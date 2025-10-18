@@ -93,6 +93,32 @@ const Admin_Dashboard = () => {
       </div>
 
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+
+      {/* ===== QuickActions =====*/}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>الإجراءات السريعة</CardTitle>
+            <CardDescription>الوصول السريع للمهام الأساسية</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {[
+              { label: "إدارة المستخدمين", icon: <Users className="h-4 w-4" /> },
+              { label: "إدارة الطلبات", icon: <Package className="h-4 w-4" />},
+              { label: "تقارير الأداء", icon: <TrendingUp className="h-4 w-4" /> },
+              { label: "تتبع المركبات", icon: <Truck className="h-4 w-4" /> },
+            ].map((item, i) => (
+              <Button
+                key={i}
+                variant={item.active ? "secondary" : "outline"}
+                className={`flex justify-between ${item.active ? "bg-muted" : ""}`}
+              >
+                <span>{item.label}</span>
+                {item.icon}
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
+
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>حجم الطلبات خلال الأسبوع</CardTitle>
