@@ -11,6 +11,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 const chartData = [
   { day: 'السبت', orders: 45 },
   { day: 'الأحد', orders: 52 },
@@ -23,7 +24,8 @@ const chartData = [
 const Admin_Dashboard = () => {
     
   return (
-    <div className="space-y-6">
+
+     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1>لوحة تحكم المدير</h1>
@@ -93,6 +95,7 @@ const Admin_Dashboard = () => {
       </div>
 
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>حجم الطلبات خلال الأسبوع</CardTitle>
@@ -112,8 +115,33 @@ const Admin_Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        </div>
+        
+        {/* ===== QuickActions =====*/}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>الإجراءات السريعة</CardTitle>
+            <CardDescription>الوصول السريع للمهام الأساسية</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {[
+              { label: "إدارة المستخدمين", icon: <Users className="h-4 w-4" /> },
+              { label: "إدارة الطلبات", icon: <Package className="h-4 w-4" />},
+              { label: "تقارير الأداء", icon: <TrendingUp className="h-4 w-4" /> },
+              { label: "تتبع المركبات", icon: <Truck className="h-4 w-4" /> },
+            ].map((item, i) => (
+              <Button
+                key={i}
+                variant={item.active ? "secondary" : "outline"}
+                className={`flex justify-between ${item.active ? "bg-muted" : ""}`}
+              >
+                <span>{item.label}</span>
+                {item.icon}
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
 
+        </div>
         </div>
   )
 }
