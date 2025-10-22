@@ -1,0 +1,56 @@
+# -------------------------------------------------------------------
+# Global Ignore for Monorepo (Root: client/ & server/)
+# -------------------------------------------------------------------
+
+# 1. Dependency Directories (Dependencies are ignored globally)
+# (Includes node_modules inside client/ and server/)
+**/node_modules
+**/dist
+**/build
+**/out
+
+# 2. General OS and Editor Files
+.DS_Store
+.vscode
+*.log
+npm-debug.log*
+
+# -------------------------------------------------------------------
+# Backend Specific Ignores (Server - Node.js/Express)
+# -------------------------------------------------------------------
+
+# Environment variables
+# This is crucial for security!
+/server/.env
+/server/.env.*
+.env
+
+# Crash dumps
+npm-debug.log
+.npm
+
+# Server runtime
+/server/tmp/
+
+# -------------------------------------------------------------------
+# Frontend Specific Ignores (Client - React/Vite/Other)
+# -------------------------------------------------------------------
+
+# Vite / other build outputs
+/client/dist
+/client/build
+/client/out
+/client/coverage
+
+# Vite temp
+.vite
+
+# -------------------------------------------------------------------
+# Logs & Others
+# -------------------------------------------------------------------
+# Package lock files that might conflict if not used properly in a monorepo
+# Since you have package.json in client AND server, it's safer to commit the lock files
+# unless you are using a monorepo manager like Yarn/NPM Workspaces.
+# If you are NOT using Workspaces, KEEP the lock files:
+# /client/package-lock.json
+# /server/package-lock.json
