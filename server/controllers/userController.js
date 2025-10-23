@@ -1,21 +1,31 @@
 const User = require("../models/User");
 
+const allowedFields = [
+	"userType",
+	"fullName",
+	"email",
+	"password",
+	"phone",
+	"address",
+	"governorate",
+	"city",
+	"storeName",
+];
+
 // Add new user
 exports.addUser = async (req, res) => {
 	try {
-		const {
-			userType,
-			fullName,
-			email,
-			password,
-			phone,
-			address,
-			governorate,
-			city,
-			storeName,
-		} = req.body;
+		const userData = Object.fromEntries(
+			allowedFields.map((key) => [key, req.body[key]])
+		);
 
-		if (!userType || !fullName || !email || !password || !phone)
+		if (
+			!userData.userType ||
+			!userData.fullName ||
+			!userData.email ||
+			!userData.password ||
+			!userData.phone
+		)
 			return res
 				.status(400)
 				.json({ message: "Required fields are missing" });
@@ -26,7 +36,7 @@ exports.addUser = async (req, res) => {
 			return regex.test(password);
 		};
 
-		if (!isStrongPassword(password)) {
+		if (!isStrongPassword(userData.password)) {
 			return res.status(400).json({
 				message:
 					"Weak password. Must contain 8+ chars, uppercase, lowercase, number, and special character.",
@@ -34,24 +44,14 @@ exports.addUser = async (req, res) => {
 		}
 
 		const existingUser = await User.findOne({
-			$or: [{ email }, { fullName }],
+			$or: [{ email: userData.email }, { fullName: userData.fullName }],
 		});
 		if (existingUser)
 			return res
 				.status(400)
-				.json({ message: "Full name or email already exists" });
+				.json({ message: "FullName or email already exists" });
 
-		const newUser = new User({
-			userType,
-			fullName,
-			email,
-			password,
-			phone,
-			address,
-			governorate,
-			city,
-			storeName,
-		});
+		const newUser = new User(userData);
 
 		await newUser.save();
 		res.status(201).json({
@@ -70,6 +70,22 @@ exports.getUsers = async (req, res) => {
 		res.status(200).json(users);
 	} catch (error) {
 		res.status(500).json({ message: "Error fetching users" });
+	}
+};
+
+// Get users with search
+exports.getUsersWithSearch = async (req, res) => {
+	try {
+		const { q } = req.query;
+		const users = await User.find({
+			$or: [
+				{ fullName: new RegExp(q, "i") },
+				{ email: new RegExp(q, "i") },
+			],
+		});
+		res.status(200).json(users);
+	} catch (error) {
+		res.status(500).json({ message: "User not found" });
 	}
 };
 
@@ -99,7 +115,7 @@ exports.updateUser = async (req, res) => {
 			if (existingName)
 				return res
 					.status(400)
-					.json({ message: "Full name already in use" });
+					.json({ message: "FullName already in use" });
 		}
 
 		const updatedUser = await User.findByIdAndUpdate(id, updates, {
