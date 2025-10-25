@@ -1,26 +1,28 @@
 const express = require("express");
 const router = express.Router();
 const {
-	addUser,
-	getUsers,
-	updateUser,
-	deleteUser,
-	getUsersWithSearch,
+  addUser,
+  getUsers,
+  updateUser,
+  deleteUser,
+  getUsersWithSearch,
 } = require("../controllers/userController");
 
-// Get all users
+const { protect, restrictTo } = require("../middleware/authMiddleware");
+
+router.use(protect); 
+
 router.get("/", getUsers);
 
-// Get users with search
-router.get("/search?q=:q", getUsersWithSearch);
+router.get("/search", getUsersWithSearch);
 
-// Add new user
+
+router.use(restrictTo("admin"));
+
 router.post("/add", addUser);
 
-// Update user by ID
 router.put("/:id", updateUser);
 
-// Delete user by ID
 router.delete("/:id", deleteUser);
 
 module.exports = router;
