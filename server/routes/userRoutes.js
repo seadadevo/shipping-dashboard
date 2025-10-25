@@ -12,7 +12,7 @@ const {
 router.get("/", getUsers);
 
 // Get users with search
-router.get("/search?q=:q", getUsersWithSearch);
+router.get("/search", getUsersWithSearch);
 
 // Add new user
 router.post("/add", addUser);
