@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Card,
 	CardContent,
@@ -40,59 +40,19 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../ui/select";
+import api from "../../lib/api";
+import type { User } from "../../types";
 
-const users = [
-	{
-		id: "1",
-		fullName: "أحمد محمد العلي",
-		username: "ahmed.ali",
-		email: "ahmed.ali@example.com",
-		role: "admin",
-		status: "نشط",
-		lastLogin: "2024-01-15",
-		joinDate: "2023-03-15",
-	},
-	{
-		id: "2",
-		fullName: "فاطمة سعد الأحمد",
-		username: "fatima.ahmed",
-		email: "fatima.ahmed@example.com",
-		role: "merchant",
-		status: "نشط",
-		lastLogin: "2024-01-14",
-		joinDate: "2023-07-22",
-	},
-	{
-		id: "3",
-		fullName: "خالد عبدالله المطيري",
-		username: "khalid.mutairi",
-		email: "khalid.mutairi@example.com",
-		role: "delivery",
-		status: "نشط",
-		lastLogin: "2024-01-15",
-		joinDate: "2023-11-08",
-	},
-	{
-		id: "4",
-		fullName: "نورا حسن الزهراني",
-		username: "nora.zahrani",
-		email: "nora.zahrani@example.com",
-		role: "merchant",
-		status: "غير نشط",
-		lastLogin: "2023-12-28",
-		joinDate: "2023-05-12",
-	},
-	{
-		id: "5",
-		fullName: "محمد عمر القحطاني",
-		username: "mohammed.qahtani",
-		email: "mohammed.qahtani@example.com",
-		role: "delivery",
-		status: "نشط",
-		lastLogin: "2024-01-14",
-		joinDate: "2023-09-30",
-	},
-];
+const getUsers = async () => {
+	const res = await api.get("/api/users/");
+	return res.data;
+};
+
+const [users, setUsers] = useState<User[]>([]);
+
+useEffect(() => {
+	getUsers().then(setUsers).catch(console.error);
+}, []);
 
 interface UserManagementProps {
 	onNavigate?: (page: string) => void;
@@ -133,7 +93,8 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 			user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			user.username.toLowerCase().includes(searchQuery.toLowerCase());
-		const matchesRole = roleFilter === "all" || user.role === roleFilter;
+		const matchesRole =
+			roleFilter === "all" || user.userType === roleFilter;
 		return matchesSearch && matchesRole;
 	});
 
@@ -164,7 +125,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">127</div>
+						<div className="text-2xl font-bold">{users.length}</div>
 					</CardContent>
 				</Card>
 
@@ -175,7 +136,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-red-600">5</div>
+						<div className="text-2xl font-bold text-red-600">{users.filter(user => user.userType === 'admin').length}</div>
 					</CardContent>
 				</Card>
 
@@ -187,7 +148,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-blue-600">
-							89
+							{users.filter(user => user.userType === 'merchant').length}
 						</div>
 					</CardContent>
 				</Card>
@@ -200,7 +161,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-green-600">
-							33
+							{users.filter(user => user.userType === 'driver').length}
 						</div>
 					</CardContent>
 				</Card>
@@ -268,12 +229,12 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 									<TableHead className="text-right">
 										الدور
 									</TableHead>
-									<TableHead className="text-right">
+									{/* <TableHead className="text-right">
 										الحالة
 									</TableHead>
 									<TableHead className="text-right">
 										آخر دخول
-									</TableHead>
+									</TableHead> */}
 									<TableHead className="text-right">
 										الإجراءات
 									</TableHead>
@@ -281,7 +242,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 							</TableHeader>
 							<TableBody>
 								{filteredUsers.map((user) => (
-									<TableRow key={user.id}>
+									<TableRow key={user._id}>
 										<TableCell className="font-medium">
 											{user.fullName}
 										</TableCell>
@@ -290,13 +251,13 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 										<TableCell>
 											<Badge
 												variant={getRoleBadgeVariant(
-													user.role
+													user.userType
 												)}
 											>
-												{getRoleLabel(user.role)}
+												{getRoleLabel(user.userType)}
 											</Badge>
 										</TableCell>
-										<TableCell>
+										{/* <TableCell>
 											<Badge
 												variant={
 													user.status === "نشط"
@@ -307,7 +268,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 												{user.status}
 											</Badge>
 										</TableCell>
-										<TableCell>{user.lastLogin}</TableCell>
+										<TableCell>{user.lastLogin}</TableCell> */}
 										<TableCell>
 											<DropdownMenu>
 												<DropdownMenuTrigger asChild>

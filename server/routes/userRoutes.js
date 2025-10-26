@@ -16,7 +16,6 @@ router.get("/", getUsers);
 
 router.get("/search", getUsersWithSearch);
 
-
 router.use(restrictTo("admin"));
 
 router.post("/add", addUser);
