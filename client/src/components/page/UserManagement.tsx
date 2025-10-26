@@ -18,7 +18,6 @@ import {
 } from "../ui/table";
 import { Badge } from "../ui/badge";
 import {
-	Plus,
 	Search,
 	Edit,
 	Trash2,
@@ -33,14 +32,14 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "./ui/select";
+} from "../ui/select";
 
 const users = [
 	{
