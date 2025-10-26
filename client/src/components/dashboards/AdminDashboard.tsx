@@ -1,42 +1,48 @@
-import React from 'react';
-import { 
-  Package, Clock, DollarSign, Users, 
-  TrendingUp, Truck 
-} from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, 
-  CartesianGrid, Tooltip, ResponsiveContainer 
-} from 'recharts';
+import React from "react";
+import {
+  Package,
+  Clock,
+  DollarSign,
+  Users,
+  TrendingUp,
+  Truck,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-// استيراد مكونات shadcn/ui
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "../ui/card";
+import { Button } from "../ui/button";
 
-// بيانات وهمية للرسم البياني
 const chartData = [
-  { day: 'السبت', orders: 45 },
-  { day: 'الأحد', orders: 52 },
-  { day: 'الاثنين', orders: 38 },
-  { day: 'الثلاثاء', orders: 67 },
-  { day: 'الأربعاء', orders: 71 },
-  { day: 'الخميس', orders: 58 },
-  { day: 'الجمعة', orders: 43 },
+  { day: "السبت", orders: 45 },
+  { day: "الأحد", orders: 52 },
+  { day: "الاثنين", orders: 38 },
+  { day: "الثلاثاء", orders: 67 },
+  { day: "الأربعاء", orders: 71 },
+  { day: "الخميس", orders: 58 },
+  { day: "الجمعة", orders: 43 },
 ];
 
-/**
- * مكون لوحة تحكم المدير
- * يعرض إحصائيات شاملة عن النظام
- */
 const AdminDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
-      {/* العنوان والأزرار */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">لوحة تحكم المدير</h1>
-          <p className="text-gray-500">
-            نظرة شاملة على أداء نظام الشحن
-          </p>
+          <p className="text-gray-500">نظرة شاملة على أداء نظام الشحن</p>
         </div>
         <div className="flex space-x-2 space-x-reverse">
           <Button>إنشاء تقرير</Button>
@@ -44,9 +50,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* بطاقات الإحصائيات السريعة */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* بطاقة الطلبات اليوم */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">الطلبات اليوم</CardTitle>
@@ -60,10 +64,11 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* بطاقة الشحنات المعلقة */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الشحنات المعلقة</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              الشحنات المعلقة
+            </CardTitle>
             <Clock className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
@@ -74,10 +79,11 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* بطاقة الإيرادات اليوم */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الإيرادات اليوم</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              الإيرادات اليوم
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
@@ -88,10 +94,11 @@ const AdminDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* بطاقة المستخدمين النشطين */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المستخدمين النشطين</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              المستخدمين النشطين
+            </CardTitle>
             <Users className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
@@ -103,9 +110,7 @@ const AdminDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* الرسم البياني والإجراءات السريعة */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* الرسم البياني */}
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>حجم الطلبات خلال الأسبوع</CardTitle>
@@ -120,18 +125,17 @@ const AdminDashboard: React.FC = () => {
                 <XAxis dataKey="day" />
                 <YAxis />
                 <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="orders" 
-                  stroke="#2563eb" 
-                  strokeWidth={2} 
+                <Line
+                  type="monotone"
+                  dataKey="orders"
+                  stroke="#2563eb"
+                  strokeWidth={2}
                 />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        
-        {/* الإجراءات السريعة */}
+
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>الإجراءات السريعة</CardTitle>
@@ -139,9 +143,15 @@ const AdminDashboard: React.FC = () => {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {[
-              { label: "إدارة المستخدمين", icon: <Users className="h-4 w-4" /> },
-              { label: "إدارة الطلبات", icon: <Package className="h-4 w-4" />},
-              { label: "تقارير الأداء", icon: <TrendingUp className="h-4 w-4" /> },
+              {
+                label: "إدارة المستخدمين",
+                icon: <Users className="h-4 w-4" />,
+              },
+              { label: "إدارة الطلبات", icon: <Package className="h-4 w-4" /> },
+              {
+                label: "تقارير الأداء",
+                icon: <TrendingUp className="h-4 w-4" />,
+              },
               { label: "تتبع المركبات", icon: <Truck className="h-4 w-4" /> },
             ].map((item, i) => (
               <Button

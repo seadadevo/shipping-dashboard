@@ -1,4 +1,3 @@
-// src/components/dashboards/DriverDashboard.tsx
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 
 export const DriverDashboard: React.FC = () => (

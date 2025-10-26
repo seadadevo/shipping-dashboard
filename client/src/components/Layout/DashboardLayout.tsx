@@ -20,27 +20,20 @@ import { MerchantDashboard } from '../dashboards/MerchantDashboard';
 import { DriverDashboard } from '../dashboards/DriverDashboard';
 import Sidebar from '../Layout/Sidebar';
 
-// استيراد الصفحات
 
 
-/**
- * مكون هيكل لوحة التحكم الرئيسي
- * يحتوي على Sidebar و Header والمحتوى الرئيسي
- */
 const DashboardLayout: React.FC = () => {
   const { user, logout } = useAuth();
   
-  // حالة لتتبع الصفحة الحالية المعروضة
+ 
   const [currentPage, setCurrentPage] = useState(
     getDefaultPageByRole(user?.userType || 'merchant')
   );
 
-  /**
-   * دالة لعرض المكون المناسب بناءً على الصفحة الحالية
-   */
+ 
   const renderCurrentPage = () => {
     switch (currentPage) {
-      // لوحات التحكم
+     
       case 'admin-dashboard':
         return <AdminDashboard />;
       case 'employee-dashboard':
@@ -50,7 +43,7 @@ const DashboardLayout: React.FC = () => {
       case 'driver-dashboard':
         return <DriverDashboard />;
 
-      // الصفحات
+      
       case 'user-management':
         return <UserManagement />;
       case 'order-management':
@@ -72,13 +65,13 @@ const DashboardLayout: React.FC = () => {
       case 'user-lookup':
         return <UserLookup />;
 
-      // الافتراضي
+     
       default:
         return <AdminDashboard />;
     }
   };
 
-  // حماية إضافية: إذا لم يكن هناك مستخدم، قم بتسجيل الخروج
+ 
   if (!user) {
     logout();
     return null;
@@ -86,22 +79,22 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50" dir="rtl">
-      {/* القائمة الجانبية */}
+     
       <Sidebar 
         userRole={user.userType}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
       />
       
-      {/* منطقة المحتوى الرئيسية */}
+      
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* رأس الصفحة */}
+      
         <Header 
           user={user}
           onLogout={logout}
         />
         
-        {/* محتوى الصفحة */}
+        
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
           {renderCurrentPage()}
         </main>
