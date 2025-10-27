@@ -54,7 +54,9 @@ const DashboardLayout: React.FC = () => {
 			case "regions-management":
 				return <RegionsManagement />;
 			case "add-user":
-				return <AddUser />;
+				return (
+					<AddUser onBack={() => setCurrentPage("user-management")} />
+				);
 			case "my-orders":
 				return <MyOrders />;
 			case "my-deliveries":

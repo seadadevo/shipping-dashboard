@@ -32,51 +32,65 @@ import {
 	Percent,
 } from "lucide-react";
 import api from "../../lib/api";
-// import { Separator } from "../ui/separator";
 
+// ... (Interface and constant data remain unchanged)
 interface AddUserProps {
 	onBack?: () => void;
 	onSave?: (userData: any) => void;
 }
 
 const branches = [
-	{ id: "1", name: "الفرع الرئيسي - الرياض" },
-	{ id: "2", name: "فرع جدة" },
-	{ id: "3", name: "فرع الدمام" },
-	{ id: "4", name: "فرع الطائف" },
-	{ id: "5", name: "فرع المدينة المنورة" },
+	{ id: "1", name: "الفرع الرئيسي - القاهرة" },
+	{ id: "2", name: "فرع الجيزة" },
+	{ id: "3", name: "فرع الإسكندرية" },
+	{ id: "4", name: "فرع الدلتا - طنطا" },
+	{ id: "5", name: "فرع الصعيد - أسيوط" },
 ];
 
 const governorates = [
 	{
 		id: "1",
-		name: "الرياض",
-		cities: ["الرياض", "الخرج", "الدرعية", "حريملاء"],
+		name: "القاهرة",
+		cities: ["القاهرة الجديدة", "المعادي", "حلوان", "مدينة نصر", "شبرا"],
 	},
 	{
 		id: "2",
-		name: "مكة المكرمة",
-		cities: ["جدة", "مكة المكرمة", "الطائف", "رابغ"],
+		name: "الجيزة",
+		cities: ["الجيزة", "الشيخ زايد", "السادس من أكتوبر", "فيصل", "الهرم"],
 	},
 	{
 		id: "3",
-		name: "المنطقة الشرقية",
-		cities: ["الدمام", "الخبر", "الظهران", "القطيف"],
+		name: "الإسكندرية",
+		cities: ["الإسكندرية", "برج العرب", "العجمي", "المنتزه"],
 	},
 	{
 		id: "4",
-		name: "المدينة المنورة",
-		cities: ["المدينة المنورة", "ينبع", "العلا", "بدر"],
+		name: "الدقهلية",
+		cities: ["المنصورة", "ميت غمر", "بلقاس", "طلخا"],
 	},
-	{ id: "5", name: "القصيم", cities: ["بريدة", "عنيزة", "الرس", "البكيرية"] },
+	{
+		id: "5",
+		name: "البحيرة",
+		cities: ["دمنهور", "كفر الدوار", "إدكو", "أبو حمص"],
+	},
+	{
+		id: "6",
+		name: "الشرقية",
+		cities: ["الزقازيق", "العاشر من رمضان", "بلبيس", "فأقوس"],
+	},
+	{
+		id: "7",
+		name: "أسيوط",
+		cities: ["أسيوط", "ديروط", "منفلوط", "أبنوب"],
+	},
 ];
 
 export function AddUser({ onBack, onSave }: AddUserProps) {
-	const [userType, setUserType] = useState<"merchant" | "courier">(
-		"merchant"
-	);
+	const [userType, setUserType] = useState<
+		"merchant" | "courier" | "employee"
+	>("employee");
 
-    const [formData, setFormData] = useState({
+	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
 		password: "",
@@ -109,17 +123,17 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 	};
 
 	const handleSubmit = async () => {
-		// التحقق من صحة البيانات
-		const requiredFields = [
-			"name",
-			"email",
-			"password",
-			"phone",
-			"address",
-			"branchId",
-			"governorateId",
-			"cityId",
-		];
+		// ... (Submit logic remains unchanged)
+		const requiredFields = ["name", "email", "password", "phone"];
+
+		if (userType === "merchant" || userType === "courier") {
+			requiredFields.push(
+				"address",
+				"branchId",
+				"governorateId",
+				"cityId"
+			);
+		}
 
 		if (userType === "merchant") {
 			requiredFields.push(
@@ -145,25 +159,25 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 				email: formData.email,
 				password: formData.password,
 				phone: formData.phone,
-				address: formData.address,
-				governorate: formData.governorateId,
-				city: formData.cityId,
+				address: formData.address || undefined,
+				governorate: formData.governorateId || undefined,
+				city: formData.cityId || undefined,
 				storeName: formData.storeName || undefined,
 				branchId: formData.branchId,
 				pickupCost: formData.pickupCost || undefined,
 				rejectionFeePercentage:
 					formData.rejectionFeePercentage || undefined,
 			};
-console.log("Submitting new user:", newUser);
+
 			// إرسال الطلب إلى الخادم
 			const { data } = await api.post("/api/users/add", newUser);
 
 			alert(
 				`✅ تم إنشاء حساب ${
-					userType === "merchant" ? "التاجر" : "المندوب"
+					userType === "merchant" ? "التاجر" : userType === "courier" ? "المندوب" : "العامل"
 				} بنجاح!`
 			);
-			console.log("User created:", data);
+			// console.log("User created:", data);
 
 			onSave?.(data);
 
@@ -194,46 +208,27 @@ console.log("Submitting new user:", newUser);
 				alert("حدث خطأ أثناء الاتصال بالخادم");
 			}
 		}
-
-		// // إنشاء كائن المستخدم الجديد
-		// const newUser = {
-		// 	...formData,
-		// 	userType,
-		// 	id: Date.now().toString(),
-		// 	createdAt: new Date().toISOString(),
-		// 	status: "نشط",
-		// };
-
-		// console.log("إنشاء مستخدم جديد:", newUser);
-
-		// // استدعاء دالة الحفظ إذا تم تمريرها
-		// onSave?.(newUser);
-
-		// // إظهار رسالة نجاح
-		// alert(
-		// 	`تم إنشاء حساب ${
-		// 		userType === "merchant" ? "التاجر" : "المندوب"
-		// 	} بنجاح!`
-		// );
-
-		// // العودة للصفحة السابقة
-		// onBack?.();
 	};
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
+		<div className="space-y-8">
+			{/* ======================= قسم العنوان والعودة ======================= */}
+			<div className="flex items-center justify-between border-b pb-4">
 				<div className="flex items-center space-x-4 space-x-reverse">
-					<Button variant="outline" onClick={onBack}>
+					<Button
+						className="ml-3 cursor-pointer"
+						variant="outline"
+						onClick={() => onBack?.()}
+					>
 						<ArrowRight className="h-4 w-4 mr-2" />
 						العودة
 					</Button>
 					<div>
-						<h1>
+						<h1 className="text-2xl font-bold">
 							إضافة {userType === "merchant" ? "تاجر" : "مندوب"}{" "}
 							جديد
 						</h1>
-						<p className="text-muted-foreground">
+						<p className="text-sm text-muted-foreground">
 							أدخل بيانات{" "}
 							{userType === "merchant" ? "التاجر" : "المندوب"}{" "}
 							الجديد لإنشاء حساب في النظام
@@ -242,8 +237,8 @@ console.log("Submitting new user:", newUser);
 				</div>
 			</div>
 
-			{/* اختيار نوع المستخدم */}
-			<Card>
+			{/* ======================= قسم اختيار نوع المستخدم (الحدود إزيلت وأضيف الظل) ======================= */}
+			<Card className="shadow-lg">
 				<CardHeader>
 					<CardTitle>نوع المستخدم</CardTitle>
 					<CardDescription>
@@ -251,45 +246,79 @@ console.log("Submitting new user:", newUser);
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<div className="flex space-x-4 space-x-reverse">
+					<div className="flex gap-2 space-x-4 space-x-reverse">
 						<Button
-							variant={
-								userType === "merchant" ? "default" : "outline"
-							}
-							onClick={() => setUserType("merchant")}
-							className="flex-1"
+							onClick={() => setUserType("employee")}
+							className={`flex-1 cursor-pointer transition-all duration-200 font-semibold ${
+								userType === "employee"
+									? "bg-green-600 text-white hover:bg-green-700 shadow-md"
+									: "bg-gray-100 text-gray-700 hover:bg-gray-200 border"
+							}`}
 						>
-							<Store className="h-4 w-4 mr-2" />
+							<Store
+								className={`h-4 w-4 mr-2 ${
+									userType === "employee"
+										? "text-white"
+										: "text-gray-500"
+								}`}
+							/>
+							عامل
+						</Button>
+
+						<Button
+							onClick={() => setUserType("merchant")}
+							className={`flex-1 cursor-pointer transition-all duration-200 font-semibold ${
+								userType === "merchant"
+									? "bg-green-600 text-white hover:bg-green-700 shadow-md"
+									: "bg-gray-100 text-gray-700 hover:bg-gray-200 border"
+							}`}
+						>
+							<Store
+								className={`h-4 w-4 mr-2 ${
+									userType === "merchant"
+										? "text-white"
+										: "text-gray-500"
+								}`}
+							/>
 							تاجر
 						</Button>
+
 						<Button
-							variant={
-								userType === "courier" ? "default" : "outline"
-							}
 							onClick={() => setUserType("courier")}
-							className="flex-1"
+							className={`flex-1 cursor-pointer transition-all duration-200 font-semibold ${
+								userType === "courier"
+									? "bg-green-600 text-white hover:bg-green-700 shadow-md"
+									: "bg-gray-100 text-gray-700 hover:bg-gray-200 border"
+							}`}
 						>
-							<User className="h-4 w-4 mr-2" />
+							<User
+								className={`h-4 w-4 mr-2 ${
+									userType === "courier"
+										? "text-white"
+										: "text-gray-500"
+								}`}
+							/>
 							مندوب توصيل
 						</Button>
 					</div>
 				</CardContent>
 			</Card>
 
-			{/* نموذج البيانات */}
-			<Card>
+			{/* ======================= قسم البيانات الأساسية (الحدود إزيلت وأضيف الظل) ======================= */}
+			<Card className="shadow-lg">
 				<CardHeader>
 					<CardTitle>البيانات الأساسية</CardTitle>
 					<CardDescription>
-						المعلومات الشخصية ومعلومات تسجيل الدخول
+						المعلومات الشخصية ومعلومات تسجيل الدخول والفرع
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-6">
-					{/* الصف الأول */}
+					{/* المجموعة الأولى: الاسم والبريد الإلكتروني */}
 					<div className="grid gap-4 md:grid-cols-2">
+						{/* الاسم الكامل */}
 						<div className="space-y-2">
 							<Label htmlFor="name" className="flex items-center">
-								<User className="h-4 w-4 mr-2" />
+								<User className="h-4 w-4 ml-1 text-primary" />
 								الاسم الكامل *
 							</Label>
 							<Input
@@ -304,12 +333,13 @@ console.log("Submitting new user:", newUser);
 							/>
 						</div>
 
+						{/* البريد الإلكتروني */}
 						<div className="space-y-2">
 							<Label
 								htmlFor="email"
 								className="flex items-center"
 							>
-								<Mail className="h-4 w-4 mr-2" />
+								<Mail className="h-4 w-4 ml-1 text-primary" />
 								البريد الإلكتروني *
 							</Label>
 							<Input
@@ -326,14 +356,18 @@ console.log("Submitting new user:", newUser);
 						</div>
 					</div>
 
-					{/* الصف الثاني */}
+					{/* فاصل مرئي */}
+					<div className="border-t pt-6" />
+
+					{/* المجموعة الثانية: كلمة المرور ورقم الهاتف */}
 					<div className="grid gap-4 md:grid-cols-2">
+						{/* كلمة المرور */}
 						<div className="space-y-2">
 							<Label
 								htmlFor="password"
 								className="flex items-center"
 							>
-								<Lock className="h-4 w-4 mr-2" />
+								<Lock className="h-4 w-4 ml-1 text-primary" />
 								كلمة المرور *
 							</Label>
 							<Input
@@ -352,12 +386,13 @@ console.log("Submitting new user:", newUser);
 							/>
 						</div>
 
+						{/* رقم الهاتف */}
 						<div className="space-y-2">
 							<Label
 								htmlFor="phone"
 								className="flex items-center"
 							>
-								<Phone className="h-4 w-4 mr-2" />
+								<Phone className="h-4 w-4 ml-1 text-primary" />
 								رقم الهاتف *
 							</Label>
 							<Input
@@ -374,71 +409,82 @@ console.log("Submitting new user:", newUser);
 						</div>
 					</div>
 
-					{/* الفرع */}
-					<div className="space-y-2">
-						<Label htmlFor="branch" className="flex items-center">
-							<Building className="h-4 w-4 mr-2" />
-							الفرع *
-						</Label>
-						<Select
-							value={formData.branchId}
-							onValueChange={(value) =>
-								handleInputChange("branchId", value)
-							}
-						>
-							<SelectTrigger>
-								<SelectValue placeholder="اختر الفرع" />
-							</SelectTrigger>
-							<SelectContent>
-								{branches.map((branch) => (
-									<SelectItem
-										key={branch.id}
-										value={branch.id}
-									>
-										{branch.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
+					{/* فاصل مرئي */}
+					<div className="border-t pt-6" />
 
-					{/* العنوان */}
-					<div className="space-y-2">
-						<Label htmlFor="address" className="flex items-center">
-							<MapPin className="h-4 w-4 mr-2" />
-							العنوان *
-						</Label>
-						<Textarea
-							id="address"
-							value={formData.address}
-							onChange={(e) =>
-								handleInputChange("address", e.target.value)
-							}
-							placeholder="أدخل العنوان التفصيلي"
-							className="text-right"
-							rows={3}
-							required
-						/>
-					</div>
+					{(userType === "merchant" || userType === "courier") && (
+						<div className="space-y-2">
+							<Label
+								htmlFor="branch"
+								className="flex items-center"
+							>
+								<Building className="h-4 w-4 ml-1 text-primary" />
+								الفرع *
+							</Label>
+							<Select
+								value={formData.branchId}
+								onValueChange={(value) =>
+									handleInputChange("branchId", value)
+								}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="اختر الفرع" />
+								</SelectTrigger>
+								<SelectContent>
+									{branches.map((branch) => (
+										<SelectItem
+											key={branch.id}
+											value={branch.id}
+										>
+											{branch.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					)}
+					{(userType === "merchant" || userType === "courier") && (
+						<div className="space-y-2">
+							<Label
+								htmlFor="address"
+								className="flex items-center"
+							>
+								<MapPin className="h-4 w-4 ml-1 text-primary" />
+								العنوان *
+							</Label>
+							<Textarea
+								id="address"
+								value={formData.address}
+								onChange={(e) =>
+									handleInputChange("address", e.target.value)
+								}
+								placeholder="أدخل العنوان التفصيلي"
+								className="text-right"
+								rows={3}
+								required
+							/>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 
-			{/* معلومات المتجر (للتجار فقط) */}
+			{/* ======================= معلومات المتجر (للتجار فقط) (الحدود إزيلت وأضيف الظل) ======================= */}
 			{userType === "merchant" && (
-				<Card>
+				<Card className="shadow-lg">
 					<CardHeader>
-						<CardTitle>معلومات المتجر</CardTitle>
+						<CardTitle>معلومات المتجر والتكاليف</CardTitle>
 						<CardDescription>
-							بيانات المتجر والتكاليف الخاصة
+							بيانات المتجر والتكاليف الخاصة للشحن والرفض
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-6">
+						{/* اسم المتجر */}
 						<div className="space-y-2">
 							<Label
 								htmlFor="storeName"
 								className="flex items-center"
 							>
-								<Store className="h-4 w-4 mr-2" />
+								<Store className="h-4 w-4 ml-1 text-primary" />
 								اسم المتجر *
 							</Label>
 							<Input
@@ -456,14 +502,18 @@ console.log("Submitting new user:", newUser);
 							/>
 						</div>
 
+						{/* فاصل مرئي */}
+						<div className="border-t pt-6" />
+
+						{/* تكلفة البيك أب ونسبة الرفض */}
 						<div className="grid gap-4 md:grid-cols-2">
 							<div className="space-y-2">
 								<Label
 									htmlFor="pickupCost"
 									className="flex items-center"
 								>
-									<DollarSign className="h-4 w-4 mr-2" />
-									تكلفة Pickup خاصة (ريال) *
+									<DollarSign className="h-4 w-4 ml-1 text-primary" />
+									تكلفة Pickup خاصة (دولار) *
 								</Label>
 								<Input
 									id="pickupCost"
@@ -488,7 +538,7 @@ console.log("Submitting new user:", newUser);
 									htmlFor="rejectionFeePercentage"
 									className="flex items-center"
 								>
-									<Percent className="h-4 w-4 mr-2" />
+									<Percent className="h-4 w-4 ml-1 text-primary" />
 									نسبة تحمل التاجر للطلبات المرفوضة (%) *
 								</Label>
 								<Input
@@ -514,121 +564,140 @@ console.log("Submitting new user:", newUser);
 				</Card>
 			)}
 
-			{/* الموقع الجغرافي */}
-			<Card>
-				<CardHeader>
-					<CardTitle>الموقع الجغرافي</CardTitle>
-					<CardDescription>المحافظة والمدينة</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-6">
-					<div className="grid gap-4 md:grid-cols-2">
-						<div className="space-y-2">
-							<Label
-								htmlFor="governorate"
-								className="flex items-center"
-							>
-								<MapPin className="h-4 w-4 mr-2" />
-								المحافظة *
-							</Label>
-							<Select
-								value={formData.governorateId}
-								onValueChange={handleGovernorateChange}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="اختر المحافظة" />
-								</SelectTrigger>
-								<SelectContent>
-									{governorates.map((governorate) => (
-										<SelectItem
-											key={governorate.id}
-											value={governorate.id}
-										>
-											{governorate.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
+			{/* ======================= قسم الموقع الجغرافي (الحدود إزيلت وأضيف الظل) ======================= */}
+			{userType === "merchant" ||
+				(userType === "courier" && (
+					<Card className="shadow-lg">
+						<CardHeader>
+							<CardTitle>الموقع الجغرافي</CardTitle>
+							<CardDescription>المحافظة والمدينة</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							<div className="grid gap-4 md:grid-cols-2">
+								{/* المحافظة */}
+								<div className="space-y-2">
+									<Label
+										htmlFor="governorate"
+										className="flex items-center"
+									>
+										<MapPin className="h-4 w-4 ml-1 text-primary" />
+										المحافظة *
+									</Label>
+									<Select
+										value={formData.governorateId}
+										onValueChange={handleGovernorateChange}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="اختر المحافظة" />
+										</SelectTrigger>
+										<SelectContent>
+											{governorates.map((governorate) => (
+												<SelectItem
+													key={governorate.id}
+													value={governorate.id}
+												>
+													{governorate.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
 
-						<div className="space-y-2">
-							<Label htmlFor="city" className="flex items-center">
-								<MapPin className="h-4 w-4 mr-2" />
-								المدينة *
-							</Label>
-							<Select
-								value={formData.cityId}
-								onValueChange={(value) =>
-									handleInputChange("cityId", value)
-								}
-								disabled={!selectedGovernorate}
-							>
-								<SelectTrigger>
-									<SelectValue
-										placeholder={
-											selectedGovernorate
-												? "اختر المدينة"
-												: "اختر المحافظة أولاً"
+								{/* المدينة */}
+								<div className="space-y-2">
+									<Label
+										htmlFor="city"
+										className="flex items-center"
+									>
+										<MapPin className="h-4 w-4 ml-1 text-primary" />
+										المدينة *
+									</Label>
+									<Select
+										value={formData.cityId}
+										onValueChange={(value) =>
+											handleInputChange("cityId", value)
 										}
-									/>
-								</SelectTrigger>
-								<SelectContent>
-									{availableCities.map((city, index) => (
-										<SelectItem key={index} value={city}>
-											{city}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
+										disabled={!selectedGovernorate}
+									>
+										<SelectTrigger>
+											<SelectValue
+												placeholder={
+													selectedGovernorate
+														? "اختر المدينة"
+														: "اختر المحافظة أولاً"
+												}
+											/>
+										</SelectTrigger>
+										<SelectContent>
+											{availableCities.map(
+												(city, index) => (
+													<SelectItem
+														key={index}
+														value={city}
+													>
+														{city}
+													</SelectItem>
+												)
+											)}
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+				))}
+
+			{/* ======================= قسم أزرار الإجراءات (الحدود إزيلت وأضيف الظل) ======================= */}
+			<Card className="shadow-lg">
+				<CardContent className="pt-6 flex justify-end gap-3">
+					<Button
+						className="cursor-pointer"
+						variant="outline"
+						onClick={() => onBack?.()}
+					>
+						<X className="h-4 w-4 mr-2" />
+						إلغاء
+					</Button>
+					<Button
+						onClick={handleSubmit}
+						className="bg-green-600 hover:bg-green-700"
+					>
+						<Save className="h-4 w-4 mr-2" />
+						حفظ البيانات
+					</Button>
 				</CardContent>
 			</Card>
 
-			{/* أزرار الإجراءات */}
-			<Card>
-				<CardContent className="pt-6">
-					<div className="flex justify-between">
-						<Button variant="outline" onClick={onBack}>
-							<X className="h-4 w-4 mr-2" />
-							إلغاء
-						</Button>
-						<Button
-							onClick={handleSubmit}
-							className="bg-green-600 hover:bg-green-700"
-						>
-							<Save className="h-4 w-4 mr-2" />
-							حفظ البيانات
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
-
-			{/* ملاحظات مهمة */}
-			<Card className="border-orange-200 bg-orange-50">
+			{/* ======================= قسم ملاحظات مهمة (حافظنا على حدود الإشعار) ======================= */}
+			{/* لاحظ أننا حافظنا على نمط الحدود هنا لأنه تصميم خاص "للتنبيه" وليس لـ "تجميع المحتوى" */}
+			<Card className="border-l-4 border-orange-500 bg-orange-50/50 shadow-sm">
 				<CardHeader>
-					<CardTitle className="text-orange-800">
-						ملاحظات مهمة
+					<CardTitle className="text-orange-800 text-lg">
+						ملاحظات هامة قبل الحفظ
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="text-orange-700">
-					<ul className="list-disc list-inside space-y-1 text-sm">
+					<ul className="list-disc list-inside space-y-2 text-sm pr-4">
 						<li>
 							تأكد من صحة البريد الإلكتروني حيث سيتم إرسال تفاصيل
-							الحساب إليه
+							الحساب إليه.
 						</li>
 						<li>
 							كلمة المرور يجب أن تكون قوية وتحتوي على أحرف وأرقام
+							ورموز.
 						</li>
-						<li>رقم الهاتف مطلوب للتواصل وإرسال الإشعارات</li>
+						<li>رقم الهاتف مطلوب للتواصل وإرسال الإشعارات.</li>
 						{userType === "merchant" && (
 							<>
+								<hr className="my-3 border-orange-200" />
 								<li>
-									تكلفة Pickup الخاصة ستُطبق على جميع طلبات
-									هذا التاجر
+									**تكلفة Pickup الخاصة:** ستُطبق على جميع
+									طلبات هذا التاجر بدلاً من التكلفة العامة.
 								</li>
 								<li>
-									نسبة تحمل الطلبات المرفوضة تحدد المبلغ الذي
-									يدفعه التاجر عند رفض الطلب
+									**نسبة تحمل الرفض:** تحدد النسبة المئوية
+									للتكلفة التي يتحملها التاجر عند رفض العميل
+									للطلب.
 								</li>
 							</>
 						)}

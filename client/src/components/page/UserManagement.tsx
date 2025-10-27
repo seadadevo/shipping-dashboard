@@ -41,17 +41,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../ui/select";
-import {
-	AlertDialog,
-	AlertDialogTrigger,
-	AlertDialogContent,
-	AlertDialogHeader,
-	AlertDialogFooter,
-	AlertDialogTitle,
-	AlertDialogDescription,
-	AlertDialogCancel,
-	AlertDialogAction,
-} from "../ui/alert-dialog";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import api from "../../lib/api";
 import { toast } from "sonner";
@@ -79,7 +69,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		getUsers().catch(console.error);
 	}, []);
 
-	// 🔹 Role translation
+	// Role translation
 	const getRoleLabel = (role: string) => {
 		switch (role) {
 			case "admin":
@@ -95,7 +85,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		}
 	};
 
-	// 🔹 Badge style
+	// Badge style
 	const getRoleBadgeVariant = (role: string) => {
 		switch (role) {
 			case "admin":
@@ -111,7 +101,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		}
 	};
 
-	// 🔹 Reset password
+	// Reset password
 	const handleResetPassword = async (id: string) => {
 		try {
 			await api.post(`/api/users/${id}/reset-password`);
@@ -155,14 +145,90 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 					</p>
 				</div>
 				<Button
-					className="bg-blue-600 hover:bg-blue-700"
+					className="cursor-pointer bg-blue-400 hover:bg-blue-500"
 					onClick={() => onNavigate?.("add-user")}
 				>
 					<UserPlus className="h-4 w-4 mr-2" />
 					إضافة مستخدم جديد
 				</Button>
 			</div>
-
+			{/* إحصائيات سريعة */}
+			<div className="grid gap-4 md:grid-cols-5">
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium">
+							إجمالي المستخدمين
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">{users.length}</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium">
+							المديرين
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold text-red-600">
+							{
+								users.filter(
+									(user) => user.userType === "admin"
+								).length
+							}
+						</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium">
+							العمال
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold text-red-600">
+							{
+								users.filter(
+									(user) => user.userType === "employee"
+								).length
+							}
+						</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium">
+							التجار
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold text-blue-600">
+							{
+								users.filter(
+									(user) => user.userType === "merchant"
+								).length
+							}
+						</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium">
+							مندوبي التوصيل
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold text-green-600">
+							{
+								users.filter(
+									(user) => user.userType === "courier"
+								).length
+							}
+						</div>
+					</CardContent>
+				</Card>
+			</div>
 			{/* Filters */}
 			<Card>
 				<CardHeader>
@@ -312,52 +378,17 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 													<DropdownMenuSeparator className="my-1" />
 
 													{/* 🗑️ Delete (with confirmation) */}
-													<AlertDialog>
-														<AlertDialogTrigger
-															asChild
-														>
-															<DropdownMenuItem className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 cursor-pointer rounded-md transition font-medium">
-																<Trash2 className="h-4 w-4 text-red-500" />
-																حذف المستخدم
-															</DropdownMenuItem>
-														</AlertDialogTrigger>
-														<AlertDialogContent className="rounded-xl p-6">
-															<AlertDialogHeader>
-																<AlertDialogTitle className="text-lg font-semibold text-gray-800">
-																	هل أنت
-																	متأكد؟
-																</AlertDialogTitle>
-																<AlertDialogDescription className="text-gray-500 mt-2">
-																	سيتم حذف هذا
-																	المستخدم
-																	نهائيًا ولا
-																	يمكن التراجع
-																	عن هذا
-																	الإجراء.
-																</AlertDialogDescription>
-															</AlertDialogHeader>
-															<AlertDialogFooter className="mt-4">
-																<AlertDialogCancel className="bg-gray-100 hover:bg-gray-200">
-																	إلغاء
-																</AlertDialogCancel>
-																<AlertDialogAction
-																	onClick={() =>
-																		handleDeleteUser(
-																			user._id
-																		)
-																	}
-																	disabled={
-																		loading
-																	}
-																	className="bg-red-600 hover:bg-red-700 text-white"
-																>
-																	{loading
-																		? "جارٍ الحذف..."
-																		: "تأكيد الحذف"}
-																</AlertDialogAction>
-															</AlertDialogFooter>
-														</AlertDialogContent>
-													</AlertDialog>
+													<DropdownMenuItem
+														onClick={() =>
+															handleDeleteUser(
+																user._id
+															)
+														}
+														className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 cursor-pointer rounded-md transition font-medium"
+													>
+														<Trash2 className="h-4 w-4 text-red-500" />
+														حذف المستخدم
+													</DropdownMenuItem>
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</TableCell>
@@ -375,7 +406,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 				</CardContent>
 			</Card>
 
-			{/* 👁️ View Modal */}
+			{/* View Modal */}
 			<Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
 				<DialogContent>
 					<DialogHeader>
@@ -383,8 +414,8 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 					</DialogHeader>
 					{selectedUser && (
 						<div className="space-y-3 text-right">
-							<p>الاسم: {selectedUser.fullName}</p>
-							<p>البريد الإلكتروني: {selectedUser.email}</p>
+							<p>{selectedUser.fullName}: الاسم</p>
+							<p>{selectedUser.email} :البريد الإلكتروني</p>
 							<p>الدور: {getRoleLabel(selectedUser.userType)}</p>
 							<p>الهاتف: {selectedUser.phone}</p>
 						</div>
@@ -392,7 +423,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 				</DialogContent>
 			</Dialog>
 
-			{/* ✏️ Edit Modal (simplified example) */}
+			{/*  Edit Modal (simplified example) */}
 			<Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
 				<DialogContent>
 					<DialogHeader>
