@@ -10,15 +10,23 @@ const badgeVariants = cva(
 		variants: {
 			variant: {
 				default:
-					"border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+					// ✅ Main brand color — for courier
+					"border-transparent bg-blue-600 text-white shadow-sm transition-all duration-200",
+
 				secondary:
-					"border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+					// ✅ Neutral gray — for merchant
+					"border border-gray-200 bg-gray-100 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200",
+
 				destructive:
-					"border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+					// ✅ Attention color — for admin
+					"border-transparent bg-red-500 text-white shadow-sm transition-all duration-200",
+
 				outline:
-					"text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+					// ✅ Minimal clean look — for employee
+					"border border-gray-300 text-white dark:border-gray-700 dark:text-black",
 			},
 		},
+
 		defaultVariants: {
 			variant: "default",
 		},

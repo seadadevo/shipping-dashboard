@@ -1,11 +1,11 @@
 export interface User {
-  _id: string;
-  userType: 'admin' | 'employee' | 'merchant' | 'driver';
-  fullName: string;
-  email: string;
-  phone: string;
-  username: string;
-  // أضف أي بيانات أخرى تحتاجها من الموديل
+	_id: string;
+	userType: "admin" | "employee" | "merchant" | "courier";
+	fullName: string;
+	email: string;
+	phone: string;
+	username: string;
+	// أضف أي بيانات أخرى تحتاجها من الموديل
 }
 
 /**
