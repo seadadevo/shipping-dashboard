@@ -9,7 +9,7 @@ import api from '../../lib/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import type { ApiError, LoginResponse } from '../../types';
+import type { ApiError, LoginResponse, User } from '../../types';
 
 
 const Login: React.FC = () => {
@@ -33,9 +33,9 @@ const Login: React.FC = () => {
       });
 
       
-      const { user, token } = response.data.data;
+      const { user } = response.data.data;
+      const { token } = response.data;  
       
-     
       login(user, token);
       
      
