@@ -174,7 +174,11 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 
 			alert(
 				`✅ تم إنشاء حساب ${
-					userType === "merchant" ? "التاجر" : userType === "courier" ? "المندوب" : "العامل"
+					userType === "merchant"
+						? "التاجر"
+						: userType === "courier"
+						? "المندوب"
+						: "العامل"
 				} بنجاح!`
 			);
 			// console.log("User created:", data);
@@ -565,87 +569,84 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 			)}
 
 			{/* ======================= قسم الموقع الجغرافي (الحدود إزيلت وأضيف الظل) ======================= */}
-			{userType === "merchant" ||
-				(userType === "courier" && (
-					<Card className="shadow-lg">
-						<CardHeader>
-							<CardTitle>الموقع الجغرافي</CardTitle>
-							<CardDescription>المحافظة والمدينة</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							<div className="grid gap-4 md:grid-cols-2">
-								{/* المحافظة */}
-								<div className="space-y-2">
-									<Label
-										htmlFor="governorate"
-										className="flex items-center"
-									>
-										<MapPin className="h-4 w-4 ml-1 text-primary" />
-										المحافظة *
-									</Label>
-									<Select
-										value={formData.governorateId}
-										onValueChange={handleGovernorateChange}
-									>
-										<SelectTrigger>
-											<SelectValue placeholder="اختر المحافظة" />
-										</SelectTrigger>
-										<SelectContent>
-											{governorates.map((governorate) => (
-												<SelectItem
-													key={governorate.id}
-													value={governorate.id}
-												>
-													{governorate.name}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-
-								{/* المدينة */}
-								<div className="space-y-2">
-									<Label
-										htmlFor="city"
-										className="flex items-center"
-									>
-										<MapPin className="h-4 w-4 ml-1 text-primary" />
-										المدينة *
-									</Label>
-									<Select
-										value={formData.cityId}
-										onValueChange={(value) =>
-											handleInputChange("cityId", value)
-										}
-										disabled={!selectedGovernorate}
-									>
-										<SelectTrigger>
-											<SelectValue
-												placeholder={
-													selectedGovernorate
-														? "اختر المدينة"
-														: "اختر المحافظة أولاً"
-												}
-											/>
-										</SelectTrigger>
-										<SelectContent>
-											{availableCities.map(
-												(city, index) => (
-													<SelectItem
-														key={index}
-														value={city}
-													>
-														{city}
-													</SelectItem>
-												)
-											)}
-										</SelectContent>
-									</Select>
-								</div>
+			{(userType === "merchant" || userType === "courier") && (
+				<Card className="shadow-lg">
+					<CardHeader>
+						<CardTitle>الموقع الجغرافي</CardTitle>
+						<CardDescription>المحافظة والمدينة</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-6">
+						<div className="grid gap-4 md:grid-cols-2">
+							{/* المحافظة */}
+							<div className="space-y-2">
+								<Label
+									htmlFor="governorate"
+									className="flex items-center"
+								>
+									<MapPin className="h-4 w-4 ml-1 text-primary" />
+									المحافظة *
+								</Label>
+								<Select
+									value={formData.governorateId}
+									onValueChange={handleGovernorateChange}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="اختر المحافظة" />
+									</SelectTrigger>
+									<SelectContent>
+										{governorates.map((governorate) => (
+											<SelectItem
+												key={governorate.id}
+												value={governorate.id}
+											>
+												{governorate.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
-						</CardContent>
-					</Card>
-				))}
+
+							{/* المدينة */}
+							<div className="space-y-2">
+								<Label
+									htmlFor="city"
+									className="flex items-center"
+								>
+									<MapPin className="h-4 w-4 ml-1 text-primary" />
+									المدينة *
+								</Label>
+								<Select
+									value={formData.cityId}
+									onValueChange={(value) =>
+										handleInputChange("cityId", value)
+									}
+									disabled={!selectedGovernorate}
+								>
+									<SelectTrigger>
+										<SelectValue
+											placeholder={
+												selectedGovernorate
+													? "اختر المدينة"
+													: "اختر المحافظة أولاً"
+											}
+										/>
+									</SelectTrigger>
+									<SelectContent>
+										{availableCities.map((city, index) => (
+											<SelectItem
+												key={index}
+												value={city}
+											>
+												{city}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* ======================= قسم أزرار الإجراءات (الحدود إزيلت وأضيف الظل) ======================= */}
 			<Card className="shadow-lg">
