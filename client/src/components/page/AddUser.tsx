@@ -31,6 +31,7 @@ import {
 	DollarSign,
 	Percent,
 } from "lucide-react";
+import api from "../../lib/api";
 // import { Separator } from "../ui/separator";
 
 interface AddUserProps {
@@ -74,7 +75,8 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 	const [userType, setUserType] = useState<"merchant" | "courier">(
 		"merchant"
 	);
-	const [formData, setFormData] = useState({
+
+    const [formData, setFormData] = useState({
 		name: "",
 		email: "",
 		password: "",
@@ -106,7 +108,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 		handleInputChange("cityId", ""); // إعادة تعيين المدينة عند تغيير المحافظة
 	};
 
-	const handleSubmit = () => {
+	const handleSubmit = async () => {
 		// التحقق من صحة البيانات
 		const requiredFields = [
 			"name",
@@ -136,29 +138,86 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 			return;
 		}
 
-		// إنشاء كائن المستخدم الجديد
-		const newUser = {
-			...formData,
-			userType,
-			id: Date.now().toString(),
-			createdAt: new Date().toISOString(),
-			status: "نشط",
-		};
+		try {
+			const newUser = {
+				userType,
+				fullName: formData.name,
+				email: formData.email,
+				password: formData.password,
+				phone: formData.phone,
+				address: formData.address,
+				governorate: formData.governorateId,
+				city: formData.cityId,
+				storeName: formData.storeName || undefined,
+				branchId: formData.branchId,
+				pickupCost: formData.pickupCost || undefined,
+				rejectionFeePercentage:
+					formData.rejectionFeePercentage || undefined,
+			};
+console.log("Submitting new user:", newUser);
+			// إرسال الطلب إلى الخادم
+			const { data } = await api.post("/api/users/add", newUser);
 
-		console.log("إنشاء مستخدم جديد:", newUser);
+			alert(
+				`✅ تم إنشاء حساب ${
+					userType === "merchant" ? "التاجر" : "المندوب"
+				} بنجاح!`
+			);
+			console.log("User created:", data);
 
-		// استدعاء دالة الحفظ إذا تم تمريرها
-		onSave?.(newUser);
+			onSave?.(data);
 
-		// إظهار رسالة نجاح
-		alert(
-			`تم إنشاء حساب ${
-				userType === "merchant" ? "التاجر" : "المندوب"
-			} بنجاح!`
-		);
+			// ✅ إعادة تعيين الحقول بعد النجاح
+			setFormData({
+				name: "",
+				email: "",
+				password: "",
+				phone: "",
+				address: "",
+				storeName: "",
+				branchId: "",
+				governorateId: "",
+				cityId: "",
+				pickupCost: "",
+				rejectionFeePercentage: "",
+			});
 
-		// العودة للصفحة السابقة
-		onBack?.();
+			setSelectedGovernorate(null);
+			setAvailableCities([]);
+
+			onBack?.();
+		} catch (error: any) {
+			console.error(error);
+			if (error.response) {
+				alert(error.response.data.message || "فشل في إضافة المستخدم");
+			} else {
+				alert("حدث خطأ أثناء الاتصال بالخادم");
+			}
+		}
+
+		// // إنشاء كائن المستخدم الجديد
+		// const newUser = {
+		// 	...formData,
+		// 	userType,
+		// 	id: Date.now().toString(),
+		// 	createdAt: new Date().toISOString(),
+		// 	status: "نشط",
+		// };
+
+		// console.log("إنشاء مستخدم جديد:", newUser);
+
+		// // استدعاء دالة الحفظ إذا تم تمريرها
+		// onSave?.(newUser);
+
+		// // إظهار رسالة نجاح
+		// alert(
+		// 	`تم إنشاء حساب ${
+		// 		userType === "merchant" ? "التاجر" : "المندوب"
+		// 	} بنجاح!`
+		// );
+
+		// // العودة للصفحة السابقة
+		// onBack?.();
 	};
 
 	return (
