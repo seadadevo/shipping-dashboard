@@ -14,7 +14,6 @@ import { UserGroups } from '../page/UserGroup';
 import { RegionsManagement } from '../page/RegionsManagement';
 import { MyOrders } from '../page/MyOrders';
 import { MyDeliveries } from '../page/MyDeliveries';
-import { UserLookup } from '../page/UserLookup';
 import { EmployeeDashboard } from '../dashboards/EmplyeeDashboard';
 import { MerchantDashboard } from '../dashboards/MerchantDashboard';
 import { DriverDashboard } from '../dashboards/DriverDashboard';
@@ -62,8 +61,6 @@ const DashboardLayout: React.FC = () => {
         return <MyOrders />;
       case 'my-deliveries':
         return <MyDeliveries />;
-      case 'user-lookup':
-        return <UserLookup />;
 
      
       default:
