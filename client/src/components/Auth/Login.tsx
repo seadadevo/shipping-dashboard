@@ -1,124 +1,137 @@
+import React, { useState } from "react";
+import { Package, Mail, Lock, AlertCircle } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import api from "../../lib/api";
 
-import React, { useState } from 'react';
-import { Package, Mail, Lock, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import api from '../../lib/api';
-
-
-
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import type { ApiError, LoginResponse } from '../../types';
-
+import {
+	Card,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+	CardContent,
+} from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import type { ApiError, LoginResponse } from "../../types";
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
+	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState(false);
+	const { login } = useAuth();
 
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setLoading(true);
+		setError(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+		try {
+			const response = await api.post<LoginResponse>(
+				"/api/v1/auth/login",
+				{
+					email,
+					password,
+				}
+			);
 
-    try {
-    
-      const response = await api.post<LoginResponse>("/api/v1/auth/login", {
-        email,
-        password,
-      });
+			//localStorage.setItem("token", response.data.token);
 
-      
-      const { user, token } = response.data.data;
-      
-     
-      login(user, token);
-      
-     
+			const { user } = response.data.data;
+			const { token } = response.data;
 
-    } catch (err) {
-      setLoading(false);
-      const error = err as ApiError;
-      
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
-      } else {
-        setError("فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.");
-      }
-      console.error(err);
-    }
-   
-  };
+			login(user, token);
+		} catch (err) {
+			setLoading(false);
+			const error = err as ApiError;
 
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100" dir="rtl">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Package className="h-12 w-12 text-blue-600 mx-auto" />
-          <CardTitle className="text-2xl font-bold mt-4">نظام الشحن</CardTitle>
-          <CardDescription>تسجيل الدخول إلى لوحة التحكم</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-           
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="email">
-              
-              </label>
-              <div className="relative">
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  className="pr-10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
+			if (error.response?.data?.message) {
+				setError(error.response.data.message);
+			} else {
+				setError("فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.");
+			}
+			console.error(err);
+		}
+	};
 
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="password">
-                كلمة المرور
-              </label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="********"
-                  className="pr-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
+	return (
+		<div
+			className="flex items-center justify-center min-h-screen bg-gray-100"
+			dir="rtl"
+		>
+			<Card className="w-full max-w-md">
+				<CardHeader className="text-center">
+					<Package className="h-12 w-12 text-blue-600 mx-auto" />
+					<CardTitle className="text-2xl font-bold mt-4">
+						نظام الشحن
+					</CardTitle>
+					<CardDescription>
+						تسجيل الدخول إلى لوحة التحكم
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<form onSubmit={handleSubmit} className="space-y-4">
+						<div className="space-y-2">
+							<label
+								className="text-sm font-medium"
+								htmlFor="email"
+							></label>
+							<div className="relative">
+								<Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+								<Input
+									id="email"
+									type="email"
+									placeholder="name@example.com"
+									className="pr-10"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									required
+								/>
+							</div>
+						</div>
 
-            
-            {error && (
-              <div className="flex items-center text-red-600 bg-red-50 p-3 rounded-md">
-                <AlertCircle className="h-4 w-4 ml-2" />
-                <p className="text-sm">{error}</p>
-              </div>
-            )}
+						<div className="space-y-2">
+							<label
+								className="text-sm font-medium"
+								htmlFor="password"
+							>
+								كلمة المرور
+							</label>
+							<div className="relative">
+								<Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+								<Input
+									id="password"
+									type="password"
+									placeholder="********"
+									className="pr-10"
+									value={password}
+									onChange={(e) =>
+										setPassword(e.target.value)
+									}
+									required
+								/>
+							</div>
+						</div>
 
-           
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "جاري التحقق..." : "تسجيل الدخول"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
+						{error && (
+							<div className="flex items-center text-red-600 bg-red-50 p-3 rounded-md">
+								<AlertCircle className="h-4 w-4 ml-2" />
+								<p className="text-sm">{error}</p>
+							</div>
+						)}
+
+						<Button
+							type="submit"
+							className="w-full"
+							disabled={loading}
+						>
+							{loading ? "جاري التحقق..." : "تسجيل الدخول"}
+						</Button>
+					</form>
+				</CardContent>
+			</Card>
+		</div>
+	);
 };
 
 export default Login;

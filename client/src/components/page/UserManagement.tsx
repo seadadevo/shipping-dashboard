@@ -55,9 +55,6 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		const res = await api.get("api/users/");
 		return res.data;
 	};
-	getUsers()
-		.then((res) => console.log(res))
-		.catch((err) => console.log(err));
 
 	const [users, setUsers] = useState<User[]>([]);
 
@@ -71,7 +68,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 				return "مدير";
 			case "merchant":
 				return "تاجر";
-			case "delivery":
+			case "driver":
 				return "مندوب توصيل";
 			default:
 				return role;
@@ -217,7 +214,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 								</SelectItem>
 								<SelectItem value="admin">مدير</SelectItem>
 								<SelectItem value="merchant">تاجر</SelectItem>
-								<SelectItem value="delivery">
+								<SelectItem value="driver">
 									مندوب توصيل
 								</SelectItem>
 							</SelectContent>
