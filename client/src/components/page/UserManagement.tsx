@@ -43,17 +43,6 @@ import {
 import api from "../../lib/api";
 import type { User } from "../../types";
 
-const getUsers = async () => {
-	const res = await api.get("/api/users/");
-	return res.data;
-};
-
-const [users, setUsers] = useState<User[]>([]);
-
-useEffect(() => {
-	getUsers().then(setUsers).catch(console.error);
-}, []);
-
 interface UserManagementProps {
 	onNavigate?: (page: string) => void;
 }
@@ -61,6 +50,20 @@ interface UserManagementProps {
 export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [roleFilter, setRoleFilter] = useState("all");
+
+	const getUsers = async () => {
+		const res = await api.get("api/users/");
+		return res.data;
+	};
+	getUsers()
+		.then((res) => console.log(res))
+		.catch((err) => console.log(err));
+
+	const [users, setUsers] = useState<User[]>([]);
+
+	useEffect(() => {
+		getUsers().then(setUsers).catch(console.error);
+	}, []);
 
 	const getRoleLabel = (role: string) => {
 		switch (role) {
@@ -136,7 +139,13 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold text-red-600">{users.filter(user => user.userType === 'admin').length}</div>
+						<div className="text-2xl font-bold text-red-600">
+							{
+								users.filter(
+									(user) => user.userType === "admin"
+								).length
+							}
+						</div>
 					</CardContent>
 				</Card>
 
@@ -148,7 +157,11 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-blue-600">
-							{users.filter(user => user.userType === 'merchant').length}
+							{
+								users.filter(
+									(user) => user.userType === "merchant"
+								).length
+							}
 						</div>
 					</CardContent>
 				</Card>
@@ -161,7 +174,11 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold text-green-600">
-							{users.filter(user => user.userType === 'driver').length}
+							{
+								users.filter(
+									(user) => user.userType === "driver"
+								).length
+							}
 						</div>
 					</CardContent>
 				</Card>
