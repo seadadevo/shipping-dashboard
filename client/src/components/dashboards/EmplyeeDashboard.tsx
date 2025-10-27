@@ -14,11 +14,11 @@ import {
   Activity,
   Users,
   Phone,
-  MapPin,
-  Badge
+  MapPin
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
 
 // حالات الطلبات مع الألوان والأيقونات
 const orderStatuses = [
