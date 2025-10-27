@@ -40,7 +40,7 @@ const DashboardLayout: React.FC = () => {
 				return <DriverDashboard />;
 
 			case "user-management":
-				return <UserManagement />;
+				return <UserManagement onNavigate={setCurrentPage}/>;
 			case "order-management":
 				return <OrderManagement />;
 			case "create-order":
