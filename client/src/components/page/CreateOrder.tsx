@@ -4,6 +4,11 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+// ... (كل الـ imports القديمة)
+import { AlertCircle, CheckCircleIcon } from 'lucide-react';
+import api from '../../lib/api';
+import type { ApiError, AddOrderResponse } from '../../types';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Checkbox } from '../ui/checkbox';
 import { 
   Table,
@@ -37,7 +42,6 @@ import {
   MapPin, 
   Calculator, 
   CheckCircle,
-  ArrowRight,
   Plus,
   Trash2,
   Phone,
@@ -47,6 +51,7 @@ import {
   DollarSign,
   Weight
 } from 'lucide-react';
+
 
 // البيانات الأساسية
 const governorates = [
@@ -90,11 +95,12 @@ interface Product {
   weight: number;
 }
 
-interface CreateOrderProps {
-  currentUser: any;
-}
 
-export function CreateOrder({ currentUser }: CreateOrderProps) {
+
+export function CreateOrder() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     // معلومات الطلب الأساسية
     type: '',
@@ -202,33 +208,79 @@ export function CreateOrder({ currentUser }: CreateOrderProps) {
     handleInputChange('totalWeight', newTotalWeight.toString());
   };
 
-  const handleSubmit = () => {
-    // التحقق من صحة البيانات
-    const requiredFields = [
-      'type', 'customerName', 'phone', 'governorateId', 'cityId', 
-      'street', 'shippingType', 'paymentType', 'branchId'
-    ];
+  const handleSubmit = async () => {
+    setError(null);
+    setSuccess(null);
 
+    // 1. التحقق من صحة البيانات (زي ما هو)
+    const requiredFields = [
+      'type', 'customerName', 'phone', 'governorateId', 'cityId',
+      'street', 'shippingType', 'paymentType', 'branchId', 'orderCost'
+    ];
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
     
-    if (missingFields.length > 0 || products.length === 0) {
-      alert('يرجى ملء جميع الحقول المطلوبة وإضافة منتج واحد على الأقل');
+    if (missingFields.length > 0) {
+      setError(`يرجى ملء الحقول المطلوبة: ${missingFields.join(', ')}`);
+      return;
+    }
+    if (products.length === 0) {
+      setError('يرجى إضافة منتج واحد على الأقل');
       return;
     }
 
-    // إنشاء الطلب
-    const orderData = {
-      ...formData,
-      products,
-      totalWeight: calculateTotalWeight(),
-      shippingCost: calculateShippingCost(),
-      createdAt: new Date().toISOString(),
-      status: 'pending',
-      orderNumber: `ORD-${Date.now()}`
-    };
+    setLoading(true);
 
-    console.log('إنشاء طلب جديد:', orderData);
-    alert('تم إنشاء الطلب بنجاح!');
+    // 2. تحويل (Mapping) البيانات من IDs إلى أسماء ليطابق الباك إند
+    try {
+      const orderTypeName = orderTypes.find(t => t.id === formData.type)?.name;
+      const governorateName = governorates.find(g => g.id === formData.governorateId)?.name;
+      const shippingTypeName = shippingTypes.find(s => s.id === formData.shippingType)?.name;
+      const paymentTypeName = paymentTypes.find(p => p.id === formData.paymentType)?.name;
+      const branchName = branches.find(b => b.id === formData.branchId)?.name;
+
+      const mappedProducts = products.map(p => ({
+        productName: p.name,
+        quantity: p.quantity,
+        weight: p.weight,
+      }));
+      
+      const totalWeight = calculateTotalWeight();
+
+      // 3. تجهيز الـ Payload للـ API
+      const payload = {
+        orderType: orderTypeName,
+        customerName: formData.customerName,
+        customerPhone1: formData.phone,
+        customerPhone2: formData.phone2,
+        customerEmail: formData.email,
+        governorate: governorateName,
+        city: formData.cityId, // الـ cityId هي الاسم فعلاً
+        village: formData.village,
+        street: formData.street,
+        isVillageDelivery: formData.villageDelivery,
+        shippingType: shippingTypeName,
+        paymentType: paymentTypeName,
+        branch: branchName,
+        orderCost: parseFloat(formData.orderCost) || 0,
+        totalWeight: totalWeight,
+        notes: formData.notes,
+        products: mappedProducts,
+      };
+
+      // 4. إرسال الطلب للـ API
+      await api.post<AddOrderResponse>('/api/orders/add', payload);
+
+      setSuccess('تم إنشاء الطلب بنجاح!');
+      setLoading(false);
+      
+      // (اختياري: إعادة تعيين الفورم بعد النجاح)
+      // resetForm(); 
+
+    } catch (err) {
+      const error = err as ApiError;
+      setError(error.response?.data?.message || 'حدث خطأ أثناء إنشاء الطلب.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -240,6 +292,20 @@ export function CreateOrder({ currentUser }: CreateOrderProps) {
         </p>
       </div>
 
+      {success && (
+        <Alert variant="default" className="bg-green-50 border-green-200 text-green-800">
+          <CheckCircleIcon className="h-4 w-4" />
+          <AlertTitle>نجاح</AlertTitle>
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>خطأ</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       {/* معلومات الطلب الأساسية */}
       <Card>
         <CardHeader>
@@ -468,7 +534,7 @@ export function CreateOrder({ currentUser }: CreateOrderProps) {
                     <div className="flex justify-between items-center w-full">
                       <span>{type.name}</span>
                       <Badge variant={type.cost > 0 ? "destructive" : type.cost < 0 ? "default" : "secondary"}>
-                        {type.cost > 0 ? `+${type.cost}` : type.cost < 0 ? type.cost : 'مجاني'} ريال
+                        {type.cost > 0 ?`+${type.cost}` : type.cost < 0 ? type.cost : 'مجاني' } ريال
                       </Badge>
                     </div>
                   </SelectItem>
@@ -753,16 +819,22 @@ export function CreateOrder({ currentUser }: CreateOrderProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex justify-between">
-            <Button variant="outline">
+            <Button variant="outline" disabled={loading}>
               إلغاء
             </Button>
             <Button 
               onClick={handleSubmit} 
               className="bg-green-600 hover:bg-green-700"
-              disabled={products.length === 0}
+              disabled={products.length === 0 || loading} // (تعديل)
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              إنشاء الطلب
+              {loading ? (
+                "جاري الإنشاء..."
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  إنشاء الطلب
+                </>
+              )}
             </Button>
           </div>
         </CardContent>

@@ -66,3 +66,61 @@ export interface ApiError {
   };
   message?: string;
 }
+
+
+export interface OrderProduct {
+  _id: string;
+  productName: string;
+  quantity: number;
+  weight: number;
+}
+
+/**
+ * نوع بيانات الطلب (كما يأتي من الباك إند)
+ */
+export interface Order {
+  _id: string;
+  orderType: string;
+  customerName: string;
+  customerPhone1: string;
+  customerPhone2?: string;
+  customerEmail?: string;
+  governorate: string;
+  city: string;
+  village?: string;
+  street: string;
+  isVillageDelivery: boolean;
+  shippingType: string;
+  paymentType: string;
+  branch: string;
+  orderCost: number;
+  totalWeight: number;
+  notes?: string;
+  products: OrderProduct[];
+  createdBy: User; // اليوزر اللي أنشأ الطلب
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * نوع بيانات استجابة جلب الطلبات
+ */
+export interface GetOrdersResponse {
+  status: string;
+  results: number;
+  data: {
+    orders: Order[];
+  };
+}
+
+/**
+ * نوع بيانات استجابة إنشاء طلب
+ */
+export interface AddOrderResponse {
+  status: string;
+  message: string;
+  data: {
+    order: Order;
+  };
+}

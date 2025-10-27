@@ -33,8 +33,8 @@ const Login: React.FC = () => {
       });
 
       
-      const { user, token } = response.data.data;
-      
+      const { user } = response.data.data;
+      const { token } = response.data
      
       login(user, token);
       
