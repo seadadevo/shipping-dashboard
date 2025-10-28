@@ -16,7 +16,7 @@ exports.addOrder = async (req, res) => {
 
     for (const field of requiredFields) {
       if (!orderData[field]) {
-        return res.status(400).json({ message: `Missing required field: ${field}` });
+        return res.status(400).json({ message:`Missing required field: ${field}`  });
       }
     }
     
