@@ -18,6 +18,7 @@ import { EmployeeDashboard } from '../dashboards/EmplyeeDashboard';
 import { MerchantDashboard } from '../dashboards/MerchantDashboard';
 import { DriverDashboard } from '../dashboards/DriverDashboard';
 import Sidebar from '../Layout/Sidebar';
+import { AddUser } from "../page/AddUser";
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
@@ -59,8 +60,7 @@ const DashboardLayout: React.FC = () => {
 				return <MyOrders />;
 			case "my-deliveries":
 				return <MyDeliveries />;
-			case "user-lookup":
-				return <UserLookup />;
+			
 
 			default:
 				return <AdminDashboard />;
@@ -68,24 +68,7 @@ const DashboardLayout: React.FC = () => {
 	};
 
       
-      case 'user-management':
-        return <UserManagement />;
-      case 'order-management':
-        return <OrderManagement />;
-      case 'create-order':
-        return <CreateOrder />;
-      case 'branch-management':
-        return <BranchManagement />;
-      case 'weight-settings':
-        return <WeightSettings />;
-      case 'user-groups':
-        return <UserGroups />;
-      case 'regions-management':
-        return <RegionsManagement />;
-      case 'my-orders':
-        return <MyOrders />;
-      case 'my-deliveries':
-        return <MyDeliveries />;
+    
 
 	return (
 		<div className="flex h-screen bg-gray-50" dir="rtl">
