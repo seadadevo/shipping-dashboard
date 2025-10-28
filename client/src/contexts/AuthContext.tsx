@@ -34,12 +34,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  useEffect(() => {
+  if (user && token) {
+    console.log("✅ Auth state updated:", { user, token });
+  }
+}, [user, token]);
   
   const login = (userData: User, authToken: string) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem("user", JSON.stringify(userData));
     localStorage.setItem("token", authToken);
+    console.log(userData)
+    console.log(authToken)
+    console.log("✅ Token saved to localStorage:", localStorage.getItem("token"));
   };
 
 
