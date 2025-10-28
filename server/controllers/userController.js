@@ -15,6 +15,17 @@ const allowedFields = [
 // Add new user
 exports.addUser = async (req, res) => {
 	try {
+		// const {
+		// 	userType,
+		// 	fullName,
+		// 	email,
+		// 	password,
+		// 	phone,
+		// 	address,
+		// 	governorate,
+		// 	city,
+		// 	storeName,
+		// } = req.body;
 		const userData = Object.fromEntries(
 			allowedFields.map((key) => [key, req.body[key]])
 		);
