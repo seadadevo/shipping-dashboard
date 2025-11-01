@@ -35,7 +35,7 @@ exports.addOrder = async (req, res) => {
       if (!value) {
         return res
           .status(400)
-          .json({ message: `Missing required field: ${key} `});
+          .json({ message:`Missing required field: ${key} ` });
       }
     } 
     if (orderCost === null || orderCost === undefined) {

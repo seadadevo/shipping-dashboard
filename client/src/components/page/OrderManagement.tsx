@@ -268,7 +268,7 @@ export function OrderManagement() {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
-              <SelectContent className='bg-blue-50 '>
+              <SelectContent>
                 {statusOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}

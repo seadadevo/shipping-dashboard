@@ -329,7 +329,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder="اختر نوع الطلب" />
                 </SelectTrigger>
-                <SelectContent className='bg-blue-50 '>
+                <SelectContent>
                   {orderTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
@@ -432,7 +432,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder="اختر المحافظة" />
                 </SelectTrigger>
-                <SelectContent className='bg-blue-50 '>
+                <SelectContent>
                   {governorates.map((governorate) => (
                     <SelectItem key={governorate.id} value={governorate.id}>
                       {governorate.name}
@@ -455,7 +455,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder={selectedGovernorate ? "اختر المدينة" : "اختر المحافظة أولاً"} />
                 </SelectTrigger>
-                <SelectContent className='bg-blue-50 '>
+                <SelectContent>
                   {availableCities.map((city, index) => (
                     <SelectItem key={index} value={city}>
                       {city}
@@ -528,13 +528,13 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر نوع الشحن" />
               </SelectTrigger>
-              <SelectContent className='bg-blue-50 '>
+              <SelectContent>
                 {shippingTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div className="flex justify-between items-center w-full">
                       <span>{type.name}</span>
                       <Badge variant={type.cost > 0 ? "destructive" : type.cost < 0 ? "default" : "secondary"}>
-                        {type.cost > 0 ?`+${type.cost} `: type.cost < 0 ? type.cost : 'مجاني' }جنيه 
+                        {type.cost > 0 ?`+${type.cost}` : type.cost < 0 ? `type.cost `: 'مجاني' } جنيه
                       </Badge>
                     </div>
                   </SelectItem>
@@ -558,7 +558,7 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر نوع الدفع" />
               </SelectTrigger>
-              <SelectContent className='bg-blue-50 '>
+              <SelectContent>
                 {paymentTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div>
@@ -581,7 +581,7 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر الفرع" />
               </SelectTrigger>
-              <SelectContent className='bg-blue-50 '>
+              <SelectContent>
                 {branches.map((branch) => (
                   <SelectItem key={branch.id} value={branch.id}>
                     {branch.name}

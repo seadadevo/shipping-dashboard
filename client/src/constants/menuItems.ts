@@ -35,22 +35,26 @@ export const driverMenuItems: MenuItem[] = [
 ];
 
 
-export const getMenuItemsByRole = (userType: 'admin' | 'employee' | 'merchant' | 'driver'): MenuItem[] => {
-  switch (userType) {
-    case 'admin':
-      return adminMenuItems;
-    case 'employee':
-      return employeeMenuItems;
-    case 'merchant':
-      return merchantMenuItems;
-    case 'driver':
-      return driverMenuItems;
-    default:
-      return [];
-  }
+export const getMenuItemsByRole = (
+	userType: "admin" | "employee" | "merchant" | "courier"
+): MenuItem[] => {
+	switch (userType) {
+		case "admin":
+			return adminMenuItems;
+		case "employee":
+			return employeeMenuItems;
+		case "merchant":
+			return merchantMenuItems;
+		case "courier":
+			return driverMenuItems;
+		default:
+			return [];
+	}
 };
 
 
-export const getDefaultPageByRole = (userType: 'admin' | 'employee' | 'merchant' | 'driver'): string => {
-  return `${userType}-dashboard`;
+export const getDefaultPageByRole = (
+	userType: "admin" | "employee" | "merchant" | "courier"
+): string => {
+	return `${userType}-dashboard`;
 };
