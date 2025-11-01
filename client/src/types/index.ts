@@ -125,3 +125,56 @@ export interface AddOrderResponse {
     order: Order;
   };
 }
+
+
+// --- الإضافات الجديدة لإدارة المناطق ---
+
+/**
+ * نوع بيانات المحافظة (من الباك إند)
+ */
+export interface Governorate {
+  _id: string;
+  govName: string;
+  govCode: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * نوع بيانات المدينة (من الباك إند)
+ */
+export interface City {
+  _id: string;
+  cityName: string;
+  shippingCost: number;
+  governorate: Governorate; // تم عمل Populate لها في الباك إند
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * نوع بيانات استجابة جلب المحافظات
+ */
+export interface GetGovernoratesResponse {
+  status: string;
+  results: number;
+  data: Governorate[];
+}
+
+/**
+ * نوع بيانات استجابة جلب المدن
+ */
+export interface GetCitiesResponse {
+  status: string;
+  results: number;
+  data: City[];
+}
+
+/**
+ * نوع بيانات استجابة إضافة محافظة أو مدينة
+ */
+export interface AddLocationResponse {
+  status: string;
+  message: string;
+  data: Governorate | City;
+}
