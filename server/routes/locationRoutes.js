@@ -3,26 +3,38 @@ const router = express.Router();
 const {
   addGovernorate,
   getAllGovernorates,
+  updateGovernorate, // ADDED
+  toggleGovernorateStatus, // ADDED
+  deleteGovernorate, // ADDED
   addCity,
   getAllCities,
+  updateCity, // ADDED
+  toggleCityStatus, // ADDED
+  deleteCity, // ADDED
   getCitiesByGovernorate
 } = require("../controllers/locationController");
 
 const { protect, restrictTo } = require("../middleware/authMiddleware");
 
 // --- Governorate Routes ---
-// Only admins can add new governorates
 router.post("/governorates", protect, restrictTo("admin"), addGovernorate);
-// All authenticated users can view governorates
 router.get("/governorates", protect, getAllGovernorates);
+// --- ADDED ---
+router.put("/governorates/:id", protect, restrictTo("admin"), updateGovernorate);
+router.patch("/governorates/:id/toggle-status", protect, restrictTo("admin"), toggleGovernorateStatus);
+router.delete("/governorates/:id", protect, restrictTo("admin"), deleteGovernorate);
+// --- END ADDED ---
+
 
 // --- City Routes ---
-// Only admins can add new cities
 router.post("/cities", protect, restrictTo("admin"), addCity);
-// All authenticated users can view cities
 router.get("/cities", protect, getAllCities);
-// Get cities for a specific governorate
 router.get("/governorates/:govId/cities", protect, getCitiesByGovernorate);
+// --- ADDED ---
+router.put("/cities/:id", protect, restrictTo("admin"), updateCity);
+router.patch("/cities/:id/toggle-status", protect, restrictTo("admin"), toggleCityStatus);
+router.delete("/cities/:id", protect, restrictTo("admin"), deleteCity);
+// --- END ADDED ---
 
 
 module.exports = router;
