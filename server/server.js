@@ -6,11 +6,13 @@ const connectDB = require("./config/db");
 
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
+const weightSettingsRouter = require("./routes/weightSettingsRoute");
 const orderRoutes = require("./routes/orderRoutes"); 
 const locationRoutes = require("./routes/locationRoutes");
 
 
 const app = express();
+
 connectDB();
 
 app.use(cors());
@@ -19,6 +21,8 @@ app.use(cookieParser());
 
 app.use("/api/users", userRoutes);
 app.use("/api/v1/auth", authRoutes);
+
+app.use("/api/weight-settings", weightSettingsRouter);
 app.use("/api/orders", orderRoutes);
 app.use("/api/locations", locationRoutes);  
 
