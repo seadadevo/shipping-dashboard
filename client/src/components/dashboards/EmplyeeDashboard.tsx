@@ -117,51 +117,51 @@ const recentOrders = [
     id: '#E2024-001', 
     merchant: 'متجر الأزياء الحديثة',
     recipient: 'سارة أحمد', 
-    destination: 'الرياض، حي النخيل', 
+    destination: 'القاهرة، وسط المدينة', 
     status: 'تم التسليم', 
     date: '2024-01-15',
-    amount: '85 ريال',
-    phone: '+966501234567'
+    amount: '85 جنيه',
+    phone: '01512345678'
   },
   { 
     id: '#E2024-002', 
     merchant: 'متجر الإلكترونيات',
     recipient: 'محمد عبدالله', 
-    destination: 'جدة، حي الروضة', 
+    destination: 'الإسكندرية، حي المنتزه', 
     status: 'تم التسليم للمندوب', 
     date: '2024-01-14',
-    amount: '125 ريال',
-    phone: '+966502345678'
+    amount: '125 جنيه',
+    phone: '01598765432'
   },
   { 
     id: '#E2024-003', 
     merchant: 'متجر المنزل والحديقة',
     recipient: 'فاطمة سعد', 
-    destination: 'الدمام، حي الشاطئ', 
+    destination: 'الجيزة، حي الهرم', 
     status: 'قيد الانتظار', 
     date: '2024-01-14',
-    amount: '95 ريال',
-    phone: '+966503456789'
+    amount: '95 جنيه',
+    phone: '01112345678'
   },
   { 
     id: '#E2024-004', 
     merchant: 'مكتبة المعرفة',
     recipient: 'أحمد علي', 
-    destination: 'المدينة المنورة، حي قباء', 
+    destination: 'القليوبية، شبرا الخيمة', 
     status: 'تم التسليم', 
     date: '2024-01-13',
-    amount: '110 ريال',
-    phone: '+966504567890'
+    amount: '110 جنيه',
+    phone: '01118138288'
   },
   { 
     id: '#E2024-005', 
-    merchant: 'متجر الرياضة',
+    merchant: 'متجر التوحيد للملابس',
     recipient: 'نورا حسن', 
-    destination: 'مكة المكرمة، حي العزيزية', 
+    destination: 'المنوفيه ، حي السلام', 
     status: 'طلب جديد', 
     date: '2024-01-13',
-    amount: '75 ريال',
-    phone: '+966505678901'
+    amount: '75 جنيه',
+    phone: '01155667788'
   },
 ];
 

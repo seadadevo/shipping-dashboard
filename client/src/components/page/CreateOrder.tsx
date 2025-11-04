@@ -53,23 +53,26 @@ import {
 } from 'lucide-react';
 
 
-// البيانات الأساسية
 const governorates = [
-  { id: '1', name: 'الرياض', cities: ['الرياض', 'الخرج', 'الدرعية', 'حريملاء', 'المجمعة'] },
-  { id: '2', name: 'مكة المكرمة', cities: ['جدة', 'مكة المكرمة', 'الطائف', 'رابغ', 'خليص'] },
-  { id: '3', name: 'المنطقة الشرقية', cities: ['الدمام', 'الخبر', 'الظهران', 'القطيف', 'الجبيل'] },
-  { id: '4', name: 'المدينة المنورة', cities: ['المدينة المنورة', 'ينبع', 'العلا', 'بدر', 'خيبر'] },
-  { id: '5', name: 'القصيم', cities: ['بريدة', 'عنيزة', 'الرس', 'البكيرية', 'المذنب'] }
+  { id: '1', name: 'القاهرة', cities: ['القاهرة الجديدة', 'مدينة نصر', 'مصر الجديدة', 'المعادي', 'حلوان', 'الزمالك', 'وسط البلد'] },
+  { id: '2', name: 'الجيزة', cities: ['الجيزة', '6 أكتوبر', 'الشيخ زايد', 'الهرم', 'فيصل', 'الدقي', 'المهندسين', 'العجوزة'] },
+  { id: '3', name: 'الاسكندرية', cities: ['الاسكندرية', 'برج العرب', 'سموحة', 'ميامي', 'سيدي بشر', 'العجمي', 'المنتزه'] },
+  { id: '4', name: 'الشرقية', cities: ['الزقازيق', 'العاشر من رمضان', 'بلبيس', 'منيا القمح', 'فاقوس', 'ههيا'] },
+  { id: '5', name: 'اسوان', cities: ['اسوان', 'كوم امبو', 'ادفو', 'نصر النوبة', 'ابو سمبل'] },
+  { id: '6', name: 'القليوبية', cities: ['بنها', 'شبرا الخيمة', 'العبور', 'القناطر الخيرية', 'طوخ', 'قليوب'] },
+  { id: '7', name: 'الدقهلية', cities: ['المنصورة', 'ميت غمر', 'السنبلاوين', 'طلخا', 'دكرنس', 'بلقاس'] },
+  { id: '8', name: 'الغربية', cities: ['طنطا', 'المحلة الكبرى', 'كفر الزيات', 'زفتى', 'السنطة', 'بسيون'] },
+  { id: '9', name: 'البحيرة', cities: ['دمنهور', 'كفر الدوار', 'ادكو', 'رشيد', 'وادي النطرون'] },
+  { id: '10', name: 'المنوفية', cities: ['شبين الكوم', 'السادات', 'منوف', 'قويسنا', 'أشمون'] }
 ];
 
 const branches = [
-  { id: '1', name: 'الفرع الرئيسي - الرياض' },
-  { id: '2', name: 'فرع جدة' },
-  { id: '3', name: 'فرع الدمام' },
-  { id: '4', name: 'فرع الطائف' },
-  { id: '5', name: 'فرع المدينة المنورة' }
+  { id: '1', name: 'القاهرة' },
+  { id: '2', name: 'الجيزة' },
+  { id: '3', name: 'الاسكندرية' },
+  { id: '4', name: 'الشرقية' },
+  { id: '5', name: 'اسوان' }
 ];
-
 const shippingTypes = [
   { id: 'normal', name: 'عادي', description: 'التوصيل خلال 3-5 أيام عمل', cost: 0 },
   { id: '24hour', name: 'شحن في 24 ساعة', description: 'توصيل سريع خلال 24 ساعة', cost: 25 },
@@ -148,7 +151,7 @@ export function CreateOrder() {
     setSelectedGovernorate(governorate);
     setAvailableCities(governorate?.cities || []);
     handleInputChange('governorateId', governorateId);
-    handleInputChange('cityId', ''); // إعادة تعيين المدينة
+    handleInputChange('cityId', ''); 
   };
 
   const calculateTotalWeight = () => {
@@ -156,7 +159,7 @@ export function CreateOrder() {
   };
 
   const calculateShippingCost = () => {
-    // إعدادات الوزن الافتراضية (يمكن جلبها من قاعدة البيانات)
+    
     const weightSettings = {
       baseWeight: 1.0,
       baseCost: 25.0,
@@ -166,7 +169,7 @@ export function CreateOrder() {
     const totalWeight = calculateTotalWeight();
     let weightCost = weightSettings.baseCost;
     
-    // حساب تكلفة الوزن الإضافي
+    
     if (totalWeight > weightSettings.baseWeight) {
       const additionalWeight = totalWeight - weightSettings.baseWeight;
       weightCost += additionalWeight * weightSettings.additionalWeightCost;
@@ -191,7 +194,7 @@ export function CreateOrder() {
       setNewProduct({ name: '', quantity: 1, weight: 0 });
       setIsAddingProduct(false);
       
-      // تحديث إجمالي الوزن تلقائياً
+     
       const newTotalWeight = calculateTotalWeight() + (newProduct.quantity * newProduct.weight);
       handleInputChange('totalWeight', newTotalWeight.toString());
     }
@@ -201,7 +204,7 @@ export function CreateOrder() {
     const updatedProducts = products.filter(p => p.id !== productId);
     setProducts(updatedProducts);
     
-    // إعادة حساب إجمالي الوزن
+    
     const newTotalWeight = updatedProducts.reduce((total, product) => 
       total + (product.quantity * product.weight), 0
     );
@@ -212,7 +215,7 @@ export function CreateOrder() {
     setError(null);
     setSuccess(null);
 
-    // 1. التحقق من صحة البيانات (زي ما هو)
+    
     const requiredFields = [
       'type', 'customerName', 'phone', 'governorateId', 'cityId',
       'street', 'shippingType', 'paymentType', 'branchId', 'orderCost'
@@ -230,7 +233,6 @@ export function CreateOrder() {
 
     setLoading(true);
 
-    // 2. تحويل (Mapping) البيانات من IDs إلى أسماء ليطابق الباك إند
     try {
       const orderTypeName = orderTypes.find(t => t.id === formData.type)?.name;
       const governorateName = governorates.find(g => g.id === formData.governorateId)?.name;
@@ -246,7 +248,6 @@ export function CreateOrder() {
       
       const totalWeight = calculateTotalWeight();
 
-      // 3. تجهيز الـ Payload للـ API
       const payload = {
         orderType: orderTypeName,
         customerName: formData.customerName,
@@ -254,7 +255,7 @@ export function CreateOrder() {
         customerPhone2: formData.phone2,
         customerEmail: formData.email,
         governorate: governorateName,
-        city: formData.cityId, // الـ cityId هي الاسم فعلاً
+        city: formData.cityId, 
         village: formData.village,
         street: formData.street,
         isVillageDelivery: formData.villageDelivery,
@@ -267,14 +268,13 @@ export function CreateOrder() {
         products: mappedProducts,
       };
 
-      // 4. إرسال الطلب للـ API
+      
       await api.post<AddOrderResponse>('/api/orders/add', payload);
 
       setSuccess('تم إنشاء الطلب بنجاح!');
       setLoading(false);
       
-      // (اختياري: إعادة تعيين الفورم بعد النجاح)
-      // resetForm(); 
+     
 
     } catch (err) {
       const error = err as ApiError;
@@ -329,7 +329,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder="اختر نوع الطلب" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-blue-50'>
                   {orderTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
@@ -432,7 +432,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder="اختر المحافظة" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-blue-50'>
                   {governorates.map((governorate) => (
                     <SelectItem key={governorate.id} value={governorate.id}>
                       {governorate.name}
@@ -455,7 +455,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder={selectedGovernorate ? "اختر المدينة" : "اختر المحافظة أولاً"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-blue-50'>
                   {availableCities.map((city, index) => (
                     <SelectItem key={index} value={city}>
                       {city}
@@ -500,7 +500,7 @@ export function CreateOrder() {
               onCheckedChange={(checked) => handleInputChange('villageDelivery', checked as boolean)}
             />
             <Label htmlFor="villageDelivery" className="cursor-pointer">
-              التوصيل لقرية (رسوم إضافية: 15 ريال)
+              التوصيل لقرية (رسوم إضافية: 15 جنيه)
             </Label>
           </div>
         </CardContent>
@@ -528,13 +528,13 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر نوع الشحن" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className='bg-blue-50'>
                 {shippingTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div className="flex justify-between items-center w-full">
                       <span>{type.name}</span>
                       <Badge variant={type.cost > 0 ? "destructive" : type.cost < 0 ? "default" : "secondary"}>
-                        {type.cost > 0 ?`+${type.cost}` : type.cost < 0 ? type.cost : 'مجاني' } ريال
+                        {type.cost > 0 ?`+${type.cost}` : type.cost < 0 ? `type.cost `: 'مجاني' } جنيه
                       </Badge>
                     </div>
                   </SelectItem>
@@ -558,7 +558,7 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر نوع الدفع" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className='bg-blue-50'>
                 {paymentTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div>
@@ -581,7 +581,7 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر الفرع" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className='bg-blue-50'>
                 {branches.map((branch) => (
                   <SelectItem key={branch.id} value={branch.id}>
                     {branch.name}
@@ -596,7 +596,7 @@ export function CreateOrder() {
             <div className="space-y-2">
               <Label htmlFor="orderCost" className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-2" />
-                تكلفة الطلب (ريال)
+                تكلفة الطلب (جنيه)
               </Label>
               <Input
                 id="orderCost"
@@ -666,7 +666,7 @@ export function CreateOrder() {
                   إضافة منتج
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className='bg-blue-50'>
                 <DialogHeader>
                   <DialogTitle>إضافة منتج جديد</DialogTitle>
                   <DialogDescription>
@@ -781,34 +781,34 @@ export function CreateOrder() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>التكلفة الأساسية (حتى 1.0 كجم):</span>
-                <span>25 ريال</span>
+                <span>25 جنيه</span>
               </div>
               {calculateTotalWeight() > 1.0 && (
                 <div className="flex justify-between">
                   <span>تكلفة الوزن الإضافي ({(calculateTotalWeight() - 1.0).toFixed(1)} كجم):</span>
-                  <span>{((calculateTotalWeight() - 1.0) * 5).toFixed(2)} ريال</span>
+                  <span>{((calculateTotalWeight() - 1.0) * 5).toFixed(2)} جنيه</span>
                 </div>
               )}
               <div className="flex justify-between font-medium">
                 <span>إجمالي تكلفة الوزن ({calculateTotalWeight().toFixed(1)} كجم):</span>
-                <span>{Math.max(25, 25 + Math.max(0, calculateTotalWeight() - 1.0) * 5).toFixed(2)} ريال</span>
+                <span>{Math.max(25, 25 + Math.max(0, calculateTotalWeight() - 1.0) * 5).toFixed(2)} جنيه</span>
               </div>
               {formData.shippingType && (
                 <div className="flex justify-between">
                   <span>رسوم نوع الشحن:</span>
-                  <span>{shippingTypes.find(type => type.id === formData.shippingType)?.cost || 0} ريال</span>
+                  <span>{shippingTypes.find(type => type.id === formData.shippingType)?.cost || 0} جنيه</span>
                 </div>
               )}
               {formData.villageDelivery && (
                 <div className="flex justify-between">
                   <span>رسوم التوصيل للقرية:</span>
-                  <span>15 ريال</span>
+                  <span>15 جنيه</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>إجمالي تكلفة الشحن:</span>
-                <span className="text-green-700">{calculateShippingCost().toFixed(2)} ريال</span>
+                <span className="text-green-700">{calculateShippingCost().toFixed(2)} جنيه</span>
               </div>
             </div>
           </CardContent>
@@ -850,7 +850,7 @@ export function CreateOrder() {
             <li>جميع الحقول المميزة بـ (*) مطلوبة لإنشاء الطلب</li>
             <li>يجب إضافة منتج واحد على الأقل لإكمال الطلب</li>
             <li>يتم حساب إجمالي الوزن تلقائياً بناءً على المنتجات المضافة</li>
-            <li>رسوم التوصيل للقرية إضافية وتبلغ 15 ريال</li>
+            <li>رسوم التوصيل للقرية إضافية وتبلغ 15 جنيه</li>
             <li>تختلف تكلفة الشحن حسب النوع المختار</li>
           </ul>
         </CardContent>

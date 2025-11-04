@@ -18,7 +18,6 @@ import { EmployeeDashboard } from '../dashboards/EmplyeeDashboard';
 import { MerchantDashboard } from '../dashboards/MerchantDashboard';
 import { DriverDashboard } from '../dashboards/DriverDashboard';
 import Sidebar from '../Layout/Sidebar';
-import { AddUser } from "../page/AddUser";
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
@@ -60,16 +59,13 @@ const DashboardLayout: React.FC = () => {
 				return <MyOrders />;
 			case "my-deliveries":
 				return <MyDeliveries />;
-			
-
 			default:
 				return <AdminDashboard />;
 		}
 	};
 
       
-    
-
+   
 	return (
 		<div className="flex h-screen bg-gray-50" dir="rtl">
 			<Sidebar

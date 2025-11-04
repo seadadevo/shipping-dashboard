@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 const validator = require("validator");
 
@@ -70,7 +71,7 @@ const orderSchema = new mongoose.Schema(
     paymentType: {
       type: String,
       required: [true, "Payment type is required"],
-      enum: ["واجب التحصيل", "دفع مقدم", "طرد مقابل طرد"],
+      enum: ["واجبة التحصيل", "دفع مقدم", "طرد مقابل طرد"],
     },
     branch: {
       type: String,
