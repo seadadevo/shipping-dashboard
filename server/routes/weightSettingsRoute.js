@@ -1,11 +1,11 @@
-// routes/weightSettingsRoute.js
 const express = require('express');
 const router = express.Router();
 const { getWeightSettings, updateWeightSettings } = require('../controllers/weightSettingsController');
+const { protect, restrictTo } = require('../middleware/authMiddleware'); 
 
-// تحديد المسارات (Endpoints)
-router.route('/weight-settings')
-    .get(getWeightSettings)    // GET لـ /api/weight-settings
-    .put(updateWeightSettings); // PUT لـ /api/weight-settings
+
+router.route('/')
+    .get(protect, getWeightSettings) 
+    .put(protect, restrictTo('admin'), updateWeightSettings); 
 
 module.exports = router;

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './../ui/card';
 import { Button } from './../ui/button';
 import { Input } from './../ui/input';
 import { Label } from './../ui/label';
 import { Separator } from './../ui/separator';
 import { Badge } from './../ui/badge';
+import api from '../../lib/api';
 import { 
   Weight, 
   Calculator, 
@@ -16,7 +16,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Alert, AlertDescription } from './../ui/alert';
-const API_URL = 'http://localhost:5000/api/weight-settings';
+const API_URL = '/api/weight-settings';
 
 interface WeightSettings {
   defaultWeightLimit: number;  
@@ -37,18 +37,20 @@ interface WeightSettings {
   const [errors, setErrors] = useState<string[]>([]);
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(API_URL);
+     
+      const response = await api.get(API_URL); 
       const fetchedSettings: WeightSettings = response.data;
 
       setSettings(fetchedSettings);
       setTempSettings(fetchedSettings);
       
-    } catch (error) {
+    } catch (error: any) { 
       console.error("Failed to fetch weight settings:", error);
-      setErrors(['فشل جلب الإعدادات من الخادم. تأكد من عمل الـ Backend.']);
+      
+      const errorMsg = error.response?.data?.message || 'فشل جلب الإعدادات من الخادم.';
+      setErrors([errorMsg]);
     }
   };
-
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -85,16 +87,18 @@ interface WeightSettings {
     setErrors([]);
 
     try {
-      const response = await axios.put(API_URL, tempSettings);
+      
+      const response = await api.put(API_URL, tempSettings); 
       const savedSettings: WeightSettings = response.data;
       
       setSettings(savedSettings);
       setLastSaved(new Date());
 
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
     catch (error: any) {
       console.error('Save failed:', error);
+      
       const errorMsg = error.response?.data?.message || 'فشل حفظ الإعدادات في الخادم.';
       setErrors([errorMsg]);
       
@@ -122,7 +126,7 @@ interface WeightSettings {
   };
 
   const formatCurrency = (amount: number): string => {
-    return `${amount.toFixed(2)} ريال`;
+    return `${amount.toFixed(2)} جنيه`;
   };
 
   const formatDate = (date: Date): string => {
@@ -236,7 +240,7 @@ interface WeightSettings {
               <div className="space-y-2">
                 <Label htmlFor="baseCost" className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-2" />
-                  التكلفة الأساسية (ريال)
+                  التكلفة الأساسية (جنيه)
                 </Label>
                 <Input
                   id="baseCost"
@@ -270,7 +274,7 @@ interface WeightSettings {
             <div className="space-y-2">
               <Label htmlFor="additionalWeightCost" className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-2" />
-                تكلفة كل كجم إضافي (ريال)
+                تكلفة كل كجم إضافي (جنيه)
               </Label>
               <Input
                 id="additionalWeightCost"
