@@ -23,7 +23,7 @@ const badgeVariants = cva(
 
 				outline:
 					// ✅ Minimal clean look — for employee
-					"border border-gray-300 text-white dark:border-gray-700 dark:text-black",
+					"border border-gray-300 text-black dark:border-gray-700 dark:text-white",
 			},
 		},
 

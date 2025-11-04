@@ -517,7 +517,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 									className="flex items-center"
 								>
 									<DollarSign className="h-4 w-4 ml-1 text-primary" />
-									تكلفة Pickup خاصة (دولار) *
+                                    تكلفة الاستلام الخاص (جنية) *
 								</Label>
 								<Input
 									id="pickupCost"
@@ -692,7 +692,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 							<>
 								<hr className="my-3 border-orange-200" />
 								<li>
-									**تكلفة Pickup الخاصة:** ستُطبق على جميع
+									**تكلفة الاستلام الخاص:** ستُطبق على جميع
 									طلبات هذا التاجر بدلاً من التكلفة العامة.
 								</li>
 								<li>
