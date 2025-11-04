@@ -26,8 +26,7 @@ export const merchantMenuItems: MenuItem[] = [
 export const employeeMenuItems: MenuItem[] = [
   { id: 'employee-dashboard', label: 'لوحة التحكم', icon: Home },
   { id: 'order-management', label: 'إدارة الطلبات', icon: Package },
-  { id: 'create-order', label: 'إنشاء طلب جديد', icon: Plus },
-  { id: 'user-lookup', label: 'استعلام عن مستخدم', icon: Users },
+  { id: 'create-order', label: 'إنشاء طلب جديد', icon: Plus }
 ];
 
 export const driverMenuItems: MenuItem[] = [

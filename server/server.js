@@ -11,7 +11,7 @@ const weightSettingsRouter = require('./routes/weightSettingsRoute');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(cookieParser()); 
+app.use(cookieParser());
 
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
 

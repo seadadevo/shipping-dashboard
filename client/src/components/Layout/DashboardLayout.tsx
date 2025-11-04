@@ -5,21 +5,19 @@ import Header from "./Header";
 
 import AdminDashboard from "../dashboards/AdminDashboard";
 
-import { UserManagement } from "../page/UserManagement";
-import { OrderManagement } from "../page/OrderManagement";
-import { CreateOrder } from "../page/CreateOrder";
-import { BranchManagement } from "../page/BranchManagement";
-import { WeightSettings } from "../page/WeightSettings";
-import { UserGroups } from "../page/UserGroup";
-import { RegionsManagement } from "../page/RegionsManagement";
-import { MyOrders } from "../page/MyOrders";
-import { MyDeliveries } from "../page/MyDeliveries";
-import { UserLookup } from "../page/UserLookup";
-import { EmployeeDashboard } from "../dashboards/EmplyeeDashboard";
-import { MerchantDashboard } from "../dashboards/MerchantDashboard";
-import { DriverDashboard } from "../dashboards/DriverDashboard";
-import Sidebar from "../Layout/Sidebar";
-import { AddUser } from "./../page/AddUser";
+import { UserManagement } from '../page/UserManagement';
+import { OrderManagement } from '../page/OrderManagement';
+import { CreateOrder } from '../page/CreateOrder';
+import { BranchManagement } from '../page/BranchManagement';
+import { WeightSettings } from '../page/WeightSettings';
+import { UserGroups } from '../page/UserGroup';
+import { RegionsManagement } from '../page/RegionsManagement';
+import { MyOrders } from '../page/MyOrders';
+import { MyDeliveries } from '../page/MyDeliveries';
+import { EmployeeDashboard } from '../dashboards/EmplyeeDashboard';
+import { MerchantDashboard } from '../dashboards/MerchantDashboard';
+import { DriverDashboard } from '../dashboards/DriverDashboard';
+import Sidebar from '../Layout/Sidebar';
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
@@ -61,19 +59,13 @@ const DashboardLayout: React.FC = () => {
 				return <MyOrders />;
 			case "my-deliveries":
 				return <MyDeliveries />;
-			case "user-lookup":
-				return <UserLookup />;
-
 			default:
 				return <AdminDashboard />;
 		}
 	};
 
-	if (!user) {
-		logout();
-		return null;
-	}
-
+      
+   
 	return (
 		<div className="flex h-screen bg-gray-50" dir="rtl">
 			<Sidebar
