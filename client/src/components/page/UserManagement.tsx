@@ -59,8 +59,10 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 	const [viewModalOpen, setViewModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
+    const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string }>({});
 
-	const getUsers = async () => {
+
+    const getUsers = async () => {
 		const res = await api.get("api/users/");
 		setUsers(res.data);
 	};
@@ -114,7 +116,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		} else if (
 			users.some(
 				(u) =>
-					u.fullName === formData.fullName && u._id !== currentUserId
+					(u.fullName.trim() === formData.fullName.trim()) && u._id !== currentUserId
 			)
 		) {
 			errors.fullName = "الاسم موجود بالفعل";
@@ -143,6 +145,13 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 
 	const handleChange = (field: string, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
+        // Run validation for the changed field only
+        const errors = validateUserForm(
+            { ...formData, [field]: value },
+            users,
+            selectedUser?._id
+        );
+        setFormErrors(errors);
 	};
 
 	// update user
@@ -490,6 +499,9 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 								}
 								placeholder="الاسم الكامل"
 							/>
+                            {formErrors.fullName && (
+                                <p className="text-red-500 text-sm mt-1">{formErrors.fullName}</p>
+                            )}
 							<Input
 								value={formData.email}
 								onChange={(e) =>
@@ -497,6 +509,9 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 								}
 								placeholder="البريد الإلكتروني"
 							/>
+                            {formErrors.email && (
+                                <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>
+                            )}
 							<Button
 								onClick={() => updateUser?.(selectedUser._id)}
 								className="bg-blue-600 hover:bg-blue-700 text-white w-full"
