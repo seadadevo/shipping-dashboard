@@ -47,19 +47,29 @@ import {
   Loader2,
   MoreHorizontal,
   Eye,
+  Trash2, // إضافة أيقونة الحذف
 } from "lucide-react";
 import api from "../../lib/api";
 import type { ApiError, GetOrdersResponse, Order } from "../../types";
+
+// (تصليح): دي الـ imports الصح من مكتبة shadcn/ui
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
   DropdownMenuTrigger,
-} from "@radix-ui/react-dropdown-menu";
+} from "../ui/dropdown-menu";
 
+// (إضافة): جلب اليوزر الحالي عشان نعرف صلاحياته
+import { useAuth } from "../../hooks/useAuth";
 
-
+// (تصليح): بنعرف الـ labels هنا عشان نستخدمها في كذا مكان
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
@@ -69,6 +79,7 @@ const statusLabels: Record<string, string> = {
   all: "جميع الحالات",
 };
 
+// (تصليح): الـ value بالإنجليزي (زي الـ API) والـ label بالعربي (لليوزر)
 const statusOptions = [
   { value: "all", label: "جميع الحالات" },
   { value: "Pending", label: statusLabels.Pending },
@@ -86,6 +97,14 @@ export function OrderManagement() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // --- (إضافة States جديدة) ---
+  const { user } = useAuth(); // اليوزر الحالي
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null); // الطلب اللي هيتحذف
+  const [isDeleting, setIsDeleting] = useState(false); // مؤشر لـ loading الحذف
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null); // مؤشر لـ loading تعديل الحالة
+  // --- (نهاية الإضافة) ---
+
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
@@ -122,23 +141,22 @@ export function OrderManagement() {
   };
 
   const getStatusColor = (status: string) => {
-  switch (status) {
-    case "Delivered":
-      return "bg-green-100 text-green-800";
-    case "Shipped":
-      return "bg-blue-100 text-blue-800";
-    case "Processing":
-      return "bg-yellow-100 text-yellow-800";
-    case "Pending":
-      return "bg-orange-100 text-orange-800";
-    case "Cancelled":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-};
+    switch (status) {
+      case "Delivered":
+        return "bg-green-100 text-green-800";
+      case "Shipped":
+        return "bg-blue-100 text-blue-800";
+      case "Processing":
+        return "bg-yellow-100 text-yellow-800";
+      case "Pending":
+        return "bg-orange-100 text-orange-800";
+      case "Cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
-  // --- (تعديل) فلترة البحث ---
   const filteredOrders = allOrders.filter((order) => {
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch =
@@ -153,7 +171,6 @@ export function OrderManagement() {
     return matchesSearch && matchesStatus;
   });
 
-  // --- (تعديل) إحصائيات الحالات ---
   const statusCounts = {
     Pending: allOrders.filter((o) => o.status === "Pending").length,
     Processing: allOrders.filter((o) => o.status === "Processing").length,
@@ -163,12 +180,45 @@ export function OrderManagement() {
   };
 
   const handleViewOrder = (order: Order) => {
-    // (تعديل)
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
   };
 
- 
+  // --- (دوال جديدة للحذف وتعديل الحالة) ---
+  const handleDeleteClick = (order: Order) => {
+    setError(null);
+    setOrderToDelete(order);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!orderToDelete) return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await api.delete(`/api/orders/${orderToDelete._id}`);
+      setOrderToDelete(null); // إغلاق الـ Dialog
+      fetchOrders(); // تحديث قائمة الطلبات
+    } catch (err) {
+      const error = err as ApiError;
+      setError(error.response?.data?.message || "فشل في حذف الطلب.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    setIsUpdatingStatus(orderId);
+    try {
+      await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
+      fetchOrders(); // تحديث القائمة
+    } catch (err) {
+      console.error("Failed to update status", err);
+      // ممكن نضيف toast error هنا
+    } finally {
+      setIsUpdatingStatus(null);
+    }
+  };
+  // --- (نهاية الدوال الجديدة) ---
 
   return (
     <div className="space-y-6">
@@ -179,19 +229,24 @@ export function OrderManagement() {
             عرض وإدارة جميع طلبات الشحن في النظام
           </p>
         </div>
-        <div className="flex space-x-2 space-x-reverse">
-          <Button variant="outline">
+        <div className="flex space-x-3 space-x-reverse">
+          <Button variant="outline" className="ml-2">
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          <Button variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          {/* (تعديل): زر التحديث بقى شغال */}
+          <Button variant="outline" onClick={fetchOrders} disabled={loading}>
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
             تحديث
           </Button>
         </div>
       </div>
 
-      {/* إحصائيات سريعة */}
+      {/* ... (الإحصائيات السريعة زي ما هي) ... */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
@@ -254,7 +309,7 @@ export function OrderManagement() {
         <CardContent>
           {/* أدوات البحث والتصفية */}
           <div className="flex items-center space-x-4 space-x-reverse mb-4">
-            <div className="relative flex-1 max-w-sm">
+            <div className="relative flex-1 max-w-sm ml-2">
               <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="البحث في الطلبات..."
@@ -268,7 +323,7 @@ export function OrderManagement() {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-blue-50">
                 {statusOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -276,11 +331,6 @@ export function OrderManagement() {
                 ))}
               </SelectContent>
             </Select>
-
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              تصفية متقدمة
-            </Button>
           </div>
 
           {/* الجدول */}
@@ -320,7 +370,7 @@ export function OrderManagement() {
                     <TableRow key={order._id}>
                       <TableCell className="font-medium">
                         <div>
-                          <p>{order._id.slice(-8)}</p> {/* عرض جزء من الـ ID */}
+                          <p>{order._id.slice(-8)}</p>
                           <p className="text-xs text-muted-foreground">
                             {order.orderType}
                           </p>
@@ -361,7 +411,10 @@ export function OrderManagement() {
                           )} flex items-center w-fit`}
                         >
                           {getStatusIcon(order.status)}
-                          <span className="mr-1">{statusLabels[order.status] || order.status}</span>
+                          {/* (تعديل): بنعرض الاسم العربي */}
+                          <span className="mr-1">
+                            {statusLabels[order.status] || order.status}
+                          </span>
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
@@ -371,23 +424,73 @@ export function OrderManagement() {
                         {new Date(order.createdAt).toLocaleDateString("ar-EG")}
                       </TableCell>
                       <TableCell>
-                        {/* ... (DropdownMenu زي ما هي بس onViewClick اتعدلت) ... */}
+                        {/* --- (تعديل القائمة المنسدلة) --- */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-white dark:bg-gray-900 border p-3 border-gray-200 shadow-lg rounded-lg flex items-end flex-col">
+                          <DropdownMenuContent className="bg-blue-50" align="end">
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                             <DropdownMenuItem
-                              className="mb-2 cursor-pointer flex items-center space-x-1.5"
                               onClick={() => handleViewOrder(order)}
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               عرض التفاصيل
                             </DropdownMenuItem>
-                            {/* ... (باقي إجراءات تعديل الحالة) ... */}
+
+                            {/* قائمة تعديل الحالة */}
+                            <DropdownMenuSub >
+                              <DropdownMenuSubTrigger
+                                disabled={isUpdatingStatus === order._id}
+                              >
+                                {isUpdatingStatus === order._id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="mr-2 h-4 w-4" />
+                                )}
+                                تغيير الحالة
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                <DropdownMenuSubContent className="bg-blue-50">
+                                  {statusOptions
+                                    .filter((s) => s.value !== "all")
+                                    .map((status) => (
+                                      <DropdownMenuItem
+                                        key={status.value}
+                                        onClick={() =>
+                                          handleStatusChange(
+                                            order._id,
+                                            status.value
+                                          )
+                                        }
+                                        disabled={
+                                          order.status === status.value ||
+                                          !!isUpdatingStatus
+                                        }
+                                      >
+                                        {status.label}
+                                      </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                            </DropdownMenuSub>
+
+                            {/* زر الحذف (للأدمن فقط) */}
+                            {user?.userType === "employee" && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => handleDeleteClick(order)}
+                                  disabled={isDeleting}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  حذف الطلب
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -408,27 +511,21 @@ export function OrderManagement() {
           </div>
         </CardContent>
       </Card>
-      {/* نافذة عرض تفاصيل الطلب */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="
-    max-w-4xl 
-    bg-white dark:bg-gray-900  /* خلفية صلبة حسب الثيم */
-    text-gray-900 dark:text-gray-100 
-    border border-gray-200 dark:border-gray-800 
-    shadow-2xl rounded-xl 
-  "
->
+
+      {/* ... (نافذة عرض تفاصيل الطلب زي ما هي) ... */}
+      <Dialog  open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className=" bg-blue-50 max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle>
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
-            <DialogDescription className="text-gray-500 dark:text-gray-400">
+            <DialogDescription>
               عرض جميع تفاصيل الطلب والحالة الحالية
             </DialogDescription>
           </DialogHeader>
 
           {selectedOrder && (
-           <div className="space-y-6 max-h-[70vh] overflow-y-auto p-2">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto p-2">
               {/* معلومات أساسية */}
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
@@ -534,7 +631,8 @@ export function OrderManagement() {
                         selectedOrder.status
                       )} text-base p-2`}
                     >
-                      {statusLabels[selectedOrder.status] || selectedOrder.status}
+                      {statusLabels[selectedOrder.status] ||
+                        selectedOrder.status}
                     </Badge>
                     <p>
                       <strong>أنشئ بواسطة:</strong>{" "}
@@ -588,6 +686,47 @@ export function OrderManagement() {
               </Card>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* --- (إضافة نافذة تأكيد الحذف) --- */}
+      <Dialog
+        open={!!orderToDelete}
+        onOpenChange={(isOpen) => !isOpen && setOrderToDelete(null)}
+      >
+        <DialogContent className="bg-blue-50">
+          <DialogHeader>
+            <DialogTitle>تأكيد الحذف</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد أنك تريد حذف الطلب رقم #
+              {orderToDelete?._id.slice(-8)}؟
+              <br />
+              لا يمكن التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end space-x-2 space-x-reverse pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setOrderToDelete(null)}
+              disabled={isDeleting}
+            >
+              إلغاء
+            </Button>
+            <Button
+            className="text-[red] ml-1 border-2"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              تأكيد الحذف
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

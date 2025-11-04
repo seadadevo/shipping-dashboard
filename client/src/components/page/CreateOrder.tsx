@@ -329,7 +329,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder="اختر نوع الطلب" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-blue-50'>
                   {orderTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
@@ -432,7 +432,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder="اختر المحافظة" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-blue-50'>
                   {governorates.map((governorate) => (
                     <SelectItem key={governorate.id} value={governorate.id}>
                       {governorate.name}
@@ -455,7 +455,7 @@ export function CreateOrder() {
                 <SelectTrigger>
                   <SelectValue placeholder={selectedGovernorate ? "اختر المدينة" : "اختر المحافظة أولاً"} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-blue-50'>
                   {availableCities.map((city, index) => (
                     <SelectItem key={index} value={city}>
                       {city}
@@ -528,7 +528,7 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر نوع الشحن" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className='bg-blue-50'>
                 {shippingTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div className="flex justify-between items-center w-full">
@@ -558,7 +558,7 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر نوع الدفع" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className='bg-blue-50'>
                 {paymentTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div>
@@ -581,7 +581,7 @@ export function CreateOrder() {
               <SelectTrigger>
                 <SelectValue placeholder="اختر الفرع" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className='bg-blue-50'>
                 {branches.map((branch) => (
                   <SelectItem key={branch.id} value={branch.id}>
                     {branch.name}
@@ -666,7 +666,7 @@ export function CreateOrder() {
                   إضافة منتج
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className='bg-blue-50'>
                 <DialogHeader>
                   <DialogTitle>إضافة منتج جديد</DialogTitle>
                   <DialogDescription>

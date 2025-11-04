@@ -161,3 +161,57 @@ exports.searchOrders = async (req, res) => {
       });
   }
 };
+
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // نتأكد إن الحالة موجودة ومطابقة للـ Enum
+    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status provided" });
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      { status: status }, // هنعدل الحالة فقط
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        order: updatedOrder,
+      },
+    });
+  } catch (error) {
+    console.error("!!! UPDATE STATUS CRASHED !!!", error);
+    res.status(500).json({ message: "Server error while updating status" });
+  }
+};
+
+// 6. حذف الطلب
+exports.deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedOrder = await Order.findByIdAndDelete(id);
+
+    if (!deletedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // بنرجع 200 ورسالة (أفضل من 204 عشان الفرونت يعرف إنها نجحت)
+    res.status(200).json({
+      status: "success",
+      message: "Order deleted successfully",
+    });
+  } catch (error) {
+    console.error("!!! DELETE ORDER CRASHED !!!", error);
+    res.status(500).json({ message: "Server error while deleting order" });
+  }
+};
