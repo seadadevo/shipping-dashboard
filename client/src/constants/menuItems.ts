@@ -9,7 +9,6 @@ export const adminMenuItems: MenuItem[] = [
   { id: 'admin-dashboard', label: 'لوحة التحكم', icon: Home },
   { id: 'order-management', label: 'إدارة الطلبات', icon: Package },
   { id: 'user-management', label: 'إدارة المستخدمين', icon: Users },
-  { id: 'branch-management', label: 'إدارة الفروع', icon: Building },
   { id: 'weight-settings', label: 'إعدادات الوزن والتكلفة', icon: Weight },
   { id: 'user-groups', label: 'المجموعات والأذونات', icon: Shield },
   { id: 'regions-management', label: 'إدارة المناطق', icon: MapPin },
