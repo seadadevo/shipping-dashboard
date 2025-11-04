@@ -517,7 +517,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 									className="flex items-center"
 								>
 									<DollarSign className="h-4 w-4 ml-1 text-primary" />
-									تكلفة Pickup خاصة (دولار) *
+									تكلفة Pickup خاصة (جنيه) *
 								</Label>
 								<Input
 									id="pickupCost"
