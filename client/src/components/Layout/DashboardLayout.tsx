@@ -8,7 +8,6 @@ import AdminDashboard from "../dashboards/AdminDashboard";
 import { UserManagement } from '../page/UserManagement';
 import { OrderManagement } from '../page/OrderManagement';
 import { CreateOrder } from '../page/CreateOrder';
-import { BranchManagement } from '../page/BranchManagement';
 import { WeightSettings } from '../page/WeightSettings';
 import { UserGroups } from '../page/UserGroup';
 import { RegionsManagement } from '../page/RegionsManagement';
@@ -43,8 +42,7 @@ const DashboardLayout: React.FC = () => {
 				return <OrderManagement />;
 			case "create-order":
 				return <CreateOrder />;
-			case "branch-management":
-				return <BranchManagement />;
+			
 			case "weight-settings":
 				return <WeightSettings />;
 			case "user-groups":

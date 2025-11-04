@@ -7,6 +7,9 @@ const connectDB = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 const weightSettingsRouter = require("./routes/weightSettingsRoute");
+const orderRoutes = require("./routes/orderRoutes"); 
+const locationRoutes = require("./routes/locationRoutes");
+
 
 const app = express();
 
@@ -20,6 +23,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/v1/auth", authRoutes);
 
 app.use("/api/weight-settings", weightSettingsRouter);
+app.use("/api/orders", orderRoutes);
+app.use("/api/locations", locationRoutes);  
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
