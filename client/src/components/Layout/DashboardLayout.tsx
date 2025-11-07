@@ -11,7 +11,6 @@ import { CreateOrder } from '../page/CreateOrder';
 import { WeightSettings } from '../page/WeightSettings';
 import { UserGroups } from '../page/UserGroup';
 import { RegionsManagement } from '../page/RegionsManagement';
-import { MyOrders } from '../page/MyOrders';
 import { MyDeliveries } from '../page/MyDeliveries';
 import { EmployeeDashboard } from '../dashboards/EmplyeeDashboard';
 import { MerchantDashboard } from '../dashboards/MerchantDashboard';
@@ -54,7 +53,7 @@ const DashboardLayout: React.FC = () => {
 					<AddUser onBack={() => setCurrentPage("user-management")} />
 				);
 			case "my-orders":
-				return <MyOrders />;
+				return <OrderManagement />;
 			case "my-deliveries":
 				return <MyDeliveries />;
 			default:
