@@ -66,7 +66,7 @@ const orderSchema = new mongoose.Schema(
     shippingType: {
       type: String,
       required: [true, "Shipping type is required"],
-      enum: ["عادي", "شحن في خلال 24 ساعة", "شحن خلال 15 يوم"],
+      enum: ["عادي", "شحن في 24 ساعة", "شحن خلال 15 يوم"],
     },
     paymentType: {
       type: String,
