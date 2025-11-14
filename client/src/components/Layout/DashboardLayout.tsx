@@ -16,6 +16,7 @@ import { EmployeeDashboard } from '../dashboards/EmplyeeDashboard';
 import { MerchantDashboard } from '../dashboards/MerchantDashboard';
 import { DriverDashboard } from '../dashboards/DriverDashboard';
 import Sidebar from '../Layout/Sidebar';
+import { AddUser } from "../page/AddUser";
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
