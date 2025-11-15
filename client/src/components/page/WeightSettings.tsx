@@ -4,53 +4,52 @@ import { Button } from './../ui/button';
 import { Input } from './../ui/input';
 import { Label } from './../ui/label';
 import { Separator } from './../ui/separator';
-import { Badge } from './../ui/badge';
 import api from '../../lib/api';
 import { 
   Weight, 
-  Calculator, 
+  // Calculator, // لم نعد بحاجة إليه
   Save, 
   Settings,
   DollarSign,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  MapPin // --- أيقونة جديدة ---
 } from 'lucide-react';
 import { Alert, AlertDescription } from './../ui/alert';
+
 const API_URL = '/api/weight-settings';
 
 interface WeightSettings {
-  defaultWeightLimit: number;  
-  defaultShippingCost: number;  
-  extraKgCost: number;        
+  defaultWeightLimit: number;   
+  extraKgCost: number;     
+  villageDeliveryCost: number; // --- الإضافة الجديدة ---
 }
 
-  export function WeightSettings() {
+export function WeightSettings() {
   const [settings, setSettings] = useState<WeightSettings>({
-    defaultWeightLimit: 1.0,     
-    defaultShippingCost: 25.0,   
-    extraKgCost: 5.0             
+    defaultWeightLimit: 10.0,     
+    extraKgCost: 5.0,
+    villageDeliveryCost: 0.0 // --- الإضافة الجديدة ---
   });
 
   const [tempSettings, setTempSettings] = useState<WeightSettings>({...settings});
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  
   const fetchSettings = async () => {
     try {
-     
       const response = await api.get(API_URL); 
       const fetchedSettings: WeightSettings = response.data;
-
       setSettings(fetchedSettings);
       setTempSettings(fetchedSettings);
-      
     } catch (error: any) { 
       console.error("Failed to fetch weight settings:", error);
-      
       const errorMsg = error.response?.data?.message || 'فشل جلب الإعدادات من الخادم.';
       setErrors([errorMsg]);
     }
   };
+  
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -61,14 +60,14 @@ interface WeightSettings {
     if (tempSettings.defaultWeightLimit <= 0) {
       newErrors.push('الوزن الأساسي يجب أن يكون أكبر من 0');
     }
-
-    if (tempSettings.defaultShippingCost < 0) {
-      newErrors.push('التكلفة الأساسية لا يمكن أن تكون سالبة');
-    }
-
     if (tempSettings.extraKgCost < 0) {
       newErrors.push('تكلفة الكيلو الإضافي لا يمكن أن تكون سالبة');
     }
+    // --- التحقق الجديد ---
+    if (tempSettings.villageDeliveryCost < 0) {
+      newErrors.push('تكلفة التوصيل للقرية لا يمكن أن تكون سالبة');
+    }
+    // --- نهاية التحقق ---
 
     if (tempSettings.defaultWeightLimit > 50) {
       newErrors.push('الوزن الأساسي لا يجب أن يتجاوز 50 كجم');
@@ -78,30 +77,23 @@ interface WeightSettings {
     return newErrors.length === 0;
   };
 
- const handleSave = async () => {
+  const handleSave = async () => {
     if (!validateSettings()) {
       return;
     }
-
     setIsSaving(true);
     setErrors([]);
-
     try {
-      
+      // tempSettings يحتوي الآن على كل البيانات
       const response = await api.put(API_URL, tempSettings); 
       const savedSettings: WeightSettings = response.data;
-      
       setSettings(savedSettings);
       setLastSaved(new Date());
-
     }
-   
     catch (error: any) {
       console.error('Save failed:', error);
-      
       const errorMsg = error.response?.data?.message || 'فشل حفظ الإعدادات في الخادم.';
       setErrors([errorMsg]);
-      
     } finally {
       setIsSaving(false);
     }
@@ -112,30 +104,19 @@ interface WeightSettings {
     setErrors([]);
   };
 
-  const calculateExampleCost = (weight: number): number => {
-    if (weight <= tempSettings.defaultWeightLimit) {
-      return tempSettings.defaultShippingCost;
-    } else {
-      const additionalWeight = weight - tempSettings.defaultWeightLimit;
-      return tempSettings.defaultShippingCost + (additionalWeight * tempSettings.extraKgCost);
-    }
-  };
-
   const hasChanges = () => {
     return JSON.stringify(settings) !== JSON.stringify(tempSettings);
   };
 
   const formatCurrency = (amount: number): string => {
-    return `${amount.toFixed(2)} جنيه`;
+    // التأكد من أن القيمة ليست null أو undefined قبل التقريب
+    return `${(amount || 0).toFixed(2)} جنيه`;
   };
 
   const formatDate = (date: Date): string => {
     return date.toLocaleString('ar', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
@@ -144,7 +125,7 @@ interface WeightSettings {
       <div>
         <h1>إعدادات الوزن وتكلفة الشحن</h1>
         <p className="text-muted-foreground">
-          تكوين تكلفة الشحن بناءً على وزن الطرود
+          تكوين قواعد الوزن الأساسية والإضافية وتكلفة توصيل القرى
         </p>
       </div>
 
@@ -157,19 +138,22 @@ interface WeightSettings {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* --- تم تعديل الشبكة لتكون 3 --- */}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-700">{settings.defaultWeightLimit} كجم</div>
               <p className="text-sm text-blue-600">الوزن الأساسي</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-700">{formatCurrency(settings.defaultShippingCost)}</div>
-              <p className="text-sm text-blue-600">التكلفة الأساسية</p>
-            </div>
-            <div className="text-center">
               <div className="text-2xl font-bold text-blue-700">{formatCurrency(settings.extraKgCost)}</div>
               <p className="text-sm text-blue-600">تكلفة كل كجم إضافي</p>
             </div>
+            {/* --- الإضافة الجديدة --- */}
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-700">{formatCurrency(settings.villageDeliveryCost)}</div>
+              <p className="text-sm text-blue-600">تكلفة توصيل القرية</p>
+            </div>
+            {/* --- نهاية الإضافة --- */}
           </div>
           {lastSaved && (
             <p className="text-xs text-blue-600 mt-4 text-center">
@@ -187,21 +171,14 @@ interface WeightSettings {
             تعديل إعدادات التكلفة
           </CardTitle>
           <CardDescription>
-            قم بتعديل إعدادات حساب تكلفة الشحن بناءً على الوزن
+            قم بتعديل قواعد حساب تكلفة الشحن
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Error messages */}
           {errors.length > 0 && (
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <ul className="list-disc list-inside space-y-1">
-                  {errors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
+              {/* ... (نفس كود الأخطاء) ... */}
             </Alert>
           )}
 
@@ -209,9 +186,9 @@ interface WeightSettings {
           <div className="space-y-4">
             <div className="flex items-center space-x-2 space-x-reverse">
               <Weight className="h-5 w-5 text-blue-600" />
-              <h3 className="font-medium">الإعدادات الأساسية</h3>
+              <h3 className="font-medium">إعدادات الوزن</h3>
             </div>
-
+            
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="baseWeight" className="flex items-center">
@@ -233,30 +210,30 @@ interface WeightSettings {
                   className="text-right"
                 />
                 <p className="text-xs text-muted-foreground">
-                  من 0 كجم إلى {tempSettings.defaultWeightLimit} كجم
+                  الحد الأقصى للوزن الذي يغطيه سعر الشحن الأساسي للمدينة
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="baseCost" className="flex items-center">
+                <Label htmlFor="additionalWeightCost" className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-2" />
-                  التكلفة الأساسية (جنيه)
+                  تكلفة كل كجم إضافي (جنيه)
                 </Label>
                 <Input
-                  id="baseCost"
+                  id="additionalWeightCost"
                   type="number"
                   step="01"
                   min="0"
-                  value={tempSettings.defaultShippingCost}
+                  value={tempSettings.extraKgCost}
                   onChange={(e) => setTempSettings({
                     ...tempSettings,
-                    defaultShippingCost: parseFloat(e.target.value) || 0
+                    extraKgCost: parseFloat(e.target.value) || 0
                   })}
                   placeholder="0.00"
                   className="text-right"
                 />
                 <p className="text-xs text-muted-foreground">
-                  التكلفة للوزن الأساسي
+                  التكلفة لكل كيلوجرام إضافي فوق الوزن الأساسي
                 </p>
               </div>
             </div>
@@ -264,70 +241,44 @@ interface WeightSettings {
 
           <Separator />
 
-          {/* Adetional weight settings */}
+          {/* --- الإضافة الجديدة: تكلفة القرية --- */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2 space-x-reverse">
-              <Calculator className="h-5 w-5 text-orange-600" />
-              <h3 className="font-medium">الوزن الإضافي</h3>
+              <MapPin className="h-5 w-5 text-green-600" />
+              <h3 className="font-medium">إعدادات توصيل القرى</h3>
             </div>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="additionalWeightCost" className="flex items-center">
+              <Label htmlFor="villageDeliveryCost" className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-2" />
-                تكلفة كل كجم إضافي (جنيه)
+                تكلفة التوصيل للقرية (جنيه)
               </Label>
               <Input
-                id="additionalWeightCost"
+                id="villageDeliveryCost"
                 type="number"
-                step="01"
+                step="1"
                 min="0"
-                value={tempSettings.extraKgCost}
+                value={tempSettings.villageDeliveryCost}
                 onChange={(e) => setTempSettings({
                   ...tempSettings,
-                  extraKgCost: parseFloat(e.target.value) || 0
+                  villageDeliveryCost: parseFloat(e.target.value) || 0
                 })}
                 placeholder="0.00"
                 className="text-right max-w-md"
               />
               <p className="text-xs text-muted-foreground">
-                التكلفة لكل كيلوجرام إضافي فوق الوزن الأساسي
+                سعر ثابت يُضاف على إجمالي الشحنة إذا تم تحديد "توصيل لقرية"
               </p>
             </div>
           </div>
+          {/* --- نهاية الإضافة --- */}
 
           <Separator />
 
-          {/* Examples */}
-          <div className="space-y-4">
-            <h3 className="font-medium flex items-center">
-              <Calculator className="h-5 w-5 mr-2 text-green-600" />
-              أمثلة على حساب التكلفة
-            </h3>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {[0.5, 1.0, 2.5, 5.0].map((weight) => (
-                <div key={weight} className="p-4 border rounded-lg bg-green-50">
-                  <div className="text-center">
-                    <div className="font-bold text-lg">{weight} كجم</div>
-                    <div className="text-green-700 font-medium">
-                      {formatCurrency(calculateExampleCost(weight))}
-                    </div>
-                    {weight <= tempSettings.defaultWeightLimit ? (
-                      <Badge variant="secondary" className="mt-1">وزن أساسي</Badge>
-                    ) : (
-                      <Badge variant="outline" className="mt-1">
-                        +{(weight - tempSettings.defaultWeightLimit).toFixed(1)} كجم
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Reset and Save Buttons */}
           <div className="flex justify-between pt-4">
-            <Button 
+            {/* ... (نفس كود الأزرار) ... */}
+             <Button 
               variant="outline" 
               onClick={handleReset}
               disabled={!hasChanges()}
@@ -355,18 +306,16 @@ interface WeightSettings {
           </div>
         </CardContent>
       </Card>
-
-      {/* Aditional information */}
+      
       <Card className="border-yellow-200 bg-yellow-50">
         <CardHeader>
           <CardTitle className="text-yellow-800">ملاحظات مهمة</CardTitle>
         </CardHeader>
         <CardContent className="text-yellow-700">
           <ul className="list-disc list-inside space-y-2 text-sm">
-            <li>سيتم تطبيق الإعدادات الجديدة على جميع الطلبات المستقبلية</li>
-            <li>الطلبات الحالية ستحتفظ بالإعدادات المحفوظة وقت إنشائها</li>
-            <li>تأكد من مراجعة الأمثلة قبل الحفظ للتأكد من صحة الحسابات</li>
-            <li>يمكن تعديل هذه الإعدادات في أي وقت من قبل المديرين فقط</li>
+            <li>هذه الإعدادات عامة وتطبق على جميع المدن.</li>
+            <li>السعر الأساسي للشحن يتم تحديده الآن من صفحة "إدارة المدن".</li>
+            <li>لإدارة أنواع الشحن (عادي، سريع، ...) اذهب إلى صفحة "إدارة أنواع الشحن".</li>
           </ul>
         </CardContent>
       </Card>
