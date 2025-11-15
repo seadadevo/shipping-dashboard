@@ -1,26 +1,28 @@
 const mongoose = require('mongoose');
 
 const WeightSettingSchema = new mongoose.Schema({
-    // تكلفة الشحن الافتراضية (مثلاً: 50 جنيهًا)
-    defaultShippingCost: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    // الوزن الأقصى المشمول بالتكلفة الافتراضية (مثلاً: 10 كجم)
+    // الوزن الأقصى المشمول بالتكلفة الافتراضية
     defaultWeightLimit: {
         type: Number,
         required: true,
         min: 0,
         default: 10 
     },
-    // سعر كل كيلو جرام إضافي بعد الوزن الافتراضي (مثلاً: 5 جنيهات)
+    // سعر كل كيلو جرام إضافي
     extraKgCost: {
         type: Number,
         required: true,
         min: 0
     },
-    // لحفظ تاريخ ووقت آخر تعديل
+    // --- الإضافة الجديدة ---
+    // سعر التوصيل للقرى (سعر ثابت)
+    villageDeliveryCost: {
+        type: Number,
+        required: true,
+        min: 0,
+        default: 0 // (نبدأ بصفر)
+    },
+    // --- نهاية الإضافة ---
     updatedAt: {
         type: Date,
         default: Date.now

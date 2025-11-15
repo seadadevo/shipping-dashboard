@@ -1,5 +1,5 @@
 import { 
-  Home, Users, Package, Building, Weight, Shield, 
+  Home, Users, Package, Weight, Shield, 
   MapPin, Plus, Truck 
 } from 'lucide-react';
 import type { MenuItem } from '../types';
@@ -12,6 +12,11 @@ export const adminMenuItems: MenuItem[] = [
   { id: 'weight-settings', label: 'إعدادات الوزن والتكلفة', icon: Weight },
   { id: 'user-groups', label: 'المجموعات والأذونات', icon: Shield },
   { id: 'regions-management', label: 'إدارة المناطق', icon: MapPin },
+  {
+  id: 'shipping-types',
+  label: 'إدارة أنواع الشحن',
+  icon: Truck, 
+},
 ];
 
 

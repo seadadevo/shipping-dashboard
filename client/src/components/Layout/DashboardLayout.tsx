@@ -17,6 +17,7 @@ import { MerchantDashboard } from '../dashboards/MerchantDashboard';
 import { DriverDashboard } from '../dashboards/DriverDashboard';
 import Sidebar from '../Layout/Sidebar';
 import { AddUser } from "../page/AddUser";
+import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
@@ -57,6 +58,8 @@ const DashboardLayout: React.FC = () => {
 				return <OrderManagement />;
 			case "my-deliveries":
 				return <MyDeliveries />;
+			case "shipping-types":
+				return <ShippingTypeManagement />;
 			default:
 				return <AdminDashboard />;
 		}
