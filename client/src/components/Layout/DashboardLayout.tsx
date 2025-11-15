@@ -57,6 +57,8 @@ const DashboardLayout: React.FC = () => {
 				return <MyOrders />;
 			case "my-deliveries":
 				return <MyDeliveries />;
+			case "shipping-types":
+				return <ShippingTypeManagement />;
 			default:
 				return <AdminDashboard />;
 		}

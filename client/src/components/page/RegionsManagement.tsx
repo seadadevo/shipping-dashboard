@@ -460,7 +460,7 @@ export function RegionsManagement() {
                       إضافة محافظة
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="bg-blue-50">
                     <DialogHeader>
                       <DialogTitle>{isEditMode ? 'تعديل محافظة' : 'إضافة محافظة جديدة'}</DialogTitle>
                       <DialogDescription>
@@ -613,7 +613,7 @@ export function RegionsManagement() {
                        إضافة مدينة
                      </Button>
                    </DialogTrigger>
-                   <DialogContent>
+                   <DialogContent className="bg-blue-50">
                      <DialogHeader>
                        <DialogTitle>{isEditMode ? 'تعديل مدينة' : 'إضافة مدينة جديدة'}</DialogTitle>
                        <DialogDescription>
@@ -644,6 +644,7 @@ export function RegionsManagement() {
                            <div className="space-y-2">
                              <Label htmlFor="cityGovernorate">المحافظة</Label>
                              <Select
+                             
                                value={newCityGovernorate}
                                onValueChange={setNewCityGovernorate}
                                dir="rtl"
@@ -652,7 +653,7 @@ export function RegionsManagement() {
                                <SelectTrigger>
                                  <SelectValue placeholder="اختر المحافظة" />
                                </SelectTrigger>
-                               <SelectContent>
+                               <SelectContent className="bg-blue-50">
                                  {/* Show only active governorates when adding/editing */}
                                  {governorates.filter(g => g.isActive || g._id === newCityGovernorate).map((gov) => (
                                    <SelectItem key={gov._id} value={gov._id}>
@@ -711,10 +712,10 @@ export function RegionsManagement() {
                     onValueChange={(value) => setSelectedGovernorate(value === 'all' ? '' : value)}
                     dir="rtl"
                   >
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger className="w-48 ml-2">
                       <SelectValue placeholder="تصفية بالمحافظة" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-blue-50">
                       <SelectItem value="all">كل المحافظات</SelectItem>
                       {governorates.map((gov) => (
                         <SelectItem key={gov._id} value={gov._id}>
