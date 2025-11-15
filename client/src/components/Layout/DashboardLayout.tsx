@@ -16,8 +16,7 @@ import { EmployeeDashboard } from '../dashboards/EmplyeeDashboard';
 import { MerchantDashboard } from '../dashboards/MerchantDashboard';
 import { DriverDashboard } from '../dashboards/DriverDashboard';
 import Sidebar from '../Layout/Sidebar';
-import { AddUser } from "../page/AddUser";
-import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
+import { MyOrders } from "../page/MyOrders";
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
@@ -55,7 +54,7 @@ const DashboardLayout: React.FC = () => {
 					<AddUser onBack={() => setCurrentPage("user-management")} />
 				);
 			case "my-orders":
-				return <OrderManagement />;
+				return <MyOrders />;
 			case "my-deliveries":
 				return <MyDeliveries />;
 			case "shipping-types":

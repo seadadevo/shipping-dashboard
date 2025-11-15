@@ -215,3 +215,49 @@ exports.deleteOrder = async (req, res) => {
     res.status(500).json({ message: "Server error while deleting order" });
   }
 };
+
+
+exports.getMyOrders = async (req, res) => {
+  try {
+    // 1. هنجيب ID التاجر اللي عامل لوج إن
+    const creatorId = req.user._id;
+
+    // 2. هنجيب فلاتر البحث والحالة (لو موجودة)
+    const { status, q } = req.query;
+
+    // 3. بناء الـ query الأساسي
+    const query = {
+      createdBy: creatorId,
+    };
+
+    // 4. إضافة فلتر الحالة
+    if (status && status !== "all") {
+      query.status = status;
+    }
+
+    // 5. إضافة فلتر البحث
+    if (q) {
+      const searchRegex = new RegExp(q, "i");
+      query.$or = [
+        { customerName: searchRegex },
+        { customerPhone1: searchRegex },
+      ];
+    }
+
+    // 6. تنفيذ البحث
+    const orders = await Order.find(query)
+      .populate("createdBy", "fullName userType")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      status: "success",
+      results: orders.length,
+      data: {
+        orders,
+      },
+    });
+  } catch (error) {
+    console.error("!!! GET MY ORDERS CRASHED !!!", error);
+    res.status(500).json({ message: "Server error while fetching my orders" });
+  }
+};
