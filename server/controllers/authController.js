@@ -54,6 +54,7 @@ exports.login = async (req, res) => {
 
     sendToken(user, 200, res);
   } catch (error) {
+    console.error("!!! LOGIN CRASHED !!!", error)
     res.status(500).json({ message: "Server error during login" });
   }
 };
