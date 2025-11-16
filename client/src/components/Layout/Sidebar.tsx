@@ -7,7 +7,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
 
   const menuItems = getMenuItemsByRole(userRole);
 
-
   const getRoleName = (role: User['userType']): string => {
     const roleNames: Record<User['userType'], string> = {
       admin: 'مدير النظام',
@@ -19,8 +18,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
   };
 
   return (
-    <div className="bg-white w-64 shadow-lg border-l border-gray-200 flex flex-col h-full">
-     
+    <div className="bg-white w-64 flex flex-col h-full">
+
+      {/* logo / system title */}
       <div className="p-6">
         <div className="flex items-center space-x-3 space-x-reverse">
           <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -33,12 +33,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
         </div>
       </div>
 
-     
+      {/* menu items */}
       <nav className="mt-6 flex-1 px-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
-          
+
           return (
             <button
               key={item.id}
@@ -56,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
         })}
       </nav>
 
-    
+      {/* user info at the bottom */}
       <div className="w-full p-4 border-t border-gray-200 bg-gray-50">
         <div className="flex items-center space-x-3 space-x-reverse">
           <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">

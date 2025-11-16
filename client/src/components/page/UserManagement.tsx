@@ -45,7 +45,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import api from "../../lib/api";
 import { toast } from "sonner";
 import type { User } from "../../types";
-import validator from "validator";
+// import validator from "validator";
 
 interface UserManagementProps {
 	onNavigate?: (page: string) => void;
