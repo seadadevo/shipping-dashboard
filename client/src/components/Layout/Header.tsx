@@ -1,9 +1,8 @@
 import React from 'react';
 import { Search, Bell, LogOut } from 'lucide-react';
-
-
+import { Sun, Moon } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import type { HeaderProps, User } from '../../types';
+import { useTheme } from '../ui/theme-provider';
 
 
 const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
     
     const roleNames: Record<User['userType'], string> = {
       admin: 'مدير',
-      employee: 'موظف',
+      employee: 'موظف', 
       merchant: 'تاجر',
       driver: 'سائق',
     };
@@ -40,31 +40,21 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
     return name.charAt(0);
   };
 
+  // (light & dark) mode
+  const { theme } = useTheme();
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 z-10">
       <div className="flex items-center justify-between">
-        
         <div className="flex items-center flex-1 max-w-lg">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              placeholder="البحث في النظام..." 
-              className="pl-4 pr-10 w-96 text-right"
-            />
-          </div>
+          <h1>LOGO</h1>
         </div>
 
-        
         <div className="flex items-center space-x-4 space-x-reverse">
-          
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-              3
-            </span>
-          </Button>
 
-          
+             {/* (light & dark) mode */}
+            <ThemeToggle />
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center space-x-2 space-x-reverse h-auto py-1 px-2">
