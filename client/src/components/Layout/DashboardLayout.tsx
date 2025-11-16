@@ -8,18 +8,17 @@ import AdminDashboard from "../dashboards/AdminDashboard";
 import { UserManagement } from "../page/UserManagement";
 import { OrderManagement } from "../page/OrderManagement";
 import { CreateOrder } from "../page/CreateOrder";
-import { BranchManagement } from "../page/BranchManagement";
 import { WeightSettings } from "../page/WeightSettings";
 import { UserGroups } from "../page/UserGroup";
 import { RegionsManagement } from "../page/RegionsManagement";
 import { MyOrders } from "../page/MyOrders";
 import { MyDeliveries } from "../page/MyDeliveries";
-import { UserLookup } from "../page/UserLookup";
 import { EmployeeDashboard } from "../dashboards/EmplyeeDashboard";
 import { MerchantDashboard } from "../dashboards/MerchantDashboard";
 import { DriverDashboard } from "../dashboards/DriverDashboard";
 import Sidebar from "../Layout/Sidebar";
 import { AddUser } from "./../page/AddUser";
+import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
@@ -45,8 +44,6 @@ const DashboardLayout: React.FC = () => {
 				return <OrderManagement />;
 			case "create-order":
 				return <CreateOrder />;
-			case "branch-management":
-				return <BranchManagement />;
 			case "weight-settings":
 				return <WeightSettings />;
 			case "user-groups":
@@ -61,8 +58,10 @@ const DashboardLayout: React.FC = () => {
 				return <MyOrders />;
 			case "my-deliveries":
 				return <MyDeliveries />;
-			case "user-lookup":
-				return <UserLookup />;
+		
+			case "shipping-types":
+				return <ShippingTypeManagement/>;
+		
 
 			default:
 				return <AdminDashboard />;
