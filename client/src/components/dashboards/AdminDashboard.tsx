@@ -25,7 +25,7 @@ import {
   CardContent,
 } from "../ui/card";
 import { Button } from "../ui/button";
-import type {ApiError, GetOrdersResponse, Order, SidebarProps} from '../../types';
+import type {ApiError, GetOrdersResponse, Order, SidebarProps, User} from '../../types';
 import {getMenuItemsByRole} from "../../constants/menuItems.ts";
 import api from "../../lib/api.ts";
 
@@ -33,6 +33,16 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
     const menuItems = getMenuItemsByRole(userRole);
 
     // calc order number today ////////////////////////////////////////////////////////
+    const [users, setUsers] = useState<User[]>([]);
+    const getUsers = async () => {
+        const res = await api.get("api/users/");
+        setUsers(res.data);
+    };
+
+    useEffect(() => {
+        getUsers().catch(console.error);
+    }, []);
+
     function isDateToday(dateString) {
         const date = new Date(dateString);
 
@@ -75,6 +85,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
     const [previousPendingOrders, setPreviousPendingOrders] = useState(0);
     const [moneysToday, setMoneysToday] = useState(0);
     const [chartData, setChartData] = useState([]);
+    const [totalOrders, setTotalOrders] = useState(0);
+    const [totalProfitAWeek, setTotalProfitAWeek] = useState(0);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -99,6 +111,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
         setPreviousPendingOrders(0);
         setMoneysToday(0);
         setChartData([]);
+        setTotalOrders(0);
+        setTotalProfitAWeek(0);
 
         const counts = {
             "الأحد": 0,
@@ -126,6 +140,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
                 }
                 if (getDayOfLast7DaysOrders(order.createdAt)) {
                     const day = new Date(order.createdAt).getDay();
+                    if(day !== new Date().getDay())
+                        setTotalProfitAWeek(c => c + order.orderCost);
                     counts[Object.keys(counts)[day]] += 1;
                 }
             });
@@ -134,6 +150,9 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
             const sortedChart = Array.from({ length: 7 }).map((_, i) => {
                 const index = (todayIndex - i + 7) % 7;
                 const day = Object.keys(counts)[index];
+                console.log(counts[day]);
+                if(i !== 0)
+                    setTotalOrders(c => c + counts[day]);
 
                 return {
                     day,
@@ -168,7 +187,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
           <CardContent>
             <div className="text-2xl font-bold">{countOrdersToday}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+12%</span> من الأمس
+              <span className="text-green-600">%{Math.ceil((countOrdersToday / (totalOrders / 6)) * 100)} </span>بالنسبة لمتوسط الطلبات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -198,7 +217,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
           <CardContent>
             <div className="text-2xl font-bold">{moneysToday} جنيه</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+8%</span> من الأمس
+              <span className="text-green-600">{Math.ceil((moneysToday / (totalProfitAWeek / 6)) * 100)}%</span> بالنسبة لمتوسط الايرادات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -211,9 +230,9 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
             <Users className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
+            <div className="text-2xl font-bold">{users.length}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+5</span> مستخدمين جدد
+              <span className="text-green-600">+createdAt(db)</span> مستخدمين جدد
             </p>
           </CardContent>
         </Card>
@@ -252,6 +271,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
               {menuItems.map((item) => {
+                  if(item.label !== "لوحة التحكم" && item.label !== "المجموعات والأذونات"){
                   const Icon = item.icon;
                   const isActive = currentPage === item.id;
 
@@ -269,7 +289,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
                           <span>{item.label}</span>
                       </button>
                   );
-              })}
+              }})}
               {/*{menuItems.map((item) => {*/}
               {/*<Button*/}
               {/*  key={item.id}*/}
