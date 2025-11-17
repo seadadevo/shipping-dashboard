@@ -34,8 +34,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
 
     // calc order number today ////////////////////////////////////////////////////////
     const [users, setUsers] = useState<User[]>([]);
-    const getUsers = async () => {
-        const res = await api.get("api/users/");
+    const getUsers = async (): Promise<void> => {
+        const res = await api.get<User[]>("api/users/");
         setUsers(res.data);
     };
 
@@ -43,12 +43,12 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
         getUsers().catch(console.error);
     }, []);
 
-    function isDateToday(dateString) {
+    function isDateToday(dateString: string): "today" | "normal" | "oldOrder" {
         const date = new Date(dateString);
 
         const twoWeeksAgo = new Date();
         twoWeeksAgo.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
-        twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 15); // subtract 14 days
+        twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 15); // subtract ~2 weeks
 
         // Start of today (UTC)
         const start = new Date();
@@ -61,7 +61,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
         return date >= start && date <= end ? "today" : date > twoWeeksAgo && date <= end ? "normal" : "oldOrder";
     }
 
-    function getDayOfLast7DaysOrders(dateString) {
+    function getDayOfLast7DaysOrders(dateString: string): boolean {
         const date = new Date(dateString);
 
         // Start of today (UTC)
@@ -77,30 +77,30 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
     }
 
     const [allOrders, setAllOrders] = useState<Order[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // const [loading, setLoading] = useState<boolean>(true);
+    // const [error, setError] = useState<string | null>(null);
 
-    const [countOrdersToday, setCountOrdersToday] = useState(0);
-    const [pendingOrdersToday, setPendingOrdersToday] = useState(0);
-    const [previousPendingOrders, setPreviousPendingOrders] = useState(0);
-    const [moneysToday, setMoneysToday] = useState(0);
-    const [chartData, setChartData] = useState([]);
-    const [totalOrders, setTotalOrders] = useState(0);
-    const [totalProfitAWeek, setTotalProfitAWeek] = useState(0);
-    const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState(0);
-    const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState(0);
+    const [countOrdersToday, setCountOrdersToday] = useState<number>(0);
+    const [pendingOrdersToday, setPendingOrdersToday] = useState<number>(0);
+    const [previousPendingOrders, setPreviousPendingOrders] = useState<number>(0);
+    const [moneysToday, setMoneysToday] = useState<number>(0);
+    const [chartData, setChartData] = useState<{ day: string; orders: number }[]>([]);
+    const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState<number>(0);
+    const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState<number>(0);
 
-    const fetchOrders = async () => {
-        setLoading(true);
-        setError(null);
+    const fetchOrders = async (): Promise<void> => {
+        // setLoading(true);
+        // setError(null);
         try {
             const response = await api.get<GetOrdersResponse>("/api/orders");
             setAllOrders(response.data.data.orders);
         } catch (err) {
             const error = err as ApiError;
-            setError(error.response?.data?.message || "فشل في جلب الطلبات.");
+            console.error("Error fetching orders:", error);
+            // setError(error.response?.data?.message || "فشل في جلب الطلبات.");
         } finally {
-            setLoading(false);
+            console.log("Orders fetched successfully");
+            // setLoading(false);
         }
     };
     useEffect(() => {
@@ -108,15 +108,15 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
     }, []);
 
     useEffect(() => {
-        setCountOrdersToday(0);
-        setPendingOrdersToday(0);
-        setPreviousPendingOrders(0);
-        setMoneysToday(0);
-        setChartData([]);
-        setTotalOrders(0);
-        setTotalProfitAWeek(0);
+        // Local accumulators to avoid multiple re-renders and keep calculations consistent
+        let localCountOrdersToday = 0;
+        let localPendingOrdersToday = 0;
+        let localPreviousPendingOrders = 0;
+        let localMoneysToday = 0;
+        let localTotalOrders = 0;
+        let localTotalProfitAWeek = 0;
 
-        const counts = {
+        const counts: Record<string, number> = {
             "الأحد": 0,
             "الاثنين": 0,
             "الثلاثاء": 0,
@@ -126,45 +126,66 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
             "السبت": 0,
         };
 
-        if(allOrders.length) {
-            allOrders.forEach(order => {
+        if (allOrders.length) {
+            const todayNum = new Date().getDay();
+            for (const order of allOrders) {
                 if (isDateToday(order.createdAt) === "today") {
-                    setCountOrdersToday(c => c + 1);
+                    localCountOrdersToday += 1;
                 }
                 if (order.status.toLowerCase() === "pending") {
-                    setPendingOrdersToday(c => c + 1);
+                    localPendingOrdersToday += 1;
                 }
-                if (order.status.toLowerCase() === "delivered" && isDateToday(order.updatedAt) === "today") {
-                    setMoneysToday(c => c + order.orderCost);
+                if (
+                    order.status.toLowerCase() === "delivered" &&
+                    isDateToday(order.updatedAt) === "today"
+                ) {
+                    localMoneysToday += order.orderCost;
                 }
                 if (isDateToday(order.updatedAt) === "oldOrder") {
-                    setPreviousPendingOrders(c => c + 1);
+                    localPreviousPendingOrders += 1;
                 }
                 if (getDayOfLast7DaysOrders(order.createdAt)) {
                     const day = new Date(order.createdAt).getDay();
-                    if(day !== new Date().getDay())
-                        setTotalProfitAWeek(c => c + order.orderCost);
-                    counts[Object.keys(counts)[day]] += 1;
+                    if (day !== todayNum) {
+                        localTotalProfitAWeek += order.orderCost;
+                    }
+                    const dayKey = Object.keys(counts)[day];
+                    counts[dayKey] += 1;
                 }
-            });
+            }
+
             const todayIndex = new Date().getDay();
-
-            const sortedChart = Array.from({ length: 7 }).map((_, i) => {
-                const index = (todayIndex - i + 7) % 7;
-                const day = Object.keys(counts)[index];
-                if(i !== 0)
-                    setTotalOrders(c => c + counts[day]);
-
-                return {
-                    day,
-                    orders: counts[day]
-                };
-            }).reverse();
+            const sortedChart = Array.from({ length: 7 })
+                .map((_, i) => {
+                    const index = (todayIndex - i + 7) % 7;
+                    const day = Object.keys(counts)[index];
+                    if (i !== 0) localTotalOrders += counts[day];
+                    return { day, orders: counts[day] };
+                })
+                .reverse();
 
             setChartData(sortedChart);
+        } else {
+            setChartData([]);
         }
-        setOrdersTodayRelativeToWeek(Math.ceil((countOrdersToday / (totalOrders / 6)) * 100));
-        setProfitTodayRelativeToWeek(Math.ceil((moneysToday / (totalProfitAWeek / 6)) * 100));
+
+        const avgOrders = localTotalOrders / 6 || 0; // average over last 6 days (excluding today)
+        const avgProfit = localTotalProfitAWeek / 6 || 0; // average over last 6 days (excluding today)
+
+        const localOrdersTodayRelativeToWeek = avgOrders > 0
+            ? Math.ceil((localCountOrdersToday / avgOrders) * 100)
+            : 0;
+        const localProfitTodayRelativeToWeek = avgProfit > 0
+            ? Math.ceil((localMoneysToday / avgProfit) * 100)
+            : 0;
+
+        // Single batched state update pattern
+        setCountOrdersToday(localCountOrdersToday);
+        setPendingOrdersToday(localPendingOrdersToday);
+        setPreviousPendingOrders(localPreviousPendingOrders);
+        setMoneysToday(localMoneysToday);
+        setOrdersTodayRelativeToWeek(localOrdersTodayRelativeToWeek);
+        setProfitTodayRelativeToWeek(localProfitTodayRelativeToWeek);
     }, [allOrders]);
 
 ///////////////////////////////////////////////////////////////////////
@@ -318,17 +339,6 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
                       </button>
                   );
               }})}
-              {/*{menuItems.map((item) => {*/}
-              {/*<Button*/}
-              {/*  key={item.id}*/}
-              {/*  onClick={() => onPageChange(item.id)}*/}
-              {/*  variant="outline"*/}
-              {/*  className="flex justify-between"*/}
-              {/*>*/}
-              {/*  <span>{item.label}</span>*/}
-              {/*  {item.icon}*/}
-              {/*</Button>*/}
-              {/*})}*/}
           </CardContent>
         </Card>
       </div>
