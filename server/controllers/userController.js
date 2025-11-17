@@ -160,3 +160,31 @@ exports.deleteUser = async (req, res) => {
 		res.status(500).json({ message: "Error deleting user" });
 	}
 };
+
+exports.searchMerchants = async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q) {
+      return res.status(200).json({ status: 'success', data: [] });
+    }
+
+    const merchants = await User.find({
+      userType: "merchant", 
+      $or: [
+        { fullName: new RegExp(q, "i") },
+        { storeName: new RegExp(q, "i") }, 
+        { phone: new RegExp(q, "i") }     
+      ],
+    }).select("fullName storeName phone email _id").limit(10); 
+
+    res.status(200).json({
+      status: "success",
+      results: merchants.length,
+      data: merchants,
+    });
+  } catch (error) {
+    console.error("Search Merchant Error:", error);
+    res.status(500).json({ message: "Error searching merchants" });
+  }
+};

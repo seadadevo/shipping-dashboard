@@ -1,11 +1,12 @@
-
 const mongoose = require("mongoose");
 const validator = require("validator");
+
 
 const productSchema = new mongoose.Schema({
   productName: {
     type: String,
     required: [true, "Product name is required"],
+    trim: true,
   },
   quantity: {
     type: Number,
@@ -15,16 +16,21 @@ const productSchema = new mongoose.Schema({
   weight: {
     type: Number,
     required: [true, "Product weight is required"],
+    min: [0, "Weight must be a positive number"],
   },
 });
 
+
 const orderSchema = new mongoose.Schema(
   {
+    
     orderType: {
       type: String,
       required: [true, "Order type is required"],
       enum: ["استلام من المتجر", "من الباب للباب", "من المستودع"],
     },
+    
+  
     customerName: {
       type: String,
       required: [true, "Customer name is required"],
@@ -32,17 +38,18 @@ const orderSchema = new mongoose.Schema(
     },
     customerPhone1: {
       type: String,
-      required: [true, "Customer phone number is required"],
+      required: [true, "Customer phone is required"],
     },
-    customerPhone2: {
-      type: String,
-    },
+    customerPhone2: String,
     customerEmail: {
       type: String,
+      trim: true,
       lowercase: true,
+      
       validate: [validator.isEmail, "Invalid email format"],
     },
 
+   
     governorate: {
       type: String,
       required: [true, "Governorate is required"],
@@ -51,9 +58,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: [true, "City is required"],
     },
-    village: {
-      type: String,
-    },
+    village: String,
     street: {
       type: String,
       required: [true, "Street address is required"],
@@ -62,11 +67,11 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
+    
+  
     shippingType: {
       type: String,
       required: [true, "Shipping type is required"],
-      enum: ["عادي", "شحن في 24 ساعة", "شحن خلال 15 يوم"],
     },
     paymentType: {
       type: String,
@@ -78,37 +83,42 @@ const orderSchema = new mongoose.Schema(
       required: [true, "Branch is required"],
       enum: ["القاهرة", "الجيزة", "الاسكندرية", "الشرقية", "اسوان"],
     },
-    orderCost: {
-      type: Number,
-      required: [true, "Order cost is required"],
-    },
-    totalWeight: {
-      type: Number,
-      required: [true, "Total weight is required"],
-    },
-    notes: {
-      type: String,
-      trim: true,
-    },
-
+    
+  
+    
+  
     products: {
       type: [productSchema],
-      validate: [
-        (val) => val.length > 0,
-        "Order must have at least one product",
-      ],
+      required: [true, "At least one product is required"],
+      validate: [v => Array.isArray(v) && v.length > 0, "Products array cannot be empty"]
+    },
+    
+ 
+    totalWeight: {
+        type: Number,
+        required: [true, "Total weight is required"],
+        min: [0.01, "Total weight must be greater than 0"]
     },
 
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    
+    orderCost: {
+      type: Number,
+      required: [true, "Order cost calculation failed or field is missing"],
     },
-
+    
+  
     status: {
       type: String,
-      default: "Pending",
       enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      default: "Pending",
+    },
+    
+    
+    notes: String,
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     },
   },
   {

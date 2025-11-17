@@ -34,7 +34,7 @@ import {
 import {
   Package,
   Search,
-  Filter,
+  // Filter, // (غير مستخدم)
   Download,
   RefreshCw,
   MapPin,
@@ -47,12 +47,11 @@ import {
   Loader2,
   MoreHorizontal,
   Eye,
-  Trash2, // إضافة أيقونة الحذف
+  Trash2,
 } from "lucide-react";
 import api from "../../lib/api";
 import type { ApiError, GetOrdersResponse, Order } from "../../types";
 
-// (تصليح): دي الـ imports الصح من مكتبة shadcn/ui
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,10 +65,8 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-// (إضافة): جلب اليوزر الحالي عشان نعرف صلاحياته
 import { useAuth } from "../../hooks/useAuth";
 
-// (تصليح): بنعرف الـ labels هنا عشان نستخدمها في كذا مكان
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
@@ -79,7 +76,6 @@ const statusLabels: Record<string, string> = {
   all: "جميع الحالات",
 };
 
-// (تصليح): الـ value بالإنجليزي (زي الـ API) والـ label بالعربي (لليوزر)
 const statusOptions = [
   { value: "all", label: "جميع الحالات" },
   { value: "Pending", label: statusLabels.Pending },
@@ -98,18 +94,23 @@ export function OrderManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- (إضافة States جديدة) ---
-  const { user } = useAuth(); // اليوزر الحالي
-  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null); // الطلب اللي هيتحذف
-  const [isDeleting, setIsDeleting] = useState(false); // مؤشر لـ loading الحذف
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null); // مؤشر لـ loading تعديل الحالة
-  // --- (نهاية الإضافة) ---
+  const { user } = useAuth();
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
 
+  // --- (🚀 تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get<GetOrdersResponse>("/api/orders");
+      // (⭐ تعديل): قمنا بإضافة params لإرسال الفلاتر للباك إند
+      const response = await api.get<GetOrdersResponse>("/api/orders", {
+        params: {
+          status: statusFilter,
+          q: searchQuery,
+        },
+      });
       setAllOrders(response.data.data.orders);
     } catch (err) {
       const error = err as ApiError;
@@ -119,9 +120,19 @@ export function OrderManagement() {
     }
   };
 
+  // --- (🚀 تعديل: useEffect الآن يراقب الفلاتر) ---
+  // (⭐ تعديل): هذا الـ useEffect سيقوم بإعادة جلب البيانات عند تغيير البحث أو الحالة
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    // (Debounce) ننتظر 500ms بعد آخر ضغطة زر قبل إرسال الطلب
+    const handler = setTimeout(() => {
+      fetchOrders();
+    }, 500);
+
+    // (Cleanup) إلغاء الـ timeout القديم إذا قام المستخدم بالكتابة مجدداً
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [statusFilter, searchQuery]); // <-- يراقب هذه المتغيرات
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -157,20 +168,17 @@ export function OrderManagement() {
     }
   };
 
-  const filteredOrders = allOrders.filter((order) => {
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch =
-      order._id.toLowerCase().includes(searchLower) ||
-      order.customerName.toLowerCase().includes(searchLower) ||
-      order.customerPhone1.includes(searchQuery) ||
-      order.createdBy.fullName.toLowerCase().includes(searchLower);
+  // --- (🚀 إزالة: filteredOrders) ---
+  // (⭐ إزالة): لم نعد بحاجة للفلترة في الفرونت إند
+  // الباك إند هو المسؤول الآن عن إرجاع البيانات المفلترة
+  // const filteredOrders = allOrders.filter((order) => { ... });
 
-    const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
+  // (ملحوظة): سنستخدم allOrders مباشرة في الجدول
 
-    return matchesSearch && matchesStatus;
-  });
-
+  // --- (تعديل: إحصائيات الطلبات) ---
+  // (⭐ تعديل): هذه الإحصائيات يجب أن تُحسب من القائمة القادمة من الباك إند
+  // إذا أردت إحصائيات *للنظام كله*، ستحتاج لـ endpoint جديد
+  // هذا الكود سيحسب الإحصائيات من القائمة المفلترة (مثال: "يوجد 5 طلبات قيد الانتظار تطابق بحثك")
   const statusCounts = {
     Pending: allOrders.filter((o) => o.status === "Pending").length,
     Processing: allOrders.filter((o) => o.status === "Processing").length,
@@ -178,13 +186,13 @@ export function OrderManagement() {
     Delivered: allOrders.filter((o) => o.status === "Delivered").length,
     Cancelled: allOrders.filter((o) => o.status === "Cancelled").length,
   };
+  // (ملحوظة: لحساب إحصائيات *كل* الطلبات بغض النظر عن الفلتر، ستحتاج لجلبها بـ API call منفصل)
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
   };
 
-  // --- (دوال جديدة للحذف وتعديل الحالة) ---
   const handleDeleteClick = (order: Order) => {
     setError(null);
     setOrderToDelete(order);
@@ -196,8 +204,8 @@ export function OrderManagement() {
     setError(null);
     try {
       await api.delete(`/api/orders/${orderToDelete._id}`);
-      setOrderToDelete(null); // إغلاق الـ Dialog
-      fetchOrders(); // تحديث قائمة الطلبات
+      setOrderToDelete(null);
+      fetchOrders(); // (⭐ تعديل): نستخدم fetchOrders المحدثة
     } catch (err) {
       const error = err as ApiError;
       setError(error.response?.data?.message || "فشل في حذف الطلب.");
@@ -210,15 +218,13 @@ export function OrderManagement() {
     setIsUpdatingStatus(orderId);
     try {
       await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
-      fetchOrders(); // تحديث القائمة
+      fetchOrders(); // (⭐ تعديل): نستخدم fetchOrders المحدثة
     } catch (err) {
       console.error("Failed to update status", err);
-      // ممكن نضيف toast error هنا
     } finally {
       setIsUpdatingStatus(null);
     }
   };
-  // --- (نهاية الدوال الجديدة) ---
 
   return (
     <div className="space-y-6">
@@ -234,7 +240,7 @@ export function OrderManagement() {
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          {/* (تعديل): زر التحديث بقى شغال */}
+          {/* (⭐ تعديل): زر التحديث الآن يستدعي fetchOrders المحدثة */}
           <Button variant="outline" onClick={fetchOrders} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -246,16 +252,17 @@ export function OrderManagement() {
         </div>
       </div>
 
-      {/* ... (الإحصائيات السريعة زي ما هي) ... */}
+      {/* ... (الإحصائيات السريعة) ... */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">إجمالي الطلبات</CardTitle>
+            <CardTitle className="text-sm">إجمالي الطلبات (المطابقة)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{allOrders.length}</div>
           </CardContent>
         </Card>
+        {/* ... (باقي كروت الإحصائيات) ... */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">قيد الانتظار</CardTitle>
@@ -312,7 +319,7 @@ export function OrderManagement() {
             <div className="relative flex-1 max-w-sm ml-2">
               <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="البحث في الطلبات..."
+                placeholder="البحث (اسم، هاتف، إيميل)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pr-8 text-right"
@@ -365,8 +372,9 @@ export function OrderManagement() {
                       <p className="text-red-600 mt-2">{error}</p>
                     </TableCell>
                   </TableRow>
-                ) : filteredOrders.length > 0 ? (
-                  filteredOrders.map((order) => (
+                ) : // --- (🚀 تعديل: نستخدم allOrders بدلاً من filteredOrders) ---
+                allOrders.length > 0 ? (
+                  allOrders.map((order) => (
                     <TableRow key={order._id}>
                       <TableCell className="font-medium">
                         <div>
@@ -378,6 +386,7 @@ export function OrderManagement() {
                       </TableCell>
                       <TableCell>
                         <div>
+                          {/* (⭐ هنا) سيعمل الآن عند جلب البيانات الصحيحة */}
                           <p className="font-medium">{order.customerName}</p>
                           <p className="text-xs text-muted-foreground">
                             {order.customerPhone1}
@@ -411,20 +420,20 @@ export function OrderManagement() {
                           )} flex items-center w-fit`}
                         >
                           {getStatusIcon(order.status)}
-                          {/* (تعديل): بنعرض الاسم العربي */}
                           <span className="mr-1">
                             {statusLabels[order.status] || order.status}
                           </span>
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {order.orderCost.toFixed(2)} جنيه
+                        {/* (⭐ وهنا) سيعمل الآن عند جلب البيانات الصحيحة */}
+                        {order.orderCost?.toFixed(2) ?? "-"} جنيه
                       </TableCell>
                       <TableCell>
                         {new Date(order.createdAt).toLocaleDateString("ar-EG")}
                       </TableCell>
                       <TableCell>
-                        {/* --- (تعديل القائمة المنسدلة) --- */}
+                        {/* ... (باقي القائمة المنسدلة كما هي) ... */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -440,8 +449,7 @@ export function OrderManagement() {
                               عرض التفاصيل
                             </DropdownMenuItem>
 
-                            {/* قائمة تعديل الحالة */}
-                            <DropdownMenuSub >
+                            <DropdownMenuSub>
                               <DropdownMenuSubTrigger
                                 disabled={isUpdatingStatus === order._id}
                               >
@@ -477,7 +485,6 @@ export function OrderManagement() {
                               </DropdownMenuPortal>
                             </DropdownMenuSub>
 
-                            {/* زر الحذف (للأدمن فقط) */}
                             {user?.userType === "employee" && (
                               <>
                                 <DropdownMenuSeparator />
@@ -511,7 +518,6 @@ export function OrderManagement() {
           </div>
         </CardContent>
       </Card>
-
       {/* ... (نافذة عرض تفاصيل الطلب زي ما هي) ... */}
       <Dialog  open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className=" bg-blue-50 max-w-4xl">
@@ -581,6 +587,40 @@ export function OrderManagement() {
                     )}
                   </CardContent>
                 </Card>
+
+                <Card className="border-blue-200">
+        <CardHeader className="pb-3 bg-blue-100/50 rounded-t-lg">
+          <CardTitle className="text-base flex items-center text-blue-800">
+             <User className="h-5 w-5 mr-2" /> 
+             بيانات التاجر (المرسل)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-3 pt-4">
+          <div>
+             <p className="text-sm text-muted-foreground">اسم التاجر/الموظف</p>
+             <p className="font-medium">{selectedOrder.createdBy.fullName}</p>
+             <Badge variant="secondary" className="mt-1">{selectedOrder.createdBy.userType}</Badge>
+          </div>
+          
+          <div>
+             <p className="text-sm text-muted-foreground">البريد الإلكتروني</p>
+             <p className="font-medium">{selectedOrder.createdBy.email}</p>
+          </div>
+
+          <div>
+             <p className="text-sm text-muted-foreground">رقم الهاتف</p>
+             <p className="font-medium">{selectedOrder.createdBy.phone || "غير متوفر"}</p>
+          </div>
+
+          {/* عرض اسم المتجر لو كان تاجر */}
+          {selectedOrder.createdBy.storeName && (
+            <div>
+               <p className="text-sm text-muted-foreground">اسم المتجر</p>
+               <p className="font-medium">{selectedOrder.createdBy.storeName}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
               </div>
 
               {/* تفاصيل الطلب */}

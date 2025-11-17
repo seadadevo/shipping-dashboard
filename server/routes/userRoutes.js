@@ -10,28 +10,17 @@ const {
 
 const { protect, restrictTo } = require("../middleware/authMiddleware");
 
-router.use(protect);
+router.use(protect); 
+router.use(restrictTo("admin"));
 
-router.get("/", restrictTo("admin", "employee"), getUsers);
+router.get("/", getUsers);
 
-router.get("/search", restrictTo("admin"), getUsersWithSearch);
+router.get("/search", getUsersWithSearch);
 
-router.post("/add", restrictTo("admin"), addUser);
+router.post("/add", addUser);
 
-router.put("/:id", restrictTo("admin"), updateUser);
+router.put("/:id", updateUser);
 
-router.delete("/:id", restrictTo("admin"), deleteUser);
-
-// router.use(restrictTo("admin"));
-//
-// router.get("/", getUsers);
-//
-// router.get("/search", getUsersWithSearch);
-//
-// router.post("/add", addUser);
-//
-// router.put("/:id", updateUser);
-//
-// router.delete("/:id", deleteUser);
+router.delete("/:id", deleteUser);
 
 module.exports = router;
