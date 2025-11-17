@@ -1,11 +1,11 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 import {
   Package,
   Clock,
   DollarSign,
   Users,
-  TrendingUp,
-  Truck,
+  // TrendingUp,
+  // Truck,
 } from "lucide-react";
 import {
   LineChart,
@@ -25,19 +25,128 @@ import {
   CardContent,
 } from "../ui/card";
 import { Button } from "../ui/button";
+import type {ApiError, GetOrdersResponse, Order, SidebarProps} from '../../types';
+import {getMenuItemsByRole} from "../../constants/menuItems.ts";
+import api from "../../lib/api.ts";
 
-const chartData = [
-  { day: "السبت", orders: 45 },
-  { day: "الأحد", orders: 52 },
-  { day: "الاثنين", orders: 38 },
-  { day: "الثلاثاء", orders: 67 },
-  { day: "الأربعاء", orders: 71 },
-  { day: "الخميس", orders: 58 },
-  { day: "الجمعة", orders: 43 },
-];
+const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, userRole}) => {
+    const menuItems = getMenuItemsByRole(userRole);
 
-const AdminDashboard: React.FC = () => {
-  return (
+    // calc order number today ////////////////////////////////////////////////////////
+    function isDateToday(dateString) {
+        const date = new Date(dateString);
+
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
+        twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 15); // subtract 14 days
+
+        // Start of today (UTC)
+        const start = new Date();
+        start.setUTCHours(0, 0, 0, 0);
+
+        // End of today (UTC)
+        const end = new Date();
+        end.setUTCHours(23, 59, 59, 999);
+
+        return date >= start && date <= end ? "today" : date > twoWeeksAgo && date <= end ? "normal" : "oldOrder";
+    }
+
+    function getDayOfLast7DaysOrders(dateString) {
+        const date = new Date(dateString);
+
+        // Start of today (UTC)
+        const start = new Date();
+        start.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
+        start.setUTCDate(start.getUTCDate() - 6); // subtract 14 days
+
+        // End of today (UTC)
+        const end = new Date();
+        end.setUTCHours(23, 59, 59, 999);
+
+        return date >= start && date <= end;
+    }
+
+    const [allOrders, setAllOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const [countOrdersToday, setCountOrdersToday] = useState(0);
+    const [pendingOrdersToday, setPendingOrdersToday] = useState(0);
+    const [previousPendingOrders, setPreviousPendingOrders] = useState(0);
+    const [moneysToday, setMoneysToday] = useState(0);
+    const [chartData, setChartData] = useState([]);
+
+    const fetchOrders = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await api.get<GetOrdersResponse>("/api/orders");
+            setAllOrders(response.data.data.orders);
+        } catch (err) {
+            const error = err as ApiError;
+            setError(error.response?.data?.message || "فشل في جلب الطلبات.");
+        } finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
+        fetchOrders();
+    }, []);
+
+    useEffect(() => {
+        setCountOrdersToday(0);
+        setPendingOrdersToday(0);
+        setPreviousPendingOrders(0);
+        setMoneysToday(0);
+        setChartData([]);
+
+        const counts = {
+            "الأحد": 0,
+            "الاثنين": 0,
+            "الثلاثاء": 0,
+            "الأربعاء": 0,
+            "الخميس": 0,
+            "الجمعة": 0,
+            "السبت": 0,
+        };
+
+        if(allOrders.length) {
+            allOrders.forEach(order => {
+                if (isDateToday(order.createdAt) === "today") {
+                    setCountOrdersToday(c => c + 1);
+                }
+                if (order.status.toLowerCase() === "pending") {
+                    setPendingOrdersToday(c => c + 1);
+                }
+                if (order.status.toLowerCase() === "delivered" && isDateToday(order.updatedAt) === "today") {
+                    setMoneysToday(c => c + order.orderCost);
+                }
+                if (isDateToday(order.updatedAt) === "oldOrder") {
+                    setPreviousPendingOrders(c => c + 1);
+                }
+                if (getDayOfLast7DaysOrders(order.createdAt)) {
+                    const day = new Date(order.createdAt).getDay();
+                    counts[Object.keys(counts)[day]] += 1;
+                }
+            });
+            const todayIndex = new Date().getDay();
+
+            const sortedChart = Array.from({ length: 7 }).map((_, i) => {
+                const index = (todayIndex - i + 7) % 7;
+                const day = Object.keys(counts)[index];
+
+                return {
+                    day,
+                    orders: counts[day]
+                };
+            }).reverse();
+
+            setChartData(sortedChart);
+        }
+    }, [allOrders]);
+
+///////////////////////////////////////////////////////////////////////
+    return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -57,7 +166,7 @@ const AdminDashboard: React.FC = () => {
             <Package className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">127</div>
+            <div className="text-2xl font-bold">{countOrdersToday}</div>
             <p className="text-xs text-gray-500">
               <span className="text-green-600">+12%</span> من الأمس
             </p>
@@ -72,9 +181,9 @@ const AdminDashboard: React.FC = () => {
             <Clock className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23</div>
+            <div className="text-2xl font-bold">{pendingOrdersToday}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-orange-600">+3</span> منذ الصباح
+              <span className="text-orange-600">+{previousPendingOrders} </span> منذ اكثر من اسبوعين
             </p>
           </CardContent>
         </Card>
@@ -87,7 +196,7 @@ const AdminDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,450 جنيه</div>
+            <div className="text-2xl font-bold">{moneysToday} جنيه</div>
             <p className="text-xs text-gray-500">
               <span className="text-green-600">+8%</span> من الأمس
             </p>
@@ -142,27 +251,36 @@ const AdminDashboard: React.FC = () => {
             <CardDescription>الوصول السريع للمهام الأساسية</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {[
-              {
-                label: "إدارة المستخدمين",
-                icon: <Users className="h-4 w-4" />,
-              },
-              { label: "إدارة الطلبات", icon: <Package className="h-4 w-4" /> },
-              {
-                label: "تقارير الأداء",
-                icon: <TrendingUp className="h-4 w-4" />,
-              },
-              { label: "تتبع المركبات", icon: <Truck className="h-4 w-4" /> },
-            ].map((item, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                className="flex justify-between"
-              >
-                <span>{item.label}</span>
-                {item.icon}
-              </Button>
-            ))}
+              {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentPage === item.id;
+
+                  return (
+                      <button
+                          key={item.id}
+                          onClick={() => onPageChange(item.id)}
+                          className={`w-full flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
+                              isActive
+                                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                                  : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                          <Icon className={`h-5 w-5 ml-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <span>{item.label}</span>
+                      </button>
+                  );
+              })}
+              {/*{menuItems.map((item) => {*/}
+              {/*<Button*/}
+              {/*  key={item.id}*/}
+              {/*  onClick={() => onPageChange(item.id)}*/}
+              {/*  variant="outline"*/}
+              {/*  className="flex justify-between"*/}
+              {/*>*/}
+              {/*  <span>{item.label}</span>*/}
+              {/*  {item.icon}*/}
+              {/*</Button>*/}
+              {/*})}*/}
           </CardContent>
         </Card>
       </div>
