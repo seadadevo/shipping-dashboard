@@ -22,7 +22,9 @@ exports.addShippingType = async (req, res) => {
 // 2. جلب كل أنواع الشحن (Any User)
 exports.getAllShippingTypes = async (req, res) => {
     try {
-        const types = await ShippingType.find({}).sort({ adjustmentAmount: 1 });
+        // ---- ADDED FILTER ----
+        const types = await ShippingType.find({ isActive: true }).sort({ adjustmentAmount: 1 });
+        // ---- END ADDED ----
         res.status(200).json({
             status: 'success',
             results: types.length,

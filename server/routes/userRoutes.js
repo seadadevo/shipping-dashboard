@@ -6,13 +6,13 @@ const {
   updateUser,
   deleteUser,
   getUsersWithSearch,
+  searchMerchants
 } = require("../controllers/userController");
 
 const { protect, restrictTo } = require("../middleware/authMiddleware");
-
 router.use(protect); 
+router.get("/merchants/search", restrictTo("admin", "employee"), searchMerchants);
 router.use(restrictTo("admin"));
-
 router.get("/", getUsers);
 
 router.get("/search", getUsersWithSearch);
