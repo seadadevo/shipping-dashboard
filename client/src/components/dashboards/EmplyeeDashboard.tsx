@@ -8,7 +8,6 @@ import {
   XCircle,
   AlertTriangle,
   Pause,
-  RotateCcw,
   DollarSign,
   TrendingUp,
   Activity,
@@ -19,160 +18,199 @@ import {
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-
-// حالات الطلبات مع الألوان والأيقونات
-const orderStatuses = [
-  {
-    id: 'new',
-    name: 'الطلبات الجديدة',
-    count: 18,
-    icon: Package,
-    color: 'bg-blue-100 text-blue-800',
-    iconColor: 'text-blue-600'
-  },
-  {
-    id: 'pending',
-    name: 'قيد الانتظار',
-    count: 12,
-    icon: Clock,
-    color: 'bg-yellow-100 text-yellow-800',
-    iconColor: 'text-yellow-600'
-  },
-  {
-    id: 'delivered_to_courier',
-    name: 'تم التسليم للمندوب',
-    count: 25,
-    icon: Truck,
-    color: 'bg-purple-100 text-purple-800',
-    iconColor: 'text-purple-600'
-  },
-  {
-    id: 'delivered',
-    name: 'تم التسليم',
-    count: 342,
-    icon: CheckCircle,
-    color: 'bg-green-100 text-green-800',
-    iconColor: 'text-green-600'
-  },
-  {
-    id: 'unreachable',
-    name: 'لا يمكن الوصول',
-    count: 8,
-    icon: XCircle,
-    color: 'bg-red-100 text-red-800',
-    iconColor: 'text-red-600'
-  },
-  {
-    id: 'postponed',
-    name: 'تم التأجيل',
-    count: 11,
-    icon: Pause,
-    color: 'bg-gray-100 text-gray-800',
-    iconColor: 'text-gray-600'
-  },
-  {
-    id: 'partial_delivered',
-    name: 'تم التسليم جزئياً',
-    count: 5,
-    icon: AlertTriangle,
-    color: 'bg-orange-100 text-orange-800',
-    iconColor: 'text-orange-600'
-  },
-  {
-    id: 'cancelled_by_recipient',
-    name: 'تم الإلغاء من قبل المستلم',
-    count: 14,
-    icon: XCircle,
-    color: 'bg-red-100 text-red-800',
-    iconColor: 'text-red-600'
-  },
-  {
-    id: 'rejected_with_payment',
-    name: 'تم الرفض مع الدفع',
-    count: 9,
-    icon: DollarSign,
-    color: 'bg-green-100 text-green-800',
-    iconColor: 'text-green-600'
-  },
-  {
-    id: 'rejected_partial_payment',
-    name: 'رفض مع سداد جزء',
-    count: 4,
-    icon: RotateCcw,
-    color: 'bg-yellow-100 text-yellow-800',
-    iconColor: 'text-yellow-600'
-  },
-  {
-    id: 'rejected_no_payment',
-    name: 'رفض ولم يتم الدفع',
-    count: 13,
-    icon: XCircle,
-    color: 'bg-red-100 text-red-800',
-    iconColor: 'text-red-600'
-  }
-];
-
-const recentOrders = [
-  { 
-    id: '#E2024-001', 
-    merchant: 'متجر الأزياء الحديثة',
-    recipient: 'سارة أحمد', 
-    destination: 'القاهرة، وسط المدينة', 
-    status: 'تم التسليم', 
-    date: '2024-01-15',
-    amount: '85 جنيه',
-    phone: '01512345678'
-  },
-  { 
-    id: '#E2024-002', 
-    merchant: 'متجر الإلكترونيات',
-    recipient: 'محمد عبدالله', 
-    destination: 'الإسكندرية، حي المنتزه', 
-    status: 'تم التسليم للمندوب', 
-    date: '2024-01-14',
-    amount: '125 جنيه',
-    phone: '01598765432'
-  },
-  { 
-    id: '#E2024-003', 
-    merchant: 'متجر المنزل والحديقة',
-    recipient: 'فاطمة سعد', 
-    destination: 'الجيزة، حي الهرم', 
-    status: 'قيد الانتظار', 
-    date: '2024-01-14',
-    amount: '95 جنيه',
-    phone: '01112345678'
-  },
-  { 
-    id: '#E2024-004', 
-    merchant: 'مكتبة المعرفة',
-    recipient: 'أحمد علي', 
-    destination: 'القليوبية، شبرا الخيمة', 
-    status: 'تم التسليم', 
-    date: '2024-01-13',
-    amount: '110 جنيه',
-    phone: '01118138288'
-  },
-  { 
-    id: '#E2024-005', 
-    merchant: 'متجر التوحيد للملابس',
-    recipient: 'نورا حسن', 
-    destination: 'المنوفيه ، حي السلام', 
-    status: 'طلب جديد', 
-    date: '2024-01-13',
-    amount: '75 جنيه',
-    phone: '01155667788'
-  },
-];
+import {useEffect, useState} from "react";
+import type {Order, User} from "../../types";
+import api from "../../lib/api.ts";
 
 export function EmployeeDashboard() {
-  const getTotalOrders = () => orderStatuses.reduce((total, status) => total + status.count, 0);
-  const getSuccessRate = () => {
-    const delivered = orderStatuses.find(s => s.id === 'delivered')?.count || 0;
-    const total = getTotalOrders();
-    return total > 0 ? Math.round((delivered / total) * 100) : 0;
-  };
+    //////////////////////////////////////////////////////////
+    function getDayOfLast7Days(dateString: string): boolean {
+        const date = new Date(dateString);
 
+        // Start of today (UTC)
+        const start = new Date();
+        start.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
+        start.setUTCDate(start.getUTCDate() - 6); // subtract 14 days
+
+        // End of today (UTC)
+        const end = new Date();
+        end.setUTCHours(23, 59, 59, 999);
+
+        return date >= start && date <= end;
+    }
+    // get all orders to processing operations
+    const [users, setUsers] = useState<User[]>([]);
+    const getUsers = async (): Promise<void> => {
+        const res = await api.get<User[]>("api/users/");
+        setUsers(res.data);
+    };
+
+    useEffect(() => {
+        getUsers().catch(console.error);
+    }, []);
+
+    const [merchantsCount, setMerchantsCount] = useState<number>(0);
+    useEffect(() => {
+        let allMerchants = 0;
+        users.forEach(user => {
+            if(user.userType.toLowerCase() === "merchant")
+                allMerchants++;
+        })
+
+        setMerchantsCount(allMerchants);
+    }, [users]);
+
+    // get all order to processing operations
+    const [orders, setOrders] = useState<Order[]>([]);
+    const getAllOrders = async (): Promise<void> => {
+        const res = await api.get<Order[]>("api/orders/");
+        setOrders(res.data.data.orders);
+    };
+
+    useEffect(() => {
+        getAllOrders().catch(console.error);
+    }, []);
+
+    const [ordersRate, setOrdersRate] = useState<number>(0);
+    const [allProcessingOrders, setAllProcessingOrders] = useState<number>(0);
+    const [orderStatuses, setOrderStatuses] = useState<any>([]);
+    const [allPendingOrders, setAllPendingOrders] = useState<number>(0);
+    const [allShippedOrders, setAllShippedOrders] = useState<number>(0);
+    const [allCancelledOrders, setAllCancelledOrders] = useState<number>(0);
+    const [allDeliveredOrders, setAllDeliveredOrders] = useState<number>(0);
+    const[allUnreachableOrders, setAllUnreachableOrders] = useState<number>(0);
+    const [allPostponedOrders, setAllPostponedOrders] = useState<number>(0);
+    const [allRejectedWithPaymentOrders, setAllRejectedWithPaymentOrders] = useState<number>(0);
+    const [allRejectedNoPaymentOrders, setAllRejectedNoPaymentOrders] = useState<number>(0);
+    const [allRecentOrders, setAllRecentOrders] = useState<Order[]>([]);
+    useEffect(() => {
+        let successOrders = 0;
+        let successOrdersRate = 0;
+        let processingOrders = 0;
+        let pendingOrders = 0;
+        let shippedOrders = 0;
+        let cancelledOrders = 0;
+        let unreachableOrders = 0;
+        let postponedOrders = 0;
+        let rejectedWithPaymentOrders = 0;
+        let rejectedNoPaymentOrders = 0;
+        let recentOrders: Order[] = [];
+
+        setOrderStatuses( [
+            {
+                id: 'new',
+                name: 'الطلبات الجديدة',
+                count: orders.length,
+                icon: Package,
+                color: 'bg-blue-100 text-blue-800',
+                iconColor: 'text-blue-600'
+            },
+            {
+                id: 'pending',
+                name: 'قيد الانتظار',
+                count: allPendingOrders,
+                icon: Clock,
+                color: 'bg-yellow-100 text-yellow-800',
+                iconColor: 'text-yellow-600'
+            },
+            {
+                id: 'delivered_to_courier',
+                name: 'تم التسليم للمندوب',
+                count: allShippedOrders,
+                icon: Truck,
+                color: 'bg-purple-100 text-purple-800',
+                iconColor: 'text-purple-600'
+            },
+            {
+                id: 'delivered',
+                name: 'تم التسليم',
+                count: allDeliveredOrders,
+                icon: CheckCircle,
+                color: 'bg-green-100 text-green-800',
+                iconColor: 'text-green-600'
+            },
+            {
+                id: 'unreachable',
+                name: 'لا يمكن الوصول',
+                count: allUnreachableOrders,
+                icon: XCircle,
+                color: 'bg-red-100 text-red-800',
+                iconColor: 'text-red-600'
+            },
+            {
+                id: 'postponed',
+                name: 'تم التأجيل',
+                count: allPostponedOrders,
+                icon: Pause,
+                color: 'bg-gray-100 text-gray-800',
+                iconColor: 'text-gray-600'
+            },
+            {
+                id: 'cancelled_by_recipient',
+                name: 'تم الإلغاء من قبل المستلم',
+                count: allCancelledOrders,
+                icon: XCircle,
+                color: 'bg-red-100 text-red-800',
+                iconColor: 'text-red-600'
+            },
+            {
+                id: 'rejected_with_payment',
+                name: 'تم الرفض مع الدفع',
+                count: allRejectedWithPaymentOrders,
+                icon: DollarSign,
+                color: 'bg-green-100 text-green-800',
+                iconColor: 'text-green-600'
+            },
+            {
+                id: 'rejected_no_payment',
+                name: 'رفض ولم يتم الدفع',
+                count: allRejectedNoPaymentOrders,
+                icon: XCircle,
+                color: 'bg-red-100 text-red-800',
+                iconColor: 'text-red-600'
+            }
+        ]);
+
+        orders.forEach(order => {
+            if(order.status.toLowerCase() === "delivered")
+                successOrders++;
+            if(order.status.toLowerCase() === "processing")
+                processingOrders++;
+            if(order.status.toLowerCase() === "pending")
+                pendingOrders++;
+            if(order.status.toLowerCase() === "shipped")
+                shippedOrders++;
+            if(order.status.toLowerCase() === "cancelled")
+                cancelledOrders++;
+            if(order.status.toLowerCase() === "unreachable")
+                unreachableOrders++;
+            if(order.status.toLowerCase() === "postponed")
+                postponedOrders++;
+            if(order.status.toLowerCase() === "rejected_with_payment")
+                rejectedWithPaymentOrders++;
+            if(order.status.toLowerCase() === "rejected_no_payment")
+                rejectedNoPaymentOrders++;
+            if(getDayOfLast7Days(order.createdAt))
+                recentOrders.push(order);
+            // if(order.createdBy)
+        });
+
+        successOrdersRate = Math.round(successOrders / orders.length * 100);
+
+        setOrdersRate(successOrdersRate);
+        setAllProcessingOrders(processingOrders);
+        setAllDeliveredOrders(successOrders);
+        setAllPendingOrders(pendingOrders);
+        setAllShippedOrders(shippedOrders);
+        setAllCancelledOrders(cancelledOrders);
+        setAllUnreachableOrders(unreachableOrders);
+        setAllPostponedOrders(postponedOrders);
+        setAllRejectedWithPaymentOrders(rejectedWithPaymentOrders);
+        setAllRejectedNoPaymentOrders(rejectedNoPaymentOrders);
+        setAllRecentOrders(recentOrders);
+    }, [orders]);
+
+    ///////////////////////////////////////////////////////////
   const getOrderStatusIcon = (status: string) => {
     switch (status) {
       case 'تم التسليم': return <CheckCircle className="h-5 w-5 text-green-600" />;
@@ -216,7 +254,7 @@ export function EmployeeDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{getTotalOrders()}</div>
+            <div className="text-2xl font-bold">{orders.length}</div>
             <p className="text-xs text-muted-foreground">
               جميع الطلبات
             </p>
@@ -229,7 +267,7 @@ export function EmployeeDashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{getSuccessRate()}%</div>
+            <div className="text-2xl font-bold text-green-600">{ordersRate}%</div>
             <p className="text-xs text-muted-foreground">
               من إجمالي الطلبات
             </p>
@@ -243,9 +281,10 @@ export function EmployeeDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {orderStatuses.filter(s => 
-                ['new', 'pending', 'unreachable', 'postponed'].includes(s.id)
-              ).reduce((total, status) => total + status.count, 0)}
+                {allProcessingOrders}
+              {/*{orderStatuses.filter(s =>
+              //   ['new', 'pending', 'unreachable', 'postponed'].includes(s.id)
+              // ).reduce((total, status) => total + status.count, 0)*/}
             </div>
             <p className="text-xs text-muted-foreground">
               تحتاج تدخل
@@ -259,7 +298,7 @@ export function EmployeeDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">47</div>
+            <div className="text-2xl font-bold">{merchantsCount}</div>
             <p className="text-xs text-muted-foreground">
               تاجر نشط اليوم
             </p>
@@ -308,37 +347,52 @@ export function EmployeeDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+            {allRecentOrders.slice(0, 5).map((order) => (
+              <div key={order._id.slice(-8)} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-center space-x-4 space-x-reverse">
                   <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-50">
                     {getOrderStatusIcon(order.status)}
                   </div>
                   <div>
-                    <p className="font-medium">{order.recipient}</p>
-                    <p className="text-sm text-blue-600">{order.merchant}</p>
+                    <p className="font-medium">{order.customerName}</p>
+                    <p className="text-sm text-blue-600">{order.orderType}</p>
                     <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <MapPin className="h-3 w-3 mr-1" />
-                      {order.destination}
+                      {order.governorate + ", " + order.city + ", " + order.street}
                     </div>
                     <div className="flex items-center text-xs text-muted-foreground mt-1">
-                      <span>رقم الطلب: {order.id}</span>
+                      <span>رقم الطلب: {order._id.slice(-8)} </span>
                       <span className="mx-2">•</span>
-                      <Phone className="h-3 w-3 mr-1" />
-                      {order.phone}
+                      <Phone className="h-3 w-3 mr-1" /> . {order.customerPhone1}
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-4 space-x-reverse">
                   <div className="text-left">
-                    <Badge className={getOrderStatusColor(order.status)}>
-                      {order.status}
+                    <Badge className={
+                        order.status.toLowerCase() === "delivered"
+                            ? getOrderStatusColor("تم التسليم")
+                            : order.status.toLowerCase() === "pending"
+                                ? getOrderStatusColor("قيد الانتظار")
+                                : order.status.toLowerCase() === "shipped"
+                                    ?getOrderStatusColor("تم التسليم للمندوب")
+                                    :getOrderStatusColor("طلب جديد")
+                    }>
+                        {
+                            order.status.toLowerCase() === "delivered"
+                                ? "تم التسليم"
+                                : order.status.toLowerCase() === "pending"
+                                    ? "قيد الانتظار"
+                                    : order.status.toLowerCase() === "shipped"
+                                        ?"تم التسليم للمندوب"
+                                        :"طلب جديد"
+                        }
                     </Badge>
-                    <p className="text-sm font-medium mt-1">{order.amount}</p>
-                    <p className="text-xs text-muted-foreground">{order.date}</p>
+                    <p className="text-sm font-medium mt-1">{order.orderCost} جنية </p>
+                    <p className="text-xs text-muted-foreground">date arrived</p>
                   </div>
-                  
+
                   <Button variant="ghost" size="sm">
                     <Eye className="h-4 w-4" />
                   </Button>
