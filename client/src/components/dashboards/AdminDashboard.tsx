@@ -1,11 +1,11 @@
 import React, {useEffect, useState} from "react";
 import {
-  Package,
-  Clock,
-  DollarSign,
-  Users,
-  // TrendingUp,
-  // Truck,
+    Package,
+    Clock,
+    DollarSign,
+    Users, Download,
+    // TrendingUp,
+    // Truck,
 } from "lucide-react";
 import {
   LineChart,
@@ -87,6 +87,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
     const [chartData, setChartData] = useState([]);
     const [totalOrders, setTotalOrders] = useState(0);
     const [totalProfitAWeek, setTotalProfitAWeek] = useState(0);
+    const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState(0);
+    const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState(0);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -150,7 +152,6 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
             const sortedChart = Array.from({ length: 7 }).map((_, i) => {
                 const index = (todayIndex - i + 7) % 7;
                 const day = Object.keys(counts)[index];
-                console.log(counts[day]);
                 if(i !== 0)
                     setTotalOrders(c => c + counts[day]);
 
@@ -162,6 +163,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
 
             setChartData(sortedChart);
         }
+        setOrdersTodayRelativeToWeek(Math.ceil((countOrdersToday / (totalOrders / 6)) * 100));
+        setProfitTodayRelativeToWeek(Math.ceil((moneysToday / (totalProfitAWeek / 6)) * 100));
     }, [allOrders]);
 
 ///////////////////////////////////////////////////////////////////////
@@ -174,7 +177,32 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
         </div>
         <div className="flex space-x-2 space-x-reverse">
           <Button>إنشاء تقرير</Button>
-          <Button variant="outline">تصدير البيانات</Button>
+          <Button variant="outline"
+                className="ml-2"
+                onClick={() => {
+                    const data = [{
+                        "الطلبات اليوم": countOrdersToday,
+                        "الشحنات المعلقة": pendingOrdersToday,
+                        "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                        "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
+                        "الإيرادات اليوم": moneysToday,
+                        "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
+                        "المستخدمين النشطين": users.length,
+                    }];
+                    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "dashboard-info.json";
+                    a.click();
+
+                    URL.revokeObjectURL(url);
+                    }}
+          >
+              <Download className="h-4 w-4 mr-2" />
+              تصدير البيانات
+          </Button>
         </div>
       </div>
 
@@ -187,7 +215,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
           <CardContent>
             <div className="text-2xl font-bold">{countOrdersToday}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">%{Math.ceil((countOrdersToday / (totalOrders / 6)) * 100)} </span>بالنسبة لمتوسط الطلبات خلال الاسبوع
+              <span className="text-green-600">%{ordersTodayRelativeToWeek} </span>بالنسبة لمتوسط الطلبات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -217,7 +245,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
           <CardContent>
             <div className="text-2xl font-bold">{moneysToday} جنيه</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">{Math.ceil((moneysToday / (totalProfitAWeek / 6)) * 100)}%</span> بالنسبة لمتوسط الايرادات خلال الاسبوع
+              <span className="text-green-600">{profitTodayRelativeToWeek}%</span> بالنسبة لمتوسط الايرادات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -279,7 +307,7 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
                       <button
                           key={item.id}
                           onClick={() => onPageChange(item.id)}
-                          className={`w-full flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
+                          className={`w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
                               isActive
                                   ? 'bg-blue-50 text-blue-700 font-semibold'
                                   : 'text-gray-700 hover:bg-gray-50'
