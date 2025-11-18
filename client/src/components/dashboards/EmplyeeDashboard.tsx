@@ -1,6 +1,5 @@
 import { 
-  Package, 
-  Plus, 
+  Package,
   CheckCircle, 
   Clock, 
   Truck,
@@ -18,19 +17,19 @@ import {
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import type {Order, User} from "../../types";
 import api from "../../lib/api.ts";
 
 export function EmployeeDashboard() {
-    //////////////////////////////////////////////////////////
+    // get day of last 7 days
     function getDayOfLast7Days(dateString: string): boolean {
         const date = new Date(dateString);
 
         // Start of today (UTC)
         const start = new Date();
         start.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
-        start.setUTCDate(start.getUTCDate() - 6); // subtract 14 days
+        start.setUTCDate(start.getUTCDate() - 6); // subtract number of days
 
         // End of today (UTC)
         const end = new Date();
@@ -38,7 +37,8 @@ export function EmployeeDashboard() {
 
         return date >= start && date <= end;
     }
-    // get all orders to processing operations
+
+    // get all users
     const [users, setUsers] = useState<User[]>([]);
     const getUsers = async (): Promise<void> => {
         const res = await api.get<User[]>("api/users/");
@@ -49,21 +49,16 @@ export function EmployeeDashboard() {
         getUsers().catch(console.error);
     }, []);
 
-    const [merchantsCount, setMerchantsCount] = useState<number>(0);
-    useEffect(() => {
-        let allMerchants = 0;
-        users.forEach(user => {
-            if(user.userType.toLowerCase() === "merchant")
-                allMerchants++;
-        })
-
-        setMerchantsCount(allMerchants);
+    // merchant count derived from users
+    const merchantsCount = useMemo(() => {
+        return users.reduce((acc, u) => acc + (u.userType?.toLowerCase() === "merchant" ? 1 : 0), 0);
     }, [users]);
 
     // get all order to processing operations
     const [orders, setOrders] = useState<Order[]>([]);
     const getAllOrders = async (): Promise<void> => {
         const res = await api.get<Order[]>("api/orders/");
+        // @ts-ignore
         setOrders(res.data.data.orders);
     };
 
@@ -71,32 +66,53 @@ export function EmployeeDashboard() {
         getAllOrders().catch(console.error);
     }, []);
 
-    const [ordersRate, setOrdersRate] = useState<number>(0);
-    const [allProcessingOrders, setAllProcessingOrders] = useState<number>(0);
-    const [orderStatuses, setOrderStatuses] = useState<any>([]);
-    const [allPendingOrders, setAllPendingOrders] = useState<number>(0);
-    const [allShippedOrders, setAllShippedOrders] = useState<number>(0);
-    const [allCancelledOrders, setAllCancelledOrders] = useState<number>(0);
-    const [allDeliveredOrders, setAllDeliveredOrders] = useState<number>(0);
-    const[allUnreachableOrders, setAllUnreachableOrders] = useState<number>(0);
-    const [allPostponedOrders, setAllPostponedOrders] = useState<number>(0);
-    const [allRejectedWithPaymentOrders, setAllRejectedWithPaymentOrders] = useState<number>(0);
-    const [allRejectedNoPaymentOrders, setAllRejectedNoPaymentOrders] = useState<number>(0);
-    const [allRecentOrders, setAllRecentOrders] = useState<Order[]>([]);
-    useEffect(() => {
-        let successOrders = 0;
-        let successOrdersRate = 0;
-        let processingOrders = 0;
-        let pendingOrders = 0;
-        let shippedOrders = 0;
-        let cancelledOrders = 0;
-        let unreachableOrders = 0;
-        let postponedOrders = 0;
-        let rejectedWithPaymentOrders = 0;
-        let rejectedNoPaymentOrders = 0;
-        let recentOrders: Order[] = [];
+    type StatusSummary = {
+        id: string;
+        name: string;
+        count: number;
+        icon: any;
+        color: string;
+        iconColor: string;
+    };
 
-        setOrderStatuses( [
+    const {
+        ordersRate,
+        allProcessingOrders,
+        allRecentOrders,
+        orderStatuses
+    } = useMemo(() => {
+        let delivered = 0;
+        let processing = 0;
+        let pending = 0;
+        let shipped = 0;
+        let cancelled = 0;
+        let unreachable = 0;
+        let postponed = 0;
+        let rejectedWithPayment = 0;
+        let rejectedNoPayment = 0;
+        const recent: Order[] = [];
+
+        for (const order of orders) {
+            const status = order.status?.toLowerCase();
+            if (status === "delivered") delivered++;
+            else if (status === "processing") processing++;
+            else if (status === "pending") pending++;
+            else if (status === "shipped") shipped++;
+            else if (status === "cancelled") cancelled++;
+            else if (status === "unreachable") unreachable++;
+            else if (status === "postponed") postponed++;
+            else if (status === "rejected_with_payment") rejectedWithPayment++;
+            else if (status === "rejected_no_payment") rejectedNoPayment++;
+
+            if (getDayOfLast7Days(order.createdAt)) recent.push(order);
+        }
+
+        const rate = orders.length ? Math.round((delivered / orders.length) * 100) : 0;
+
+        // Sort recent orders by date desc for stable display
+        recent.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        const statuses: StatusSummary[] = [
             {
                 id: 'new',
                 name: 'الطلبات الجديدة',
@@ -108,7 +124,7 @@ export function EmployeeDashboard() {
             {
                 id: 'pending',
                 name: 'قيد الانتظار',
-                count: allPendingOrders,
+                count: pending,
                 icon: Clock,
                 color: 'bg-yellow-100 text-yellow-800',
                 iconColor: 'text-yellow-600'
@@ -116,7 +132,7 @@ export function EmployeeDashboard() {
             {
                 id: 'delivered_to_courier',
                 name: 'تم التسليم للمندوب',
-                count: allShippedOrders,
+                count: shipped,
                 icon: Truck,
                 color: 'bg-purple-100 text-purple-800',
                 iconColor: 'text-purple-600'
@@ -124,7 +140,7 @@ export function EmployeeDashboard() {
             {
                 id: 'delivered',
                 name: 'تم التسليم',
-                count: allDeliveredOrders,
+                count: delivered,
                 icon: CheckCircle,
                 color: 'bg-green-100 text-green-800',
                 iconColor: 'text-green-600'
@@ -132,7 +148,7 @@ export function EmployeeDashboard() {
             {
                 id: 'unreachable',
                 name: 'لا يمكن الوصول',
-                count: allUnreachableOrders,
+                count: unreachable,
                 icon: XCircle,
                 color: 'bg-red-100 text-red-800',
                 iconColor: 'text-red-600'
@@ -140,7 +156,7 @@ export function EmployeeDashboard() {
             {
                 id: 'postponed',
                 name: 'تم التأجيل',
-                count: allPostponedOrders,
+                count: postponed,
                 icon: Pause,
                 color: 'bg-gray-100 text-gray-800',
                 iconColor: 'text-gray-600'
@@ -148,7 +164,7 @@ export function EmployeeDashboard() {
             {
                 id: 'cancelled_by_recipient',
                 name: 'تم الإلغاء من قبل المستلم',
-                count: allCancelledOrders,
+                count: cancelled,
                 icon: XCircle,
                 color: 'bg-red-100 text-red-800',
                 iconColor: 'text-red-600'
@@ -156,7 +172,7 @@ export function EmployeeDashboard() {
             {
                 id: 'rejected_with_payment',
                 name: 'تم الرفض مع الدفع',
-                count: allRejectedWithPaymentOrders,
+                count: rejectedWithPayment,
                 icon: DollarSign,
                 color: 'bg-green-100 text-green-800',
                 iconColor: 'text-green-600'
@@ -164,50 +180,19 @@ export function EmployeeDashboard() {
             {
                 id: 'rejected_no_payment',
                 name: 'رفض ولم يتم الدفع',
-                count: allRejectedNoPaymentOrders,
+                count: rejectedNoPayment,
                 icon: XCircle,
                 color: 'bg-red-100 text-red-800',
                 iconColor: 'text-red-600'
             }
-        ]);
+        ];
 
-        orders.forEach(order => {
-            if(order.status.toLowerCase() === "delivered")
-                successOrders++;
-            if(order.status.toLowerCase() === "processing")
-                processingOrders++;
-            if(order.status.toLowerCase() === "pending")
-                pendingOrders++;
-            if(order.status.toLowerCase() === "shipped")
-                shippedOrders++;
-            if(order.status.toLowerCase() === "cancelled")
-                cancelledOrders++;
-            if(order.status.toLowerCase() === "unreachable")
-                unreachableOrders++;
-            if(order.status.toLowerCase() === "postponed")
-                postponedOrders++;
-            if(order.status.toLowerCase() === "rejected_with_payment")
-                rejectedWithPaymentOrders++;
-            if(order.status.toLowerCase() === "rejected_no_payment")
-                rejectedNoPaymentOrders++;
-            if(getDayOfLast7Days(order.createdAt))
-                recentOrders.push(order);
-            // if(order.createdBy)
-        });
-
-        successOrdersRate = Math.round(successOrders / orders.length * 100);
-
-        setOrdersRate(successOrdersRate);
-        setAllProcessingOrders(processingOrders);
-        setAllDeliveredOrders(successOrders);
-        setAllPendingOrders(pendingOrders);
-        setAllShippedOrders(shippedOrders);
-        setAllCancelledOrders(cancelledOrders);
-        setAllUnreachableOrders(unreachableOrders);
-        setAllPostponedOrders(postponedOrders);
-        setAllRejectedWithPaymentOrders(rejectedWithPaymentOrders);
-        setAllRejectedNoPaymentOrders(rejectedNoPaymentOrders);
-        setAllRecentOrders(recentOrders);
+        return {
+            ordersRate: rate,
+            allProcessingOrders: processing,
+            allRecentOrders: recent,
+            orderStatuses: statuses
+        };
     }, [orders]);
 
     ///////////////////////////////////////////////////////////
@@ -240,10 +225,10 @@ export function EmployeeDashboard() {
             متابعة ومعالجة طلبات الشحن
           </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
-          معالجة طلب جديد
-        </Button>
+        {/*<Button className="bg-blue-600 hover:bg-blue-700">*/}
+        {/*  <Plus className="h-4 w-4 mr-2" />*/}
+        {/*  معالجة طلب جديد*/}
+        {/*</Button>*/}
       </div>
 
       {/* إحصائيات عامة */}
@@ -280,14 +265,9 @@ export function EmployeeDashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-                {allProcessingOrders}
-              {/*{orderStatuses.filter(s =>
-              //   ['new', 'pending', 'unreachable', 'postponed'].includes(s.id)
-              // ).reduce((total, status) => total + status.count, 0)*/}
-            </div>
+            <div className="text-2xl font-bold text-orange-600">{allProcessingOrders}</div>
             <p className="text-xs text-muted-foreground">
-              تحتاج تدخل
+              تحتاج تدخل النظام
             </p>
           </CardContent>
         </Card>
@@ -342,7 +322,7 @@ export function EmployeeDashboard() {
         <CardHeader>
           <CardTitle>الطلبات الحديثة</CardTitle>
           <CardDescription>
-            آخر الطلبات المدخلة في النظام
+            آخر خمس طلبات تم ادخالها في النظام
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -390,7 +370,7 @@ export function EmployeeDashboard() {
                         }
                     </Badge>
                     <p className="text-sm font-medium mt-1">{order.orderCost} جنية </p>
-                    <p className="text-xs text-muted-foreground">date arrived</p>
+                    <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
 
                   <Button variant="ghost" size="sm">
@@ -401,9 +381,9 @@ export function EmployeeDashboard() {
             ))}
           </div>
 
-          <div className="mt-4 text-center">
-            <Button variant="outline">عرض جميع الطلبات</Button>
-          </div>
+          {/*<div className="mt-4 text-center">*/}
+          {/*  <Button variant="outline">عرض جميع الطلبات</Button>*/}
+          {/*</div>*/}
         </CardContent>
       </Card>
 
