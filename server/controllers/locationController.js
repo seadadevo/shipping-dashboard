@@ -36,7 +36,9 @@ exports.addGovernorate = async (req, res) => {
 
 exports.getAllGovernorates = async (req, res) => {
   try {
-    const governorates = await Governorate.find().sort({ govName: 1 });
+    // ---- ADDED FILTER ----
+    const governorates = await Governorate.find({ isActive: true }).sort({ govName: 1 });
+    // ---- END ADDED ----
     res.status(200).json({
       status: "success",
       results: governorates.length,
@@ -187,9 +189,11 @@ exports.addCity = async (req, res) => {
 
 exports.getAllCities = async (req, res) => {
   try {
-    const cities = await City.find()
+    // ---- ADDED FILTER ----
+    const cities = await City.find({ isActive: true })
       .populate("governorate", "govName govCode")
       .sort({ "governorate.govName": 1, cityName: 1 });
+    // ---- END ADDED ----
       
     res.status(200).json({
       status: "success",
@@ -298,9 +302,11 @@ exports.getCitiesByGovernorate = async (req, res) => {
              return res.status(400).json({ message: "Governorate ID is required" });
         }
         
-        const cities = await City.find({ governorate: govId })
+        // ---- ADDED FILTER ----
+        const cities = await City.find({ governorate: govId, isActive: true })
             .populate("governorate", "govName govCode")
             .sort({ cityName: 1 });
+        // ---- END ADDED ----
 
         res.status(200).json({
             status: "success",
