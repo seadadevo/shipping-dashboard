@@ -13,7 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
       admin: 'مدير النظام',
       employee: 'موظف',
       merchant: 'تاجر',
-      driver: 'سائق',
+      courier: 'سائق',
     };
     return roleNames[role];
   };

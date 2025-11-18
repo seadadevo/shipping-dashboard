@@ -39,7 +39,7 @@ const DashboardLayout: React.FC = () => {
 				return <EmployeeDashboard />;
 			case "merchant-dashboard":
 				return <MerchantDashboard />;
-			case "driver-dashboard":
+			case "courier-dashboard":
 				return <DriverDashboard />;
 
 			case "user-management":
