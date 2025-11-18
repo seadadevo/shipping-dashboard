@@ -11,10 +11,10 @@ const AppContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center">
           <Package className="h-16 w-16 text-blue-600 animate-pulse" />
-          <p className="text-gray-600 mt-4">جاري تحميل النظام...</p>
+          <p className="text-foreground mt-4">جاري تحميل النظام...</p>
         </div>
       </div>
     );
