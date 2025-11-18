@@ -42,7 +42,7 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
   const { theme } = useTheme();
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 z-20">
+    <header className="bg-background shadow-sm border-b border-gray-200 px-6 py-4 z-20">
       <div className="flex items-center justify-between">
 
         {/* menu button for small screens */}
@@ -54,7 +54,7 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
         </button>
 
         <div className="flex items-center flex-1 max-w-lg">
-          <h1>LOGO</h1>
+          <img src={theme === 'dark' ? '/dark-logo.png' : '/light-logo.png'} className='w-20' alt="flash line logo" />
         </div>
 
         <div className="flex items-center space-x-4 space-x-reverse">
