@@ -309,9 +309,9 @@ export function EmployeeDashboard() {
         <CardContent>
           <div className="space-y-4">
             {recentOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+              <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors">
                 <div className="flex items-center space-x-4 space-x-reverse">
-                  <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-50">
+                  <div className="h-10 w-10 ml-3 rounded-full flex items-center justify-center bg-gray-50">
                     {getOrderStatusIcon(order.status)}
                   </div>
                   <div>
