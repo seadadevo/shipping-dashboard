@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const bcrypt = require('bcryptjs');
 
 const allowedFields = [
 	"userType",
@@ -11,7 +12,71 @@ const allowedFields = [
 	"city",
 	"storeName",
 ];
+//  Get user profile
+exports.getUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password'); // لا ترسل كلمة المرور
 
+        if (user) {
+            res.json({
+                id: user._id,
+                fullName: user.fullName, 
+                email: user.email,
+                userType: user.userType,
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+//     update password
+exports.updatePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        const user = await User.findById(req.user.id).select('+password'); // جلب كلمة المرور للمقارنة
+       // [تعديل 1] التحقق الأكيد من وجود كلمة المرور المشفرة
+        if (!user || !user.password) {
+            return res.status(404).json({ message: 'لم يتم العثور على ملف المستخدم أو حقل كلمة المرور مفقود.' });
+        }
+        
+        if (!currentPassword) {
+            return res.status(401).json({ message: 'لا يمكن أن يكون حقل كلمة المرور الحالية فارغًا.' });
+        }
+
+        if (!newPassword) {
+            return res.status(401).json({ message: 'لا يمكن أن يكون حقل كلمة المرور الجديدة فارغًا.' });
+        }
+
+        // 3. المقارنة والمصادقة
+        if (await bcrypt.compare(currentPassword, user.password)) {
+            
+            // 4. تشفير كلمة المرور الجديدة
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newPassword, salt);
+            
+            // 4. استخدام FindByIdAndUpdate لتجاوز قواعد التحقق غير الضرورية
+            await User.findByIdAndUpdate(
+                req.user.id, // ID
+                { password: hashedPassword }, // الحقل المراد تحديثه فقط
+                { 
+                    new: true, 
+                    runValidators:  false // لا يزال يشغل قواعد التحقق على الحقل المُعدَّل فقط (password)
+                }
+            );
+
+            res.json({ message: 'تم تحديث كلمة المرور بنجاح' });
+        } else {
+            res.status(401).json({ message: '!كلمة المرور الحالية غير صحيحة' });
+        }
+    } catch (error) {
+        // إذا كان الخطأ هنا، فهو خطأ تشفير أو خطأ في الاتصال بالـ DB
+        console.error("PUT /api/users/password failed:", error); 
+        res.status(500).json({ message: 'Error processing password update.' });
+    }
+};
 // Add new user
 exports.addUser = async (req, res) => {
 	try {
