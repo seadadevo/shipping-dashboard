@@ -529,7 +529,7 @@ export function OrderManagement() {
               عرض جميع تفاصيل الطلب والحالة الحالية
             </DialogDescription>
           </DialogHeader>
-
+          
           {selectedOrder && (
             <div className="space-y-6 max-h-[70vh] overflow-y-auto p-2">
               {/* معلومات أساسية */}

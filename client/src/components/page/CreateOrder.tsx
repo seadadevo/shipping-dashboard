@@ -376,7 +376,7 @@ export function CreateOrder() {
                       <Label className="text-base">نوع الطلب <span className="text-red-500">*</span></Label>
                       <Select value={formData.type} onValueChange={(v) => handleInputChange('type', v)} dir="rtl">
                           <SelectTrigger className="h-11"><SelectValue placeholder="اختر نوع الطلب" /></SelectTrigger>
-                          <SelectContent className='bg-blue-50'>{orderTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                          <SelectContent className='bg-background'>{orderTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                       </Select>
                   </div>
                   <div className='space-y-2'>
@@ -439,7 +439,7 @@ export function CreateOrder() {
                       <Label className="text-base">المدينة <span className="text-red-500">*</span></Label>
                       <Select value={formData.cityName} onValueChange={(v) => handleInputChange('cityName', v)} disabled={availableCities.length===0} dir="rtl">
                           <SelectTrigger className="h-11"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
-                          <SelectContent className='bg-blue-50'>
+                          <SelectContent className='bg-background'>
                               {availableCities.map(c => (
                                   <SelectItem key={c._id} value={c.cityName}>
                                       <div className="flex justify-between w-full gap-4">
@@ -453,29 +453,39 @@ export function CreateOrder() {
                   </div>
               </div>
               <div className='grid gap-6 md:grid-cols-3'>
-                  <div className='space-y-2'>
-                      <Label className="text-base">القرية (اختياري)</Label>
-                      <Input 
-                          value={formData.village} 
-                          onChange={(e)=>handleInputChange('village', e.target.value)} 
-                          className='text-right h-11'
-                          placeholder="اسم القرية إن وجدت"
-                      />
-                  </div>
-                  <div className='space-y-2 md:col-span-2'>
-                      <Label className="text-base">الشارع / العنوان بالتفصيل <span className="text-red-500">*</span></Label>
-                      <Input 
-                          value={formData.street} 
-                          onChange={(e)=>handleInputChange('street', e.target.value)} 
-                          className='text-right h-11'
-                          placeholder="مثال: 15 شارع الجمهورية، بجوار المسجد الكبير، الدور الثاني"
-                      />
-                  </div>
-              </div>
-              <div className="flex items-center space-x-2 space-x-reverse bg-orange-50 p-4 rounded-md border border-orange-100">
-                  <Checkbox id="villageDelivery" className='ml-2 border-orange-500' checked={formData.villageDelivery} onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} />
-                  <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)</Label>
-              </div>
+                <div className='space-y-2'>
+                    <Label className="text-base">القرية (اختياري)</Label>
+                    <Input 
+                        value={formData.village} 
+                        onChange={(e)=>handleInputChange('village', e.target.value)} 
+                        className='text-right h-11'
+                        placeholder="اسم القرية إن وجدت"
+                        disabled={!formData.villageDelivery} // هنا نمنع الكتابة إذا لم يتم تفعيل checkbox
+                    />
+                </div>
+                <div className='space-y-2 md:col-span-2'>
+                    <Label className="text-base">الشارع / العنوان بالتفصيل <span className="text-red-500">*</span></Label>
+                    <Input 
+                        value={formData.street} 
+                        onChange={(e)=>handleInputChange('street', e.target.value)} 
+                        className='text-right h-11'
+                        placeholder="مثال: 15 شارع الجمهورية، بجوار المسجد الكبير، الدور الثاني"
+                    />
+                </div>
+            </div>
+
+            <div className="flex items-center space-x-2 space-x-reverse bg-orange-50 p-4 rounded-md border border-orange-100">
+                <Checkbox 
+                    id="villageDelivery" 
+                    className='ml-2 border-orange-500' 
+                    checked={formData.villageDelivery} 
+                    onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} 
+                />
+                <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
+                    هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)
+                </Label>
+            </div>
+
           </CardContent>
       </Card>
 
@@ -490,7 +500,7 @@ export function CreateOrder() {
                     <Label className="text-base">نوع الشحن <span className="text-red-500">*</span></Label>
                     <Select value={formData.shippingType} onValueChange={(v) => handleInputChange('shippingType', v)} dir="rtl">
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
-                        <SelectContent className='bg-blue-50'>
+                        <SelectContent className='bg-background'>
                             {shippingTypesList.map(t => (
                                 <SelectItem key={t._id} value={t.name}>
                                     <div className="flex justify-between w-full gap-2">
@@ -508,14 +518,14 @@ export function CreateOrder() {
                     <Label className="text-base">نوع الدفع <span className="text-red-500">*</span></Label>
                     <Select value={formData.paymentType} onValueChange={(v) => handleInputChange('paymentType', v)} dir="rtl">
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر الطريقة" /></SelectTrigger>
-                        <SelectContent className='bg-blue-50'>{paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                        <SelectContent className='bg-background'>{paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className='space-y-2'>
                     <Label className="text-base">الفرع المختص <span className="text-red-500">*</span></Label>
                     <Select value={formData.branchName} onValueChange={(v) => handleInputChange('branchName', v)} dir="rtl">
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
-                        <SelectContent className='bg-blue-50'>{branches.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                        <SelectContent className='bg-background'>{branches.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
             </div>
@@ -601,7 +611,7 @@ export function CreateOrder() {
             {products.length > 0 ? (
                 <div className="rounded-md border overflow-hidden">
                     <Table>
-                        <TableHeader className="bg-gray-50">
+                        <TableHeader className="bg-background">
                             <TableRow>
                                 <TableHead className='text-right'>الاسم</TableHead>
                                 <TableHead className='text-center'>الكمية</TableHead>

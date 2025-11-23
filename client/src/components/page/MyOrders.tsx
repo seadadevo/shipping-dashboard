@@ -247,11 +247,11 @@ export function MyOrders() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={setStatusFilter} dir="rtl">
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
-              <SelectContent className="bg-blue-50">
+              <SelectContent className="bg-background">
                 {statusOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -347,7 +347,7 @@ export function MyOrders() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-blue-50" align="end">
+                          <DropdownMenuContent className="bg-background" align="end"  dir="rtl">
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() => handleViewOrder(order)}
@@ -378,9 +378,9 @@ export function MyOrders() {
 
       {/* ... (نافذة عرض تفاصيل الطلب زي ما هي) ... */}
       <Dialog  open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className=" bg-blue-50 max-w-4xl">
+        <DialogContent className=" bg-background max-w-4xl"  dir="rtl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-blue-600">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
             <DialogDescription>
