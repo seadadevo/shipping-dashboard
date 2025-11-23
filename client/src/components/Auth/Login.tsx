@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Package, Mail, Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
+import { useTheme } from '../ui/theme-provider';
 
 import {
 	Card,
@@ -54,17 +55,22 @@ const Login: React.FC = () => {
 		}
 	};
 
+	  const { theme } = useTheme();
+
 	return (
 		<div
-			className="flex items-center justify-center min-h-screen bg-gray-100"
+			className="flex items-center justify-center min-h-screen bg-background"
 			dir="rtl"
 		>
 			<Card className="w-full max-w-md">
 				<CardHeader className="text-center">
-					<Package className="h-12 w-12 text-blue-600 mx-auto" />
+					<div className="flex items-center justify-center">
+						<img src={theme === 'dark' ? '/dark-logo.png' : '/light-logo.png'} className='w-40' alt="flash line logo" />
+					</div>
+					{/* <Package className="h-12 w-12 text-blue-600 mx-auto" />
 					<CardTitle className="text-2xl font-bold mt-4">
 						نظام الشحن
-					</CardTitle>
+					</CardTitle> */}
 					<CardDescription>
 						تسجيل الدخول إلى لوحة التحكم
 					</CardDescription>
@@ -122,7 +128,7 @@ const Login: React.FC = () => {
 
 						<Button
 							type="submit"
-							className="w-full"
+							className="w-full bg-accent-foreground"
 							disabled={loading}
 						>
 							{loading ? "جاري التحقق..." : "تسجيل الدخول"}

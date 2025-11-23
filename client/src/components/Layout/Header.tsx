@@ -47,7 +47,7 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
 
         {/* menu button for small screens */}
         <button 
-          className="lg:hidden p-2 rounded-md hover:bg-gray-100"
+          className="lg:hidden p-2 rounded-md hover:bg-muted-foreground"
           onClick={onToggleSidebar}
         >
           <Menu className="w-6 h-6" />
