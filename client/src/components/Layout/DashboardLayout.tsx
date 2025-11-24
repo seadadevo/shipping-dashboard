@@ -19,6 +19,7 @@ import { DriverDashboard } from "../dashboards/DriverDashboard";
 import Sidebar from "../Layout/Sidebar";
 import { AddUser } from "./../page/AddUser";
 import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
+import { AccountSettings } from "../page/AccountSettings";
 
 const DashboardLayout: React.FC = () => {
 	const { user, logout } = useAuth();
@@ -65,7 +66,8 @@ const DashboardLayout: React.FC = () => {
 		
 			case "shipping-types":
 				return <ShippingTypeManagement/>;
-		
+			case "account-settings": 
+			return <AccountSettings />;
 
 			default:
 				return <AdminDashboard />;
@@ -86,7 +88,7 @@ const DashboardLayout: React.FC = () => {
 			/>
 
 			<div className="flex-1 flex flex-col overflow-hidden">
-				<Header user={user} onLogout={logout} />
+				<Header user={user} onLogout={logout} onNavigate={setCurrentPage} />
 
 				<main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
 					{renderCurrentPage()}

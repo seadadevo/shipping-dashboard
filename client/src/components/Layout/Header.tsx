@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Bell, LogOut } from 'lucide-react';
+import { Search, Bell, LogOut, Settings } from 'lucide-react';
 
 
 import { Button } from '../ui/button';
@@ -15,7 +15,7 @@ import {
 import type { HeaderProps, User } from '../../types';
 
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ user, onLogout, onNavigate }) => {
   
   const getRoleName = (role: User['userType'] | undefined): string => {
     if (!role) return 'مستخدم';
@@ -82,9 +82,13 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
             <DropdownMenuContent align="end" className="w-56 bg-blue-50">
               <DropdownMenuLabel>حسابي</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onNavigate("account-settings")}
+                >
+                  <Settings className="h-4 w-4 ml-2" /> 
                 إعدادات الحساب
               </DropdownMenuItem>
+              
               <DropdownMenuItem>
                 المساعدة والدعم
               </DropdownMenuItem>
