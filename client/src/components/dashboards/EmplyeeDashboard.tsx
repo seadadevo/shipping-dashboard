@@ -1,6 +1,5 @@
 import { 
-  Package, 
-  Plus, 
+  Package,
   CheckCircle, 
   Clock, 
   Truck,
@@ -8,7 +7,6 @@ import {
   XCircle,
   AlertTriangle,
   Pause,
-  RotateCcw,
   DollarSign,
   TrendingUp,
   Activity,
@@ -19,160 +17,185 @@ import {
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-
-// حالات الطلبات مع الألوان والأيقونات
-const orderStatuses = [
-  {
-    id: 'new',
-    name: 'الطلبات الجديدة',
-    count: 18,
-    icon: Package,
-    color: 'bg-blue-100 text-blue-800',
-    iconColor: 'text-blue-600'
-  },
-  {
-    id: 'pending',
-    name: 'قيد الانتظار',
-    count: 12,
-    icon: Clock,
-    color: 'bg-yellow-100 text-yellow-800',
-    iconColor: 'text-yellow-600'
-  },
-  {
-    id: 'delivered_to_courier',
-    name: 'تم التسليم للمندوب',
-    count: 25,
-    icon: Truck,
-    color: 'bg-purple-100 text-purple-800',
-    iconColor: 'text-purple-600'
-  },
-  {
-    id: 'delivered',
-    name: 'تم التسليم',
-    count: 342,
-    icon: CheckCircle,
-    color: 'bg-green-100 text-green-800',
-    iconColor: 'text-green-600'
-  },
-  {
-    id: 'unreachable',
-    name: 'لا يمكن الوصول',
-    count: 8,
-    icon: XCircle,
-    color: 'bg-red-100 text-red-800',
-    iconColor: 'text-red-600'
-  },
-  {
-    id: 'postponed',
-    name: 'تم التأجيل',
-    count: 11,
-    icon: Pause,
-    color: 'bg-gray-100 text-gray-800',
-    iconColor: 'text-gray-600'
-  },
-  {
-    id: 'partial_delivered',
-    name: 'تم التسليم جزئياً',
-    count: 5,
-    icon: AlertTriangle,
-    color: 'bg-orange-100 text-orange-800',
-    iconColor: 'text-orange-600'
-  },
-  {
-    id: 'cancelled_by_recipient',
-    name: 'تم الإلغاء من قبل المستلم',
-    count: 14,
-    icon: XCircle,
-    color: 'bg-red-100 text-red-800',
-    iconColor: 'text-red-600'
-  },
-  {
-    id: 'rejected_with_payment',
-    name: 'تم الرفض مع الدفع',
-    count: 9,
-    icon: DollarSign,
-    color: 'bg-green-100 text-green-800',
-    iconColor: 'text-green-600'
-  },
-  {
-    id: 'rejected_partial_payment',
-    name: 'رفض مع سداد جزء',
-    count: 4,
-    icon: RotateCcw,
-    color: 'bg-yellow-100 text-yellow-800',
-    iconColor: 'text-yellow-600'
-  },
-  {
-    id: 'rejected_no_payment',
-    name: 'رفض ولم يتم الدفع',
-    count: 13,
-    icon: XCircle,
-    color: 'bg-red-100 text-red-800',
-    iconColor: 'text-red-600'
-  }
-];
-
-const recentOrders = [
-  { 
-    id: '#E2024-001', 
-    merchant: 'متجر الأزياء الحديثة',
-    recipient: 'سارة أحمد', 
-    destination: 'القاهرة، وسط المدينة', 
-    status: 'تم التسليم', 
-    date: '2024-01-15',
-    amount: '85 جنيه',
-    phone: '01512345678'
-  },
-  { 
-    id: '#E2024-002', 
-    merchant: 'متجر الإلكترونيات',
-    recipient: 'محمد عبدالله', 
-    destination: 'الإسكندرية، حي المنتزه', 
-    status: 'تم التسليم للمندوب', 
-    date: '2024-01-14',
-    amount: '125 جنيه',
-    phone: '01598765432'
-  },
-  { 
-    id: '#E2024-003', 
-    merchant: 'متجر المنزل والحديقة',
-    recipient: 'فاطمة سعد', 
-    destination: 'الجيزة، حي الهرم', 
-    status: 'قيد الانتظار', 
-    date: '2024-01-14',
-    amount: '95 جنيه',
-    phone: '01112345678'
-  },
-  { 
-    id: '#E2024-004', 
-    merchant: 'مكتبة المعرفة',
-    recipient: 'أحمد علي', 
-    destination: 'القليوبية، شبرا الخيمة', 
-    status: 'تم التسليم', 
-    date: '2024-01-13',
-    amount: '110 جنيه',
-    phone: '01118138288'
-  },
-  { 
-    id: '#E2024-005', 
-    merchant: 'متجر التوحيد للملابس',
-    recipient: 'نورا حسن', 
-    destination: 'المنوفيه ، حي السلام', 
-    status: 'طلب جديد', 
-    date: '2024-01-13',
-    amount: '75 جنيه',
-    phone: '01155667788'
-  },
-];
+import {useEffect, useMemo, useState} from "react";
+import type {Order, User} from "../../types";
+import api from "../../lib/api.ts";
 
 export function EmployeeDashboard() {
-  const getTotalOrders = () => orderStatuses.reduce((total, status) => total + status.count, 0);
-  const getSuccessRate = () => {
-    const delivered = orderStatuses.find(s => s.id === 'delivered')?.count || 0;
-    const total = getTotalOrders();
-    return total > 0 ? Math.round((delivered / total) * 100) : 0;
-  };
+    // get day of last 7 days
+    function getDayOfLast7Days(dateString: string): boolean {
+        const date = new Date(dateString);
 
+        // Start of today (UTC)
+        const start = new Date();
+        start.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
+        start.setUTCDate(start.getUTCDate() - 6); // subtract number of days
+
+        // End of today (UTC)
+        const end = new Date();
+        end.setUTCHours(23, 59, 59, 999);
+
+        return date >= start && date <= end;
+    }
+
+    // get all users
+    const [users, setUsers] = useState<User[]>([]);
+    const getUsers = async (): Promise<void> => {
+        const res = await api.get<User[]>("api/users/");
+        setUsers(res.data);
+    };
+
+    useEffect(() => {
+        getUsers().catch(console.error);
+    }, []);
+
+    // merchant count derived from users
+    const merchantsCount = useMemo(() => {
+        return users.reduce((acc, u) => acc + (u.userType?.toLowerCase() === "merchant" ? 1 : 0), 0);
+    }, [users]);
+
+    // get all order to processing operations
+    const [orders, setOrders] = useState<Order[]>([]);
+    const getAllOrders = async (): Promise<void> => {
+        const res = await api.get<Order[]>("api/orders/");
+        // @ts-ignore
+        setOrders(res.data.data.orders);
+    };
+
+    useEffect(() => {
+        getAllOrders().catch(console.error);
+    }, []);
+
+    type StatusSummary = {
+        id: string;
+        name: string;
+        count: number;
+        icon: any;
+        color: string;
+        iconColor: string;
+    };
+
+    const {
+        ordersRate,
+        allProcessingOrders,
+        allRecentOrders,
+        orderStatuses
+    } = useMemo(() => {
+        let delivered = 0;
+        let processing = 0;
+        let pending = 0;
+        let shipped = 0;
+        let cancelled = 0;
+        let unreachable = 0;
+        let postponed = 0;
+        let rejectedWithPayment = 0;
+        let rejectedNoPayment = 0;
+        const recent: Order[] = [];
+
+        for (const order of orders) {
+            const status = order.status?.toLowerCase();
+            if (status === "delivered") delivered++;
+            else if (status === "processing") processing++;
+            else if (status === "pending") pending++;
+            else if (status === "shipped") shipped++;
+            else if (status === "cancelled") cancelled++;
+            else if (status === "unreachable") unreachable++;
+            else if (status === "postponed") postponed++;
+            else if (status === "rejected_with_payment") rejectedWithPayment++;
+            else if (status === "rejected_no_payment") rejectedNoPayment++;
+
+            if (getDayOfLast7Days(order.createdAt)) recent.push(order);
+        }
+
+        const rate = orders.length ? Math.round((delivered / orders.length) * 100) : 0;
+
+        // Sort recent orders by date desc for stable display
+        recent.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        const statuses: StatusSummary[] = [
+            {
+                id: 'new',
+                name: 'الطلبات الجديدة',
+                count: orders.length,
+                icon: Package,
+                color: 'bg-blue-100 text-blue-800',
+                iconColor: 'text-blue-600'
+            },
+            {
+                id: 'pending',
+                name: 'قيد الانتظار',
+                count: pending,
+                icon: Clock,
+                color: 'bg-yellow-100 text-yellow-800',
+                iconColor: 'text-yellow-600'
+            },
+            {
+                id: 'delivered_to_courier',
+                name: 'تم التسليم للمندوب',
+                count: shipped,
+                icon: Truck,
+                color: 'bg-purple-100 text-purple-800',
+                iconColor: 'text-purple-600'
+            },
+            {
+                id: 'delivered',
+                name: 'تم التسليم',
+                count: delivered,
+                icon: CheckCircle,
+                color: 'bg-green-100 text-green-800',
+                iconColor: 'text-green-600'
+            },
+            {
+                id: 'unreachable',
+                name: 'لا يمكن الوصول',
+                count: unreachable,
+                icon: XCircle,
+                color: 'bg-red-100 text-red-800',
+                iconColor: 'text-red-600'
+            },
+            {
+                id: 'postponed',
+                name: 'تم التأجيل',
+                count: postponed,
+                icon: Pause,
+                color: 'bg-gray-100 text-gray-800',
+                iconColor: 'text-gray-600'
+            },
+            {
+                id: 'cancelled_by_recipient',
+                name: 'تم الإلغاء من قبل المستلم',
+                count: cancelled,
+                icon: XCircle,
+                color: 'bg-red-100 text-red-800',
+                iconColor: 'text-red-600'
+            },
+            {
+                id: 'rejected_with_payment',
+                name: 'تم الرفض مع الدفع',
+                count: rejectedWithPayment,
+                icon: DollarSign,
+                color: 'bg-green-100 text-green-800',
+                iconColor: 'text-green-600'
+            },
+            {
+                id: 'rejected_no_payment',
+                name: 'رفض ولم يتم الدفع',
+                count: rejectedNoPayment,
+                icon: XCircle,
+                color: 'bg-red-100 text-red-800',
+                iconColor: 'text-red-600'
+            }
+        ];
+
+        return {
+            ordersRate: rate,
+            allProcessingOrders: processing,
+            allRecentOrders: recent,
+            orderStatuses: statuses
+        };
+    }, [orders]);
+
+    ///////////////////////////////////////////////////////////
   const getOrderStatusIcon = (status: string) => {
     switch (status) {
       case 'تم التسليم': return <CheckCircle className="h-5 w-5 text-green-600" />;
@@ -202,10 +225,10 @@ export function EmployeeDashboard() {
             متابعة ومعالجة طلبات الشحن
           </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
-          معالجة طلب جديد
-        </Button>
+        {/*<Button className="bg-blue-600 hover:bg-blue-700">*/}
+        {/*  <Plus className="h-4 w-4 mr-2" />*/}
+        {/*  معالجة طلب جديد*/}
+        {/*</Button>*/}
       </div>
 
       {/* إحصائيات عامة */}
@@ -216,7 +239,7 @@ export function EmployeeDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{getTotalOrders()}</div>
+            <div className="text-2xl font-bold">{orders.length}</div>
             <p className="text-xs text-muted-foreground">
               جميع الطلبات
             </p>
@@ -229,7 +252,7 @@ export function EmployeeDashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{getSuccessRate()}%</div>
+            <div className="text-2xl font-bold text-green-600">{ordersRate}%</div>
             <p className="text-xs text-muted-foreground">
               من إجمالي الطلبات
             </p>
@@ -242,13 +265,9 @@ export function EmployeeDashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {orderStatuses.filter(s => 
-                ['new', 'pending', 'unreachable', 'postponed'].includes(s.id)
-              ).reduce((total, status) => total + status.count, 0)}
-            </div>
+            <div className="text-2xl font-bold text-orange-600">{allProcessingOrders}</div>
             <p className="text-xs text-muted-foreground">
-              تحتاج تدخل
+              تحتاج تدخل النظام
             </p>
           </CardContent>
         </Card>
@@ -259,7 +278,7 @@ export function EmployeeDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">47</div>
+            <div className="text-2xl font-bold">{merchantsCount}</div>
             <p className="text-xs text-muted-foreground">
               تاجر نشط اليوم
             </p>
@@ -303,7 +322,7 @@ export function EmployeeDashboard() {
         <CardHeader>
           <CardTitle>الطلبات الحديثة</CardTitle>
           <CardDescription>
-            آخر الطلبات المدخلة في النظام
+            آخر خمس طلبات تم ادخالها في النظام
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -315,30 +334,45 @@ export function EmployeeDashboard() {
                     {getOrderStatusIcon(order.status)}
                   </div>
                   <div>
-                    <p className="font-medium">{order.recipient}</p>
-                    <p className="text-sm text-blue-600">{order.merchant}</p>
+                    <p className="font-medium">{order.customerName}</p>
+                    <p className="text-sm text-blue-600">{order.orderType}</p>
                     <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <MapPin className="h-3 w-3 mr-1" />
-                      {order.destination}
+                      {order.governorate + ", " + order.city + ", " + order.street}
                     </div>
                     <div className="flex items-center text-xs text-muted-foreground mt-1">
-                      <span>رقم الطلب: {order.id}</span>
+                      <span>رقم الطلب: {order._id.slice(-8)} </span>
                       <span className="mx-2">•</span>
-                      <Phone className="h-3 w-3 mr-1" />
-                      {order.phone}
+                      <Phone className="h-3 w-3 mr-1" /> . {order.customerPhone1}
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-4 space-x-reverse">
                   <div className="text-left">
-                    <Badge className={getOrderStatusColor(order.status)}>
-                      {order.status}
+                    <Badge className={
+                        order.status.toLowerCase() === "delivered"
+                            ? getOrderStatusColor("تم التسليم")
+                            : order.status.toLowerCase() === "pending"
+                                ? getOrderStatusColor("قيد الانتظار")
+                                : order.status.toLowerCase() === "shipped"
+                                    ?getOrderStatusColor("تم التسليم للمندوب")
+                                    :getOrderStatusColor("طلب جديد")
+                    }>
+                        {
+                            order.status.toLowerCase() === "delivered"
+                                ? "تم التسليم"
+                                : order.status.toLowerCase() === "pending"
+                                    ? "قيد الانتظار"
+                                    : order.status.toLowerCase() === "shipped"
+                                        ?"تم التسليم للمندوب"
+                                        :"طلب جديد"
+                        }
                     </Badge>
-                    <p className="text-sm font-medium mt-1">{order.amount}</p>
-                    <p className="text-xs text-muted-foreground">{order.date}</p>
+                    <p className="text-sm font-medium mt-1">{order.orderCost} جنية </p>
+                    <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
-                  
+
                   <Button variant="ghost" size="sm">
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -347,9 +381,9 @@ export function EmployeeDashboard() {
             ))}
           </div>
 
-          <div className="mt-4 text-center">
-            <Button variant="outline">عرض جميع الطلبات</Button>
-          </div>
+          {/*<div className="mt-4 text-center">*/}
+          {/*  <Button variant="outline">عرض جميع الطلبات</Button>*/}
+          {/*</div>*/}
         </CardContent>
       </Card>
 
