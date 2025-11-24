@@ -425,7 +425,7 @@ export function RegionsManagement() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="governorates" className="space-y-4">
+      <Tabs defaultValue="governorates" className="space-y-4" dir='rtl'>
         {/* ... (TabsList remains the same) ... */}
          <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="governorates" className="flex items-center">
@@ -460,14 +460,14 @@ export function RegionsManagement() {
                       إضافة محافظة
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-blue-50">
+                  <DialogContent className="bg-background">
                     <DialogHeader>
-                      <DialogTitle>{isEditMode ? 'تعديل محافظة' : 'إضافة محافظة جديدة'}</DialogTitle>
-                      <DialogDescription>
+                      <DialogTitle className='text-blue-600 text-center'>{isEditMode ? 'تعديل محافظة' : 'إضافة محافظة جديدة'}</DialogTitle>
+                      <DialogDescription className='text-foreground text-center'>
                         {isEditMode ? 'قم بتحديث بيانات المحافظة' : 'أدخل بيانات المحافظة الجديدة'}
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
+                    <div className="space-y-4" dir="rtl">
                       {error && (
                         <div className="flex items-center text-red-600 bg-red-50 p-3 rounded-md">
                           <AlertCircle className="h-4 w-4 ml-2" />
@@ -497,7 +497,7 @@ export function RegionsManagement() {
                         />
                       </div>
                       <div className="flex justify-end space-x-2 space-x-reverse">
-                        <Button variant="outline" onClick={() => setIsGovDialogOpen(false)} disabled={isSubmitting}>
+                        <Button className='ml-2' variant="outline" onClick={() => setIsGovDialogOpen(false)} disabled={isSubmitting}>
                           إلغاء
                         </Button>
                         <Button onClick={handleGovernorateFormSubmit} disabled={isSubmitting}>
@@ -554,7 +554,7 @@ export function RegionsManagement() {
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent className="bg-blue-50" align="end">
+                              <DropdownMenuContent className="bg-background" align="end">
                                 <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => handleOpenEditGovDialog(governorate)}>
                                   <Edit className="mr-2 h-4 w-4" />
@@ -613,15 +613,15 @@ export function RegionsManagement() {
                        إضافة مدينة
                      </Button>
                    </DialogTrigger>
-                   <DialogContent className="bg-blue-50">
-                     <DialogHeader>
-                       <DialogTitle>{isEditMode ? 'تعديل مدينة' : 'إضافة مدينة جديدة'}</DialogTitle>
-                       <DialogDescription>
+                   <DialogContent className="bg-background">
+                     <DialogHeader >
+                       <DialogTitle className='text-foreground text-center text-blue-600'>{isEditMode ? 'تعديل مدينة' : 'إضافة مدينة جديدة'}</DialogTitle>
+                       <DialogDescription className='text-center'>
                          {governorates.length === 0 ? "يجب إضافة محافظة أولاً" : (isEditMode ? "قم بتحديث بيانات المدينة" : "أدخل بيانات المدينة الجديدة")}
                        </DialogDescription>
                      </DialogHeader>
                      {governorates.length > 0 && (
-                       <div className="space-y-4">
+                       <div className="space-y-4" dir="rtl">
                          {error && (
                            <div className="flex items-center text-red-600 bg-red-50 p-3 rounded-md">
                              <AlertCircle className="h-4 w-4 ml-2" />
@@ -653,7 +653,7 @@ export function RegionsManagement() {
                                <SelectTrigger>
                                  <SelectValue placeholder="اختر المحافظة" />
                                </SelectTrigger>
-                               <SelectContent className="bg-blue-50">
+                               <SelectContent className="bg-background">
                                  {/* Show only active governorates when adding/editing */}
                                  {governorates.filter(g => g.isActive || g._id === newCityGovernorate).map((gov) => (
                                    <SelectItem key={gov._id} value={gov._id}>
@@ -676,12 +676,13 @@ export function RegionsManagement() {
                                placeholder="35"
                                className="text-right"
                                disabled={isSubmitting}
+                               dir='rtl'
                              />
                            </div>
                          </div>
                          
                          <div className="flex justify-end space-x-2 space-x-reverse">
-                           <Button variant="outline" onClick={() => setIsCityDialogOpen(false)} disabled={isSubmitting}>
+                           <Button className='ml-2' variant="outline" onClick={() => setIsCityDialogOpen(false)} disabled={isSubmitting}>
                              إلغاء
                            </Button>
                            <Button onClick={handleCityFormSubmit} disabled={isSubmitting}>
@@ -715,7 +716,7 @@ export function RegionsManagement() {
                     <SelectTrigger className="w-48 ml-2">
                       <SelectValue placeholder="تصفية بالمحافظة" />
                     </SelectTrigger>
-                    <SelectContent className="bg-blue-50">
+                    <SelectContent className="bg-background">
                       <SelectItem value="all">كل المحافظات</SelectItem>
                       {governorates.map((gov) => (
                         <SelectItem key={gov._id} value={gov._id}>
@@ -775,7 +776,7 @@ export function RegionsManagement() {
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent className="bg-blue-50" align="end">
+                              <DropdownMenuContent className="bg-background" align="end">
                                 <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => handleOpenEditCityDialog(city)}>
                                   <Edit className="mr-2 h-4 w-4" />
