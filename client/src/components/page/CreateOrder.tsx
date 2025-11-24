@@ -565,7 +565,7 @@ export function CreateOrder() {
                         </Button>
                     </DialogTrigger>
                     <DialogContent className='bg-background' dir='rtl'>
-                        <DialogHeader><DialogTitle className='text-blue-600'>إضافة منتج جديد</DialogTitle></DialogHeader>
+                        <DialogHeader><DialogTitle className='text-blue-600 text-center'>إضافة منتج جديد</DialogTitle></DialogHeader>
                         <div className='space-y-4 py-4'>
                             <div className='space-y-2'>
                                 <Label>اسم المنتج <span className="text-red-500">*</span></Label>
