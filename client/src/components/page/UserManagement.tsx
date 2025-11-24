@@ -326,6 +326,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 						<Select
 							value={roleFilter}
 							onValueChange={setRoleFilter}
+							 dir="rtl"
 						>
 							<SelectTrigger className="w-48 me-1">
 								<SelectValue placeholder="تصفية حسب الدور" />
@@ -396,9 +397,10 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 												<DropdownMenuContent
 													align="end"
 													sideOffset={6}
-													className="w-52 rounded-xl border border-gray-200 bg-white shadow-lg ring-1 ring-gray-100"
+													className="w-52 rounded-xl border border-gray-200 bg-background shadow-lg ring-1 ring-gray-100"
+													dir="rtl"
 												>
-													<DropdownMenuLabel className="text-gray-500 text-sm font-medium px-3 py-1">
+													<DropdownMenuLabel className="text-foreground text-sm font-medium px-3 py-1">
 														الإجراءات
 													</DropdownMenuLabel>
 
@@ -414,7 +416,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 																true
 															);
 														}}
-														className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer rounded-md transition"
+														className="flex items-center gap-2 px-3 py-2 text-foreground hover:bg-blue-50 hover:text-blue-600 cursor-pointer rounded-md transition"
 													>
 														<Edit className="h-4 w-4 text-blue-500" />
 														تعديل المستخدم
@@ -430,7 +432,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 																true
 															);
 														}}
-														className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-green-50 hover:text-green-600 cursor-pointer rounded-md transition"
+														className="flex items-center gap-2 px-3 py-2 text-foreground hover:bg-green-50 hover:text-green-600 cursor-pointer rounded-md transition"
 													>
 														<Eye className="h-4 w-4 text-green-500" />
 														عرض التفاصيل
@@ -469,9 +471,9 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 
 			{/* View Modal */}
 			<Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-				<DialogContent>
+				<DialogContent className="bg-background">
 					<DialogHeader>
-						<DialogTitle>تفاصيل المستخدم</DialogTitle>
+						<DialogTitle className="text-blue-600 text-center" dir="rtl">تفاصيل المستخدم</DialogTitle>
 					</DialogHeader>
 					{selectedUser && (
 						<div className="space-y-3 text-right">
@@ -486,9 +488,9 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 
 			{/*  Edit Modal (simplified example) */}
 			<Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>تعديل بيانات المستخدم</DialogTitle>
+				<DialogContent className="bg-background">
+					<DialogHeader >
+						<DialogTitle className="text-blue-600 text-center" dir="rtl">تعديل بيانات المستخدم</DialogTitle>
 					</DialogHeader>
 					{selectedUser && (
 						<div className="space-y-4">
