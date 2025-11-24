@@ -42,16 +42,9 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
   const { theme } = useTheme();
 
   return (
-    <header className="bg-background shadow-sm border-b border-gray-200 px-6 py-4 z-20">
+    <header className="bg-background shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 z-20">
       <div className="flex items-center justify-between">
 
-        {/* menu button for small screens */}
-        <button 
-          className="lg:hidden p-2 rounded-md hover:bg-muted-foreground"
-          onClick={onToggleSidebar}
-        >
-          <Menu className="w-6 h-6" />
-        </button>
 
         <div className="flex items-center flex-1 max-w-lg">
           <img src={theme === 'dark' ? '/dark-logo.png' : '/light-logo.png'} className='w-20' alt="flash line logo" />
@@ -66,7 +59,7 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
-                className="flex items-center space-x-2 space-x-reverse h-auto py-1 px-2"
+                className="flex items-center space-x-2 space-x-reverse h-auto py-1 px-2 m-0"
               >
                 {/* initials circle */}
                 <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
@@ -98,6 +91,15 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+        {/* menu button for small screens */}
+        <button 
+          className="lg:hidden p-2 rounded-md hover:bg-muted-foreground"
+          onClick={onToggleSidebar}
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        
         </div>
       </div>
     </header>

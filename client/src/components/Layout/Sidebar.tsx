@@ -18,17 +18,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
   };
 
   return (
-    <div className=" w-64 flex flex-col h-full">
+    <div className=" w-64 flex flex-col h-full border-x border-border">
 
       {/* logo / system title */}
-      <div className="p-6">
+      <div className="p-6 flex justify-center ">
         <div className="flex items-center space-x-3 space-x-reverse">
-          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Package className="h-5 w-5 text-white" />
-          </div>
           <div>
-            <h2 className="font-bold">نظام الشحن</h2>
-            <p className="text-sm">إدارة الشحنات</p>
+            <h2 className="font-bold text-xl">Flash Line</h2>
+          </div>
+          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center mr-2">
+            <Package className="h-5 w-5 text-white" />
           </div>
         </div>
       </div>
@@ -57,10 +56,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
       </nav>
 
       {/* user info at the bottom */}
-      <div className="w-full p-4 border-t border-gray-200 ">
+      <div className="w-full p-4 border-t border-border ">
         <div className="flex items-center space-x-3 space-x-reverse">
-          <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
-            <span className="text-xs">
+          <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center ml-2">
+            <span className="text-xs text-black">
               {getRoleName(userRole).charAt(0)}
             </span>
           </div>

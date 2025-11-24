@@ -109,7 +109,7 @@ const DashboardLayout: React.FC = () => {
       {/* Sidebar Mobile Drawer */}
       {sidebarOpen && (
         <div
-          className="fixed right-0 top-0 h-full z-50 lg:hidden"
+          className="fixed left-0 top-0 h-full z-50 lg:hidden"
           ref={sidebarRef}
         >
           <div className="h-full w-64 bg-background shadow-xl">
