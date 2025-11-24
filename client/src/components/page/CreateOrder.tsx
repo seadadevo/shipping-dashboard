@@ -292,8 +292,7 @@ export function CreateOrder() {
           <Card className={`border-2 shadow-sm transition-all ${selectedMerchant ? 'border-green-500 bg-green-50/30' : 'border-secondary'}`}>
             <CardHeader className='pb-4 border-b mb-4 bg-secondary'>
                 <CardTitle className="text-lg flex items-center ">
-                    <Store className="h-5 w-5 mx-2 text-blue-800" />
-                    1. تحديد التاجر (المرسل) <span className="text-red-500 mr-1 text-sm">*</span>
+                    <Store className="h-5 w-5 mx-2 text-blue-800" /> تحديد التاجر (المرسل)<span className="text-red-500 mr-1 text-sm">*</span>
                 </CardTitle>
                 <CardDescription>ابحث واختر التاجر الذي سيتم تسجيل الطلب باسمه.</CardDescription>
             </CardHeader>
@@ -368,7 +367,7 @@ export function CreateOrder() {
      
       <Card className="shadow-sm">
           <CardHeader className="bg-secondary border-b pb-4 mb-4">
-              <CardTitle className='flex items-center text-lg'><UserIcon className='h-5 w-5 mx-2 text-blue-600'/> 2. معلومات العميل (المستلم)</CardTitle>
+              <CardTitle className='flex items-center text-lg'><UserIcon className='h-5 w-5 mx-2 text-blue-600'/>معلومات العميل (المستلم)</CardTitle>
           </CardHeader>
           <CardContent className='space-y-5'>
               <div className='grid gap-6 md:grid-cols-2'>
@@ -424,7 +423,7 @@ export function CreateOrder() {
      
       <Card className="shadow-sm">
           <CardHeader className="bg-secondary border-b pb-4 mb-4">
-              <CardTitle className='flex items-center text-lg'><MapPin className='h-5 w-5 mx-2 text-orange-600'/> 3. عنوان التوصيل</CardTitle>
+              <CardTitle className='flex items-center text-lg'><MapPin className='h-5 w-5 mx-2 text-orange-600'/>عنوان التوصيل</CardTitle>
           </CardHeader>
           <CardContent className='space-y-5'>
               <div className='grid gap-6 md:grid-cols-2'>
@@ -492,7 +491,7 @@ export function CreateOrder() {
       
       <Card className="shadow-sm">
         <CardHeader className="bg-secondary border-b pb-4 mb-4">
-            <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mx-2 text-green-600'/> 4. تفاصيل الشحن والدفع</CardTitle>
+            <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mx-2 text-green-600'/>تفاصيل الشحن والدفع</CardTitle>
         </CardHeader>
         <CardContent className='space-y-5'>
             <div className="grid gap-6 md:grid-cols-3">
@@ -557,7 +556,7 @@ export function CreateOrder() {
       <Card className="shadow-sm">
         <CardHeader className="bg-secondary border-b pb-4 mb-4">
             <div className="flex items-center justify-between">
-                <CardTitle className='flex items-center text-lg'><Package className='h-5 w-5 mx-2 text-purple-600'/> 5. محتويات الشحنة</CardTitle>
+                <CardTitle className='flex items-center text-lg'><Package className='h-5 w-5 mx-2 text-purple-600'/>محتويات الشحنة</CardTitle>
                 <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
                     <DialogTrigger asChild>
                         <Button className='bg-blue-600 hover:bg-blue-700'> 
