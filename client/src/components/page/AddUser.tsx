@@ -671,7 +671,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 
 			{/* ======================= قسم ملاحظات مهمة (حافظنا على حدود الإشعار) ======================= */}
 			{/* لاحظ أننا حافظنا على نمط الحدود هنا لأنه تصميم خاص "للتنبيه" وليس لـ "تجميع المحتوى" */}
-			<Card className="border-l-4 border-orange-500 bg-orange-50/50 shadow-sm">
+			<Card className="border-l-4 border-orange-500 bg-yellow-50 shadow-sm">
 				<CardHeader>
 					<CardTitle className="text-orange-800 text-lg">
 						ملاحظات هامة قبل الحفظ

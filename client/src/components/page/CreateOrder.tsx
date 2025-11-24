@@ -267,7 +267,7 @@ export function CreateOrder() {
    
     <div className="space-y-8  mx-auto pb-12">
       <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">إنشاء طلب جديد</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-blue-600">إنشاء طلب جديد</h1>
         <p className="text-gray-500">قم بملء البيانات التالية لإنشاء طلب شحن جديد وإضافته للنظام.</p>
       </div>
 
@@ -289,11 +289,10 @@ export function CreateOrder() {
 
       
       {['admin', 'employee'].includes(user?.userType || '') && (
-          <Card className={`border-2 shadow-sm transition-all ${selectedMerchant ? 'border-green-500 bg-green-50/30' : 'border-gray-200'}`}>
-            <CardHeader className='pb-4 border-b mb-4 bg-gray-50/50'>
-                <CardTitle className="text-lg flex items-center text-blue-800">
-                    <Store className="h-5 w-5 mr-2" />
-                    1. تحديد التاجر (المرسل) <span className="text-red-500 mr-1 text-sm">*</span>
+          <Card className={`border-2 shadow-sm transition-all ${selectedMerchant ? 'border-green-500 bg-green-50/30' : 'border-secondary'}`}>
+            <CardHeader className='pb-4 border-b mb-4 bg-secondary'>
+                <CardTitle className="text-lg flex items-center ">
+                    <Store className="h-5 w-5 mx-2 text-blue-800" /> تحديد التاجر (المرسل)<span className="text-red-500 mr-1 text-sm">*</span>
                 </CardTitle>
                 <CardDescription>ابحث واختر التاجر الذي سيتم تسجيل الطلب باسمه.</CardDescription>
             </CardHeader>
@@ -367,16 +366,16 @@ export function CreateOrder() {
 
      
       <Card className="shadow-sm">
-          <CardHeader className="bg-gray-50/50 border-b pb-4 mb-4">
-              <CardTitle className='flex items-center text-lg'><UserIcon className='h-5 w-5 mr-2 text-blue-600'/> 2. معلومات العميل (المستلم)</CardTitle>
+          <CardHeader className="bg-secondary border-b pb-4 mb-4">
+              <CardTitle className='flex items-center text-lg'><UserIcon className='h-5 w-5 mx-2 text-blue-600'/>معلومات العميل (المستلم)</CardTitle>
           </CardHeader>
           <CardContent className='space-y-5'>
               <div className='grid gap-6 md:grid-cols-2'>
                   <div className='space-y-2'>
                       <Label className="text-base">نوع الطلب <span className="text-red-500">*</span></Label>
-                      <Select value={formData.type} onValueChange={(v) => handleInputChange('type', v)}>
+                      <Select value={formData.type} onValueChange={(v) => handleInputChange('type', v)} dir="rtl">
                           <SelectTrigger className="h-11"><SelectValue placeholder="اختر نوع الطلب" /></SelectTrigger>
-                          <SelectContent className='bg-blue-50'>{orderTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                          <SelectContent className='bg-background'>{orderTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                       </Select>
                   </div>
                   <div className='space-y-2'>
@@ -423,23 +422,23 @@ export function CreateOrder() {
 
      
       <Card className="shadow-sm">
-          <CardHeader className="bg-gray-50/50 border-b pb-4 mb-4">
-              <CardTitle className='flex items-center text-lg'><MapPin className='h-5 w-5 mr-2 text-orange-600'/> 3. عنوان التوصيل</CardTitle>
+          <CardHeader className="bg-secondary border-b pb-4 mb-4">
+              <CardTitle className='flex items-center text-lg'><MapPin className='h-5 w-5 mx-2 text-orange-600'/>عنوان التوصيل</CardTitle>
           </CardHeader>
           <CardContent className='space-y-5'>
               <div className='grid gap-6 md:grid-cols-2'>
                   <div className='space-y-2'>
                       <Label className="text-base">المحافظة <span className="text-red-500">*</span></Label>
-                      <Select value={formData.governorateName} onValueChange={handleGovernorateChange}>
+                      <Select value={formData.governorateName} onValueChange={handleGovernorateChange} dir='rtl'>
                           <SelectTrigger className="h-11"><SelectValue placeholder="اختر المحافظة" /></SelectTrigger>
-                          <SelectContent className='bg-blue-50'>{governoratesList.map(g => <SelectItem key={g._id} value={g.govName}>{g.govName}</SelectItem>)}</SelectContent>
+                          <SelectContent className='bg-background'>{governoratesList.map(g => <SelectItem key={g._id} value={g.govName}>{g.govName}</SelectItem>)}</SelectContent>
                       </Select>
                   </div>
                   <div className='space-y-2'>
                       <Label className="text-base">المدينة <span className="text-red-500">*</span></Label>
-                      <Select value={formData.cityName} onValueChange={(v) => handleInputChange('cityName', v)} disabled={availableCities.length===0}>
+                      <Select value={formData.cityName} onValueChange={(v) => handleInputChange('cityName', v)} disabled={availableCities.length===0} dir="rtl">
                           <SelectTrigger className="h-11"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
-                          <SelectContent className='bg-blue-50'>
+                          <SelectContent className='bg-background'>
                               {availableCities.map(c => (
                                   <SelectItem key={c._id} value={c.cityName}>
                                       <div className="flex justify-between w-full gap-4">
@@ -453,44 +452,54 @@ export function CreateOrder() {
                   </div>
               </div>
               <div className='grid gap-6 md:grid-cols-3'>
-                  <div className='space-y-2'>
-                      <Label className="text-base">القرية (اختياري)</Label>
-                      <Input 
-                          value={formData.village} 
-                          onChange={(e)=>handleInputChange('village', e.target.value)} 
-                          className='text-right h-11'
-                          placeholder="اسم القرية إن وجدت"
-                      />
-                  </div>
-                  <div className='space-y-2 md:col-span-2'>
-                      <Label className="text-base">الشارع / العنوان بالتفصيل <span className="text-red-500">*</span></Label>
-                      <Input 
-                          value={formData.street} 
-                          onChange={(e)=>handleInputChange('street', e.target.value)} 
-                          className='text-right h-11'
-                          placeholder="مثال: 15 شارع الجمهورية، بجوار المسجد الكبير، الدور الثاني"
-                      />
-                  </div>
-              </div>
-              <div className="flex items-center space-x-2 space-x-reverse bg-orange-50 p-4 rounded-md border border-orange-100">
-                  <Checkbox id="villageDelivery" checked={formData.villageDelivery} onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} />
-                  <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)</Label>
-              </div>
+                <div className='space-y-2'>
+                    <Label className="text-base">القرية (اختياري)</Label>
+                    <Input 
+                        value={formData.village} 
+                        onChange={(e)=>handleInputChange('village', e.target.value)} 
+                        className='text-right h-11'
+                        placeholder="اسم القرية إن وجدت"
+                        disabled={!formData.villageDelivery} // هنا نمنع الكتابة إذا لم يتم تفعيل checkbox
+                    />
+                </div>
+                <div className='space-y-2 md:col-span-2'>
+                    <Label className="text-base">الشارع / العنوان بالتفصيل <span className="text-red-500">*</span></Label>
+                    <Input 
+                        value={formData.street} 
+                        onChange={(e)=>handleInputChange('street', e.target.value)} 
+                        className='text-right h-11'
+                        placeholder="مثال: 15 شارع الجمهورية، بجوار المسجد الكبير، الدور الثاني"
+                    />
+                </div>
+            </div>
+
+            <div className="flex items-center space-x-2 space-x-reverse bg-orange-50 p-4 rounded-md border border-orange-100">
+                <Checkbox 
+                    id="villageDelivery" 
+                    className='ml-2 border-orange-500' 
+                    checked={formData.villageDelivery} 
+                    onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} 
+                />
+                <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
+                    هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)
+                </Label>
+            </div>
+
           </CardContent>
       </Card>
 
       
       <Card className="shadow-sm">
-        <CardHeader className="bg-gray-50/50 border-b pb-4 mb-4">
-            <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mr-2 text-green-600'/> 4. تفاصيل الشحن والدفع</CardTitle>
+        <CardHeader className="bg-secondary border-b pb-4 mb-4">
+            <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mx-2 text-green-600'/>تفاصيل الشحن والدفع</CardTitle>
         </CardHeader>
         <CardContent className='space-y-5'>
             <div className="grid gap-6 md:grid-cols-3">
                 <div className='space-y-2'>
                     <Label className="text-base">نوع الشحن <span className="text-red-500">*</span></Label>
-                    <Select value={formData.shippingType} onValueChange={(v) => handleInputChange('shippingType', v)}>
+                    <Select value={formData.shippingType} onValueChange={(v) => handleInputChange('shippingType', v)} dir="rtl">
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
-                        <SelectContent className='bg-blue-50'>
+                        <SelectContent className='bg-background'>
                             {shippingTypesList.map(t => (
                                 <SelectItem key={t._id} value={t.name}>
                                     <div className="flex justify-between w-full gap-2">
@@ -506,16 +515,16 @@ export function CreateOrder() {
                 </div>
                 <div className='space-y-2'>
                     <Label className="text-base">نوع الدفع <span className="text-red-500">*</span></Label>
-                    <Select value={formData.paymentType} onValueChange={(v) => handleInputChange('paymentType', v)}>
+                    <Select value={formData.paymentType} onValueChange={(v) => handleInputChange('paymentType', v)} dir="rtl">
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر الطريقة" /></SelectTrigger>
-                        <SelectContent className='bg-blue-50'>{paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                        <SelectContent className='bg-background'>{paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div className='space-y-2'>
                     <Label className="text-base">الفرع المختص <span className="text-red-500">*</span></Label>
-                    <Select value={formData.branchName} onValueChange={(v) => handleInputChange('branchName', v)}>
+                    <Select value={formData.branchName} onValueChange={(v) => handleInputChange('branchName', v)} dir="rtl">
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
-                        <SelectContent className='bg-blue-50'>{branches.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                        <SelectContent className='bg-background'>{branches.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
             </div>
@@ -545,17 +554,17 @@ export function CreateOrder() {
 
       
       <Card className="shadow-sm">
-        <CardHeader className="bg-gray-50/50 border-b pb-4 mb-4">
+        <CardHeader className="bg-secondary border-b pb-4 mb-4">
             <div className="flex items-center justify-between">
-                <CardTitle className='flex items-center text-lg'><Package className='h-5 w-5 mr-2 text-purple-600'/> 5. محتويات الشحنة</CardTitle>
+                <CardTitle className='flex items-center text-lg'><Package className='h-5 w-5 mx-2 text-purple-600'/>محتويات الشحنة</CardTitle>
                 <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
                     <DialogTrigger asChild>
                         <Button className='bg-blue-600 hover:bg-blue-700'> 
                             <Plus className='mr-2 h-4 w-4'/> إضافة منتج
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className='bg-blue-50'>
-                        <DialogHeader><DialogTitle>إضافة منتج جديد</DialogTitle></DialogHeader>
+                    <DialogContent className='bg-background' dir='rtl'>
+                        <DialogHeader><DialogTitle className='text-blue-600 text-center'>إضافة منتج جديد</DialogTitle></DialogHeader>
                         <div className='space-y-4 py-4'>
                             <div className='space-y-2'>
                                 <Label>اسم المنتج <span className="text-red-500">*</span></Label>
@@ -601,7 +610,7 @@ export function CreateOrder() {
             {products.length > 0 ? (
                 <div className="rounded-md border overflow-hidden">
                     <Table>
-                        <TableHeader className="bg-gray-50">
+                        <TableHeader className="bg-background">
                             <TableRow>
                                 <TableHead className='text-right'>الاسم</TableHead>
                                 <TableHead className='text-center'>الكمية</TableHead>
@@ -626,8 +635,8 @@ export function CreateOrder() {
                     </Table>
                 </div>
             ) : (
-                <div className='flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg text-muted-foreground bg-gray-50'>
-                    <div className="bg-white p-4 rounded-full mb-3 shadow-sm">
+                <div className='flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg text-muted-foreground bg-secondary'>
+                    <div className="bg-foreground p-4 rounded-full mb-3 shadow-sm">
                         <Package className="h-10 w-10 text-gray-300" />
                     </div>
                     <p className="font-medium">لا يوجد منتجات مضافة بعد</p>
@@ -638,7 +647,7 @@ export function CreateOrder() {
       </Card>
 
       
-      <Card className="bg-white border-t bottom-4 shadow-lg ">
+      <Card className="bg-secondary border-t bottom-4 shadow-lg ">
         <CardContent className="p-4 flex justify-between items-center">
             <Button variant="ghost" size="lg" onClick={() => window.history.back()} disabled={loading} className="text-gray-600">
                 إلغاء ورجوع
