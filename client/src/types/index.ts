@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 export interface User {
 	_id: string;
 	userType: "admin" | "employee" | "merchant" | "courier";
@@ -25,7 +27,7 @@ export interface AuthContextType {
 export interface MenuItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
 }
 
 /**

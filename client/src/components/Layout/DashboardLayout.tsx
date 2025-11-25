@@ -31,10 +31,10 @@ const DashboardLayout: React.FC = () => {
 		switch (currentPage) {
 			case "admin-dashboard":
 				return <AdminDashboard
-                    userRole={user.userType}
-                    currentPage={currentPage}
-                    onPageChange={setCurrentPage}
-                />;
+						userRole={user?.userType || "merchant"}
+						currentPage={currentPage}
+						onPageChange={setCurrentPage}
+				/>;
 			case "employee-dashboard":
 				return <EmployeeDashboard />;
 			case "merchant-dashboard":
@@ -68,7 +68,13 @@ const DashboardLayout: React.FC = () => {
 		
 
 			default:
-				return <AdminDashboard />;
+				return (
+					<AdminDashboard
+						userRole={user?.userType || "merchant"}
+						currentPage={currentPage}
+						onPageChange={setCurrentPage}
+					/>
+				);
 		}
 	};
 

@@ -1,9 +1,9 @@
 import React from "react";
-import { LogIn, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import DashboardLayout from "./components/Layout/DashboardLayout";
-import Login from "../src/components/Auth/Login"
+import Login from "./components/Auth/Login";
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
 

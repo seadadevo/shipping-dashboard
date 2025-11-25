@@ -2,29 +2,38 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 
+const ALLOWED_TYPES = ["admin", "employee", "merchant", "courier"];
+
+const getExpiryDays = () => {
+  const raw = process.env.JWT_EXPIRES_IN || "7d";
+  const days = Number(String(raw).replace("d", ""));
+  return Number.isFinite(days) && days > 0 ? days : 7;
+};
+
 const sendToken = (user, statusCode, res) => {
+  const secret = process.env.JWT_SECRET;
+  const expiresIn = process.env.JWT_EXPIRES_IN || "7d";
+
   const token = jwt.sign(
     { id: user._id, role: user.userType },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    }
+    secret,
+    { expiresIn }
   );
 
+  const expiresDays = getExpiryDays();
   res.cookie("token", token, {
-    expires: new Date(
-      Date.now() +
-        process.env.JWT_EXPIRES_IN.replace("d", "") * 24 * 60 * 60 * 1000
-    ),
+    expires: new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000),
     httpOnly: true,
   });
 
-  user.password = undefined;
+  // Return a safe user payload without the password
+  const plainUser = typeof user.toObject === "function" ? user.toObject() : { ...user };
+  delete plainUser.password;
   res.status(statusCode).json({
     status: "success",
     token,
     data: {
-      user,
+      user: plainUser,
     },
   });
 };
@@ -45,8 +54,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Incorrect email or password" });
     }
 
-    const allowedTypes = ["admin", "employee", "merchant", "courier"];
-    if (!allowedTypes.includes(user.userType)) {
+    if (!ALLOWED_TYPES.includes(user.userType)) {
       return res.status(403).json({
         message: "Your user type is not authorized to access this dashboard.",
       });

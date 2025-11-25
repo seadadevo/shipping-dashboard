@@ -1,22 +1,18 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Package } from 'lucide-react';
 import { getMenuItemsByRole } from '../../constants/menuItems';
 import type { SidebarProps, User } from '../../types';
 
+const roleNames: Record<User['userType'], string> = {
+  admin: 'مدير النظام',
+  employee: 'موظف',
+  merchant: 'تاجر',
+  courier: 'سائق',
+};
+
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }) => {
-
-  const menuItems = getMenuItemsByRole(userRole);
-
-
-  const getRoleName = (role: User['userType']): string => {
-    const roleNames: Record<User['userType'], string> = {
-      admin: 'مدير النظام',
-      employee: 'موظف',
-      merchant: 'تاجر',
-      courier: 'سائق',
-    };
-    return roleNames[role];
-  };
+  const menuItems = useMemo(() => getMenuItemsByRole(userRole), [userRole]);
+  const roleName = roleNames[userRole];
 
   return (
     <div className="bg-white w-64 shadow-lg border-l border-gray-200 flex flex-col h-full">
@@ -61,12 +57,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
         <div className="flex items-center space-x-3 space-x-reverse">
           <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center">
             <span className="text-xs text-gray-600">
-              {getRoleName(userRole).charAt(0)}
+              {roleName.charAt(0)}
             </span>
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-900">
-              {getRoleName(userRole)}
+              {roleName}
             </p>
             <p className="text-xs text-gray-500">متصل الآن</p>
           </div>
@@ -76,4 +72,4 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
   );
 }
 
-export default Sidebar;
+export default memo(Sidebar);

@@ -14,12 +14,13 @@ import {
   Phone,
   MapPin
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import {useEffect, useMemo, useState} from "react";
-import type {Order, User} from "../../types";
-import api from "../../lib/api.ts";
+import type {Order, User, GetOrdersResponse} from "../../types";
+import api from "../../lib/api";
 
 export function EmployeeDashboard() {
     // get day of last 7 days
@@ -51,14 +52,13 @@ export function EmployeeDashboard() {
 
     // merchant count derived from users
     const merchantsCount = useMemo(() => {
-        return users.reduce((acc, u) => acc + (u.userType?.toLowerCase() === "merchant" ? 1 : 0), 0);
+        return users.reduce((acc, u) => acc + (u.userType === "merchant" ? 1 : 0), 0);
     }, [users]);
 
     // get all order to processing operations
     const [orders, setOrders] = useState<Order[]>([]);
     const getAllOrders = async (): Promise<void> => {
-        const res = await api.get<Order[]>("api/orders/");
-        // @ts-ignore
+        const res = await api.get<GetOrdersResponse>("api/orders/");
         setOrders(res.data.data.orders);
     };
 
@@ -70,7 +70,7 @@ export function EmployeeDashboard() {
         id: string;
         name: string;
         count: number;
-        icon: any;
+        icon: LucideIcon;
         color: string;
         iconColor: string;
     };

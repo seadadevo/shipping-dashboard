@@ -26,8 +26,8 @@ import {
 } from "../ui/card";
 import { Button } from "../ui/button";
 import type {ApiError, GetOrdersResponse, Order, SidebarProps, User} from '../../types';
-import {getMenuItemsByRole} from "../../constants/menuItems.ts";
-import api from "../../lib/api.ts";
+import {getMenuItemsByRole} from "../../constants/menuItems";
+import api from "../../lib/api";
 
 const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, userRole}) => {
     const menuItems = getMenuItemsByRole(userRole);
