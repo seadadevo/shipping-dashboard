@@ -517,7 +517,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 									className="flex items-center"
 								>
 									<DollarSign className="h-4 w-4 ml-1 text-primary" />
-									تكلفة Pickup خاصة (جنيه) *
+                                    تكلفة الاستلام الخاص (جنية) *
 								</Label>
 								<Input
 									id="pickupCost"
@@ -671,7 +671,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 
 			{/* ======================= قسم ملاحظات مهمة (حافظنا على حدود الإشعار) ======================= */}
 			{/* لاحظ أننا حافظنا على نمط الحدود هنا لأنه تصميم خاص "للتنبيه" وليس لـ "تجميع المحتوى" */}
-			<Card className="border-l-4 border-orange-500 bg-orange-50/50 shadow-sm">
+			<Card className="border-l-4 border-orange-500 bg-yellow-50 shadow-sm">
 				<CardHeader>
 					<CardTitle className="text-orange-800 text-lg">
 						ملاحظات هامة قبل الحفظ
@@ -692,7 +692,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 							<>
 								<hr className="my-3 border-orange-200" />
 								<li>
-									**تكلفة Pickup الخاصة:** ستُطبق على جميع
+									**تكلفة الاستلام الخاص:** ستُطبق على جميع
 									طلبات هذا التاجر بدلاً من التكلفة العامة.
 								</li>
 								<li>

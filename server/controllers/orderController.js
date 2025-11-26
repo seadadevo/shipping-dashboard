@@ -1,36 +1,59 @@
 const Order = require("../models/Order");
+const User = require("../models/User"); // 👈 ده السطر اللي كان ناقص ومسبب المشكلة
+
+// --- باقي الموديلات ---
+const WeightSetting = require("../models/WeightSetting");
+const Governorate = require("../models/Governotate"); 
+const City = require("../models/City");
+const ShippingType = require("../models/ShippingType");
 
 exports.addOrder = async (req, res) => {
   try {
     const orderData = req.body;
-    const creatorId = req.user._id;
+    
+    // 1. تحديد صاحب الطلب (creatorId)
+    let creatorId = req.user._id; // الافتراضي: المستخدم الحالي
+
+    // لو المستخدم (أدمن أو موظف) وباعِت merchantId، نستخدمه
+    if (["admin", "employee"].includes(req.user.userType) && orderData.merchantId) {
+        const merchantUser = await User.findById(orderData.merchantId); // 👈 هنا كان بيحصل الخطأ
+        if (!merchantUser) {
+            return res.status(404).json({ message: "Selected merchant not found" });
+        }
+        if (merchantUser.userType !== 'merchant') {
+             return res.status(400).json({ message: "The selected user is not a merchant" });
+        }
+        creatorId = orderData.merchantId; 
+    }
 
     const {
       orderType,
       customerName,
       customerPhone1,
-      governorate,
-      city,
+      governorate, 
+      city,         
       street,
-      shippingType,
+      shippingType, 
       paymentType,
       branch,
-      orderCost,
       totalWeight,
       products,
+      isVillageDelivery,
     } = orderData; 
 
+    // التحقق من الحقول المطلوبة
     const requiredStrings = {
-      orderType,
-      customerName,
-      customerPhone1,
-      governorate,
-      city,
-      street,
-      shippingType,
-      paymentType,
-      branch,
+        orderType,
+        customerName,
+        customerPhone1,
+        governorate,
+        city,
+        street,
+        shippingType,
+        paymentType,
+        branch
     };
+
     for (const [key, value] of Object.entries(requiredStrings)) {
       if (!value) {
         return res
@@ -38,25 +61,58 @@ exports.addOrder = async (req, res) => {
           .json({ message:`Missing required field: ${key} ` });
       }
     } 
-    if (orderCost === null || orderCost === undefined) {
-      return res
-        .status(400)
-        .json({ message: "Missing required field: orderCost" });
-    }
+
     if (totalWeight === null || totalWeight === undefined) {
       return res
         .status(400)
         .json({ message: "Missing required field: totalWeight" });
     }
-    if (!Array.isArray(orderData.products) || orderData.products.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Order must have at least one product" });
+
+    // =============================================
+    // --- 🚀 حساب التكلفة التلقائي ---
+    // =============================================
+
+    // جلب الإعدادات
+    const weightSettings = await WeightSetting.findOne();
+    const govDoc = await Governorate.findOne({ govName: governorate });
+    const cityDoc = await City.findOne({ cityName: city, governorate: govDoc?._id });
+    const shippingTypeDoc = await ShippingType.findOne({ name: shippingType });
+
+    // التحقق من صحة البيانات
+    if (!weightSettings) return res.status(500).json({ message: "Weight settings are not configured." });
+    if (!govDoc || !cityDoc) return res.status(400).json({ message: `Invalid governorate or city name` });
+    if (!cityDoc.isActive) return res.status(400).json({ message: `The selected city is disabled.` });
+    if (!shippingTypeDoc) return res.status(400).json({ message: `Invalid shipping type` });
+    if (!shippingTypeDoc.isActive) return res.status(400).json({ message: `The selected shipping type is disabled.` });
+    
+    // استخراج القيم
+    const baseCityCostPerKg = cityDoc.shippingCost; 
+    const { defaultWeightLimit, extraKgCost, villageDeliveryCost } = weightSettings;
+    const shippingAdjustment = shippingTypeDoc.adjustmentAmount; 
+
+    // حساب تكلفة الوزن
+    let weightCost = 0;
+    if (totalWeight <= defaultWeightLimit) {
+        weightCost = totalWeight * baseCityCostPerKg; 
+    } else {
+        const defaultWeightCost = defaultWeightLimit * baseCityCostPerKg;
+        const extraWeight = totalWeight - defaultWeightLimit;
+        const extraWeightCost = extraWeight * extraKgCost;
+        weightCost = defaultWeightCost + extraWeightCost;
     }
 
+    // حساب تكلفة القرية
+    const villageCost = (isVillageDelivery === true) ? villageDeliveryCost : 0;
+    
+    // التكلفة النهائية
+    const calculatedOrderCost = weightCost + shippingAdjustment + villageCost;
+
+    // =============================================
+    
     const newOrder = new Order({
       ...orderData,
-      createdBy: creatorId,
+      orderCost: calculatedOrderCost,
+      createdBy: creatorId, // 👈 استخدام ID التاجر (سواء الحالي أو المختار)
     });
 
     await newOrder.save();
@@ -66,152 +122,134 @@ exports.addOrder = async (req, res) => {
       message: "Order created successfully",
       data: {
         order: newOrder,
+        calculatedCost: calculatedOrderCost, 
       },
     });
-  } catch (error) {
 
+  } catch (error) {
     console.error("!!! ADD ORDER CRASHED !!!", error); 
-    res
-      .status(500)
-      .json({
+    res.status(500).json({
         message: "Server error while creating order",
         error: error.message,
       });
   }
 };
+
+// ... (باقي الدوال كما هي: getAllOrders, searchOrders, etc.)
 
 exports.getAllOrders = async (req, res) => {
-  try {
-    // 1. قراءة متغيرات الفلترة والبحث من الرابط
-    // (مثال: /api/orders?status=Pending&q=احمد)
-    const { status, q } = req.query;
-
-    // 2. بناء جملة الاستعلام (Query)
-    const query = {};
-
-    // 3. إضافة فلتر الحالة (Status)
-    // هنتأكد إن الحالة جاية ومش "all"
-    if (status && status !== 'all') {
-      // query.status لازم تكون القيمة الإنجليزية (Pending, Shipped, etc.)
-      query.status = status;
+    try {
+      const { status, q } = req.query;
+      const query = {};
+  
+      if (status && status !== 'all') {
+        query.status = status;
+      }
+  
+      if (q) {
+        const searchRegex = new RegExp(q, "i");
+        query.$or = [
+          { customerName: searchRegex },
+          { customerPhone1: searchRegex },
+          { customerEmail: searchRegex },
+        ];
+      }
+  
+      const orders = await Order.find(query)
+        .populate("createdBy", "fullName userType email phone storeName") // Populate كاملة
+        .sort({ createdAt: -1 });
+  
+      res.status(200).json({
+        status: "success",
+        results: orders.length,
+        data: { orders },
+      });
+  
+    } catch (error) {
+      console.error("!!! GET ALL ORDERS CRASHED !!!", error);
+      res.status(500).json({ message: "Server error while fetching orders" });
     }
+  };
 
-    // 4. إضافة فلتر البحث (Search)
-    // لو المستخدم كتب حاجة في خانة البحث (q)
-    if (q) {
-      const searchRegex = new RegExp(q, "i");
-      query.$or = [
-        { customerName: searchRegex },
-        { customerPhone1: searchRegex },
-        { customerEmail: searchRegex },
-      ];
-    }
-
-    // 5. تنفيذ الاستعلام المجمع (فلترة + بحث)
-    const orders = await Order.find(query) // <-- استخدام الـ query المجمع
-      .populate("createdBy", "fullName userType")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      status: "success",
-      results: orders.length,
-      data: {
-        orders,
-      },
-    });
-
-  } catch (error) {
-    console.error("!!! GET ALL ORDERS CRASHED !!!", error);
-    res.status(500).json({ message: "Server error while fetching orders" });
-  }
-};
 
 exports.searchOrders = async (req, res) => {
-  try {
-    const { q } = req.query;
-
-    if (!q) {
-      return res.status(400).json({ message: "Search query (q) is required" });
-    }
-
-    const searchRegex = new RegExp(q, "i");
-
-    const orders = await Order.find({
-      $or: [
-        { customerName: searchRegex },
-        { customerPhone1: searchRegex },
-        { customerEmail: searchRegex },
-      ],
-    }).populate("createdBy", "fullName userType");
-
-    res.status(200).json({
-      status: "success",
-      results: orders.length,
-      data: {
-        orders,
-      },
-    });
-  } catch (error) {
-    console.error("!!! ADD ORDER CRASHED !!!", error);
-    res
-      .status(500)
-      .json({
-        message: "Server error while creating order",
-        error: error.message,
+    try {
+      const { q } = req.query;
+  
+      if (!q) {
+        return res.status(400).json({ message: "Search query (q) is required" });
+      }
+  
+      const searchRegex = new RegExp(q, "i");
+  
+      const orders = await Order.find({
+        $or: [
+          { customerName: searchRegex },
+          { customerPhone1: searchRegex },
+          { customerEmail: searchRegex },
+        ],
+      }).populate("createdBy", "fullName userType email phone storeName");
+  
+      res.status(200).json({
+        status: "success",
+        results: orders.length,
+        data: {
+          orders,
+        },
       });
-  }
-};
-
-exports.updateOrderStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    // نتأكد إن الحالة موجودة ومطابقة للـ Enum
-    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid status provided" });
+    } catch (error) {
+        res.status(500).json({message: "Search Error", error: error.message});
     }
-
-    const updatedOrder = await Order.findByIdAndUpdate(
-      id,
-      { status: status }, // هنعدل الحالة فقط
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
+  };
+  
+  exports.updateOrderStatus = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status provided" });
+      }
+      const updatedOrder = await Order.findByIdAndUpdate(
+        id,
+        { status: status }, 
+        { new: true, runValidators: true }
+      );
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.status(200).json({ status: "success", data: { order: updatedOrder } });
+    } catch (error) {
+      res.status(500).json({ message: "Server error while updating status" });
     }
-
-    res.status(200).json({
-      status: "success",
-      data: {
-        order: updatedOrder,
-      },
-    });
-  } catch (error) {
-    console.error("!!! UPDATE STATUS CRASHED !!!", error);
-    res.status(500).json({ message: "Server error while updating status" });
-  }
-};
-
-// 6. حذف الطلب
-exports.deleteOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deletedOrder = await Order.findByIdAndDelete(id);
-
-    if (!deletedOrder) {
-      return res.status(404).json({ message: "Order not found" });
+  };
+  
+  exports.deleteOrder = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deletedOrder = await Order.findByIdAndDelete(id);
+      if (!deletedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.status(200).json({ status: "success", message: "Order deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Server error while deleting order" });
     }
-
-    // بنرجع 200 ورسالة (أفضل من 204 عشان الفرونت يعرف إنها نجحت)
-    res.status(200).json({
-      status: "success",
-      message: "Order deleted successfully",
-    });
-  } catch (error) {
-    console.error("!!! DELETE ORDER CRASHED !!!", error);
-    res.status(500).json({ message: "Server error while deleting order" });
-  }
-};
+  };
+  
+  exports.getMyOrders = async (req, res) => {
+    try {
+      const creatorId = req.user._id;
+      const { status, q } = req.query;
+      const query = { createdBy: creatorId };
+      if (status && status !== "all") query.status = status;
+      if (q) {
+        const searchRegex = new RegExp(q, "i");
+        query.$or = [{ customerName: searchRegex }, { customerPhone1: searchRegex }];
+      }
+      const orders = await Order.find(query).populate("createdBy", "fullName userType").sort({ createdAt: -1 });
+      res.status(200).json({ status: "success", results: orders.length, data: { orders } });
+    } catch (error) {
+      res.status(500).json({ message: "Server error while fetching my orders" });
+    }
+  };

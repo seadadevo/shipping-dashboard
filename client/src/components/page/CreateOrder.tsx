@@ -1,13 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-// ... (كل الـ imports القديمة)
-import { AlertCircle, CheckCircleIcon } from 'lucide-react';
+import { 
+  AlertCircle, 
+  CheckCircleIcon, 
+  Search, 
+  X, 
+  Package, 
+  User as UserIcon, 
+  MapPin, 
+  CheckCircle, 
+  Plus, 
+  Trash2, 
+  Store,
+  Edit2,
+  DollarSign,
+  Weight,
+  Loader2
+} from 'lucide-react';
 import api from '../../lib/api';
-import type { ApiError, AddOrderResponse } from '../../types';
+import type { 
+  ApiError, 
+  AddOrderResponse,
+  Governorate,
+  City,
+  ShippingType as ShippingTypeData,
+} from '../../types';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Checkbox } from '../ui/checkbox';
 import { 
@@ -34,62 +55,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
-import { 
-  Package, 
-  User, 
-  MapPin, 
-  Calculator, 
-  CheckCircle,
-  Plus,
-  Trash2,
-  Phone,
-  Mail,
-  Building,
-  FileText,
-  DollarSign,
-  Weight
-} from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
-
-const governorates = [
-  { id: '1', name: 'القاهرة', cities: ['القاهرة الجديدة', 'مدينة نصر', 'مصر الجديدة', 'المعادي', 'حلوان', 'الزمالك', 'وسط البلد'] },
-  { id: '2', name: 'الجيزة', cities: ['الجيزة', '6 أكتوبر', 'الشيخ زايد', 'الهرم', 'فيصل', 'الدقي', 'المهندسين', 'العجوزة'] },
-  { id: '3', name: 'الاسكندرية', cities: ['الاسكندرية', 'برج العرب', 'سموحة', 'ميامي', 'سيدي بشر', 'العجمي', 'المنتزه'] },
-  { id: '4', name: 'الشرقية', cities: ['الزقازيق', 'العاشر من رمضان', 'بلبيس', 'منيا القمح', 'فاقوس', 'ههيا'] },
-  { id: '5', name: 'اسوان', cities: ['اسوان', 'كوم امبو', 'ادفو', 'نصر النوبة', 'ابو سمبل'] },
-  { id: '6', name: 'القليوبية', cities: ['بنها', 'شبرا الخيمة', 'العبور', 'القناطر الخيرية', 'طوخ', 'قليوب'] },
-  { id: '7', name: 'الدقهلية', cities: ['المنصورة', 'ميت غمر', 'السنبلاوين', 'طلخا', 'دكرنس', 'بلقاس'] },
-  { id: '8', name: 'الغربية', cities: ['طنطا', 'المحلة الكبرى', 'كفر الزيات', 'زفتى', 'السنطة', 'بسيون'] },
-  { id: '9', name: 'البحيرة', cities: ['دمنهور', 'كفر الدوار', 'ادكو', 'رشيد', 'وادي النطرون'] },
-  { id: '10', name: 'المنوفية', cities: ['شبين الكوم', 'السادات', 'منوف', 'قويسنا', 'أشمون'] }
-];
-
-const branches = [
-  { id: '1', name: 'القاهرة' },
-  { id: '2', name: 'الجيزة' },
-  { id: '3', name: 'الاسكندرية' },
-  { id: '4', name: 'الشرقية' },
-  { id: '5', name: 'اسوان' }
-];
-const shippingTypes = [
-  { id: 'normal', name: 'عادي', description: 'التوصيل خلال 3-5 أيام عمل', cost: 0 },
-  { id: '24hour', name: 'شحن في 24 ساعة', description: 'توصيل سريع خلال 24 ساعة', cost: 25 },
-  { id: '15days', name: 'شحن خلال 15 يوم', description: 'توصيل اقتصادي خلال 15 يوم', cost: -10 }
-];
-
-const paymentTypes = [
-  { id: 'cod', name: 'واجبة التحصيل', description: 'الدفع عند الاستلام' },
-  { id: 'prepaid', name: 'دفع مقدم', description: 'تم الدفع مسبقاً' },
-  { id: 'exchange', name: 'طرد مقابل طرد', description: 'تبادل طرود بين الطرفين' }
-];
-
-const orderTypes = [
-  { id: 'pickup', name: 'استلام من المتجر' },
-  { id: 'door_to_door', name: 'من الباب للباب' },
-  { id: 'warehouse', name: 'من المستودع' }
-];
+const branches = ["القاهرة", "الجيزة", "الاسكندرية", "الشرقية", "اسوان"];
+const paymentTypes = ["واجبة التحصيل", "دفع مقدم", "طرد مقابل طرد"];
+const orderTypes = ["استلام من المتجر", "من الباب للباب", "من المستودع"];
 
 interface Product {
   id: string;
@@ -98,92 +69,114 @@ interface Product {
   weight: number;
 }
 
-
+interface MerchantResult {
+    _id: string;
+    fullName: string;
+    storeName?: string;
+    phone: string;
+}
 
 export function CreateOrder() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  
+  const [governoratesList, setGovernoratesList] = useState<Governorate[]>([]);
+  const [shippingTypesList, setShippingTypesList] = useState<ShippingTypeData[]>([]);
+  const [availableCities, setAvailableCities] = useState<City[]>([]);
+  const [isLoadingLists, setIsLoadingLists] = useState(true);
+
+ 
+  const [merchantSearchQuery, setMerchantSearchQuery] = useState("");
+  const [merchantResults, setMerchantResults] = useState<MerchantResult[]>([]);
+  const [selectedMerchant, setSelectedMerchant] = useState<MerchantResult | null>(null);
+  const [isSearchingMerchant, setIsSearchingMerchant] = useState(false);
+  const [showMerchantList, setShowMerchantList] = useState(false);
+
   const [formData, setFormData] = useState({
-    // معلومات الطلب الأساسية
     type: '',
     customerName: '',
     phone: '',
     phone2: '',
     email: '',
-    
-    // الموقع
-    governorateId: '',
-    cityId: '',
+    governorateName: '',
+    cityName: '',
     village: '',
     street: '',
     villageDelivery: false,
-    
-    // تفاصيل الشحن
     shippingType: '',
     paymentType: '',
-    branchId: '',
-    orderCost: '',
-    totalWeight: '',
+    branchName: '',
+    totalWeight: '0',
     notes: ''
   });
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    quantity: 1,
-    weight: 0
-  });
+  const [newProduct, setNewProduct] = useState({ name: '', quantity: 1, weight: 0 });
 
-  const [selectedGovernorate, setSelectedGovernorate] = useState<any>(null);
-  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setIsLoadingLists(true);
+      try {
+        const [govRes, shipRes] = await Promise.all([
+          api.get('/api/locations/governorates'),
+          api.get('/api/shipping-types')
+        ]);
+        setGovernoratesList(govRes.data.data.filter((g: Governorate) => g.isActive));
+        setShippingTypesList(shipRes.data.data.filter((s: ShippingTypeData) => s.isActive));
+      } catch (err) {
+        setError('فشل في تحميل البيانات الأساسية.');
+      } finally {
+        setIsLoadingLists(false);
+      }
+    };
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (merchantSearchQuery.trim().length > 1 && !selectedMerchant) {
+        setIsSearchingMerchant(true);
+        try {
+            const res = await api.get(`/api/users/merchants/search?q=${merchantSearchQuery}`);
+            setMerchantResults(res.data.data);
+            setShowMerchantList(true);
+        } catch (error) {
+            console.error("Search failed", error);
+        } finally {
+            setIsSearchingMerchant(false);
+        }
+      } else {
+        setMerchantResults([]);
+        setShowMerchantList(false);
+      }
+    }, 400);
+    return () => clearTimeout(delayDebounceFn);
+  }, [merchantSearchQuery, selectedMerchant]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleGovernorateChange = (governorateId: string) => {
-    const governorate = governorates.find(g => g.id === governorateId);
-    setSelectedGovernorate(governorate);
-    setAvailableCities(governorate?.cities || []);
-    handleInputChange('governorateId', governorateId);
-    handleInputChange('cityId', ''); 
+  const handleGovernorateChange = async (governorateName: string) => {
+    handleInputChange('governorateName', governorateName);
+    handleInputChange('cityName', '');
+    setAvailableCities([]);
+    const selectedGov = governoratesList.find(g => g.govName === governorateName);
+    if (!selectedGov) return;
+    try {
+      const res = await api.get(`/api/locations/governorates/${selectedGov._id}/cities`);
+      setAvailableCities(res.data.data);
+    } catch (err) { setError('فشل في تحميل المدن'); }
   };
 
-  const calculateTotalWeight = () => {
-    return products.reduce((total, product) => total + (product.quantity * product.weight), 0);
-  };
-
-  const calculateShippingCost = () => {
-    
-    const weightSettings = {
-      baseWeight: 1.0,
-      baseCost: 25.0,
-      additionalWeightCost: 5.0
-    };
-    
-    const totalWeight = calculateTotalWeight();
-    let weightCost = weightSettings.baseCost;
-    
-    
-    if (totalWeight > weightSettings.baseWeight) {
-      const additionalWeight = totalWeight - weightSettings.baseWeight;
-      weightCost += additionalWeight * weightSettings.additionalWeightCost;
-    }
-    
-    const shippingTypeData = shippingTypes.find(type => type.id === formData.shippingType);
-    const shippingTypeCost = shippingTypeData?.cost || 0;
-    const villageDeliveryCost = formData.villageDelivery ? 15 : 0;
-    
-    return weightCost + shippingTypeCost + villageDeliveryCost;
-  };
+  const calculateTotalWeight = () => products.reduce((t, p) => t + (p.quantity * p.weight), 0);
 
   const handleAddProduct = () => {
-    if (newProduct.name.trim() && newProduct.quantity > 0 && newProduct.weight > 0) {
+    if (newProduct.name && newProduct.quantity > 0 && newProduct.weight > 0) {
       const product: Product = {
         id: Date.now().toString(),
         name: newProduct.name,
@@ -191,668 +184,486 @@ export function CreateOrder() {
         weight: newProduct.weight
       };
       setProducts([...products, product]);
+      handleInputChange('totalWeight', (calculateTotalWeight() + (newProduct.quantity * newProduct.weight)).toString());
       setNewProduct({ name: '', quantity: 1, weight: 0 });
       setIsAddingProduct(false);
-      
-     
-      const newTotalWeight = calculateTotalWeight() + (newProduct.quantity * newProduct.weight);
-      handleInputChange('totalWeight', newTotalWeight.toString());
     }
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    const updatedProducts = products.filter(p => p.id !== productId);
-    setProducts(updatedProducts);
-    
-    
-    const newTotalWeight = updatedProducts.reduce((total, product) => 
-      total + (product.quantity * product.weight), 0
-    );
-    handleInputChange('totalWeight', newTotalWeight.toString());
+  const handleDeleteProduct = (id: string) => {
+    const updated = products.filter(p => p.id !== id);
+    setProducts(updated);
+    const newWeight = updated.reduce((t, p) => t + (p.quantity * p.weight), 0);
+    handleInputChange('totalWeight', newWeight.toString());
   };
 
   const handleSubmit = async () => {
     setError(null);
     setSuccess(null);
 
-    
-    const requiredFields = [
-      'type', 'customerName', 'phone', 'governorateId', 'cityId',
-      'street', 'shippingType', 'paymentType', 'branchId', 'orderCost'
-    ];
-    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
-    
-    if (missingFields.length > 0) {
-      setError(`يرجى ملء الحقول المطلوبة: ${missingFields.join(', ')}`);
-      return;
+    if (['admin', 'employee'].includes(user?.userType || '') && !selectedMerchant) {
+        setError('يجب تحديد التاجر صاحب الطلب أولاً');
+        return;
     }
-    if (products.length === 0) {
-      setError('يرجى إضافة منتج واحد على الأقل');
-      return;
-    }
+
+    const requiredFields = ['type', 'customerName', 'phone', 'governorateName', 'cityName', 'street', 'shippingType', 'paymentType', 'branchName'];
+    const missing = requiredFields.filter(f => !formData[f as keyof typeof formData]);
+    
+    if (missing.length > 0) return setError(`يرجى ملء الحقول المطلوبة: ${missing.join(', ')}`);
+    if (products.length === 0) return setError('يجب إضافة منتج واحد على الأقل');
 
     setLoading(true);
-
     try {
-      const orderTypeName = orderTypes.find(t => t.id === formData.type)?.name;
-      const governorateName = governorates.find(g => g.id === formData.governorateId)?.name;
-      const shippingTypeName = shippingTypes.find(s => s.id === formData.shippingType)?.name;
-      const paymentTypeName = paymentTypes.find(p => p.id === formData.paymentType)?.name;
-      const branchName = branches.find(b => b.id === formData.branchId)?.name;
-
-      const mappedProducts = products.map(p => ({
-        productName: p.name,
-        quantity: p.quantity,
-        weight: p.weight,
-      }));
-      
-      const totalWeight = calculateTotalWeight();
-
       const payload = {
-        orderType: orderTypeName,
+        orderType: formData.type,
         customerName: formData.customerName,
         customerPhone1: formData.phone,
         customerPhone2: formData.phone2,
         customerEmail: formData.email,
-        governorate: governorateName,
-        city: formData.cityId, 
+        governorate: formData.governorateName,
+        city: formData.cityName, 
         village: formData.village,
         street: formData.street,
         isVillageDelivery: formData.villageDelivery,
-        shippingType: shippingTypeName,
-        paymentType: paymentTypeName,
-        branch: branchName,
-        orderCost: parseFloat(formData.orderCost) || 0,
-        totalWeight: totalWeight,
+        shippingType: formData.shippingType,
+        paymentType: formData.paymentType,
+        branch: formData.branchName,
+        totalWeight: calculateTotalWeight(),
         notes: formData.notes,
-        products: mappedProducts,
+        products: products.map(p => ({ productName: p.name, quantity: p.quantity, weight: p.weight })),
+        merchantId: selectedMerchant ? selectedMerchant._id : undefined
       };
-
       
       await api.post<AddOrderResponse>('/api/orders/add', payload);
-
       setSuccess('تم إنشاء الطلب بنجاح!');
       setLoading(false);
-      
-     
-
     } catch (err) {
       const error = err as ApiError;
-      setError(error.response?.data?.message || 'حدث خطأ أثناء إنشاء الطلب.');
+      setError(error.response?.data?.message || 'خطأ في إنشاء الطلب');
       setLoading(false);
     }
   };
 
+  const handleSelectMerchant = (merchant: MerchantResult) => {
+      setSelectedMerchant(merchant);
+      setMerchantSearchQuery(""); 
+      setShowMerchantList(false);
+  };
+
+  const handleClearMerchant = () => {
+      setSelectedMerchant(null);
+      setMerchantSearchQuery("");
+      setMerchantResults([]);
+  };
+
+  if (isLoadingLists) return (
+    <div className="flex flex-col justify-center items-center h-64 space-y-4">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+        <p className="text-muted-foreground">جاري تحميل البيانات...</p>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1>إنشاء طلب شحن جديد</h1>
-        <p className="text-muted-foreground">
-          أنشئ طلب شحن جديد مع تفاصيل كاملة للعميل والمنتجات
-        </p>
+   
+    <div className="space-y-8  mx-auto pb-12">
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-blue-600">إنشاء طلب جديد</h1>
+        <p className="text-gray-500">قم بملء البيانات التالية لإنشاء طلب شحن جديد وإضافته للنظام.</p>
       </div>
 
       {success && (
-        <Alert variant="default" className="bg-green-50 border-green-200 text-green-800">
-          <CheckCircleIcon className="h-4 w-4" />
-          <AlertTitle>نجاح</AlertTitle>
-          <AlertDescription>{success}</AlertDescription>
+        <Alert className='bg-green-50 border-green-200 text-green-800'>
+            <CheckCircleIcon className='h-4 w-4' />
+            <AlertTitle>تم بنجاح</AlertTitle>
+            <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
+      
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>خطأ</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+            <AlertCircle className='h-4 w-4' />
+            <AlertTitle>خطأ</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      {/* معلومات الطلب الأساسية */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <User className="h-5 w-5 mr-2" />
-            معلومات العميل الأساسية
-          </CardTitle>
-          <CardDescription>
-            البيانات الشخصية ومعلومات التواصل مع العميل
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* النوع ومعلومات العميل */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="type" className="flex items-center">
-                <Package className="h-4 w-4 mr-2" />
-                نوع الطلب *
-              </Label>
-              <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر نوع الطلب" />
-                </SelectTrigger>
-                <SelectContent className='bg-blue-50'>
-                  {orderTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="customerName" className="flex items-center">
-                <User className="h-4 w-4 mr-2" />
-                اسم العميل *
-              </Label>
-              <Input
-                id="customerName"
-                value={formData.customerName}
-                onChange={(e) => handleInputChange('customerName', e.target.value)}
-                placeholder="أدخل اسم العميل الكامل"
-                className="text-right"
-                required
-              />
-            </div>
-          </div>
-
-          {/* أرقام الهاتف والبريد الإلكتروني */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="flex items-center">
-                <Phone className="h-4 w-4 mr-2" />
-                رقم الهاتف *
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                placeholder="05xxxxxxxx"
-                className="text-right"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone2" className="flex items-center">
-                <Phone className="h-4 w-4 mr-2" />
-                رقم الهاتف 2
-              </Label>
-              <Input
-                id="phone2"
-                type="tel"
-                value={formData.phone2}
-                onChange={(e) => handleInputChange('phone2', e.target.value)}
-                placeholder="05xxxxxxxx"
-                className="text-right"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center">
-                <Mail className="h-4 w-4 mr-2" />
-                البريد الإلكتروني
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="example@domain.com"
-                className="text-right"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* معلومات الموقع */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <MapPin className="h-5 w-5 mr-2" />
-            معلومات الموقع والعنوان
-          </CardTitle>
-          <CardDescription>
-            العنوان الكامل لتوصيل الطلب
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* المحافظة والمدينة */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="governorate" className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2" />
-                المحافظة *
-              </Label>
-              <Select 
-                value={formData.governorateId} 
-                onValueChange={handleGovernorateChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر المحافظة" />
-                </SelectTrigger>
-                <SelectContent className='bg-blue-50'>
-                  {governorates.map((governorate) => (
-                    <SelectItem key={governorate.id} value={governorate.id}>
-                      {governorate.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="city" className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2" />
-                المدينة *
-              </Label>
-              <Select 
-                value={formData.cityId} 
-                onValueChange={(value) => handleInputChange('cityId', value)}
-                disabled={!selectedGovernorate}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={selectedGovernorate ? "اختر المدينة" : "اختر المحافظة أولاً"} />
-                </SelectTrigger>
-                <SelectContent className='bg-blue-50'>
-                  {availableCities.map((city, index) => (
-                    <SelectItem key={index} value={city}>
-                      {city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* القرية والشارع */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="village">القرية</Label>
-              <Input
-                id="village"
-                value={formData.village}
-                onChange={(e) => handleInputChange('village', e.target.value)}
-                placeholder="أدخل اسم القرية"
-                className="text-right"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="street">الشارع *</Label>
-              <Input
-                id="street"
-                value={formData.street}
-                onChange={(e) => handleInputChange('street', e.target.value)}
-                placeholder="أدخل اسم الشارع أو العنوان التفصيلي"
-                className="text-right"
-                required
-              />
-            </div>
-          </div>
-
-          {/* التوصيل للقرية */}
-          <div className="flex items-center space-x-2 space-x-reverse">
-            <Checkbox
-              id="villageDelivery"
-              checked={formData.villageDelivery}
-              onCheckedChange={(checked) => handleInputChange('villageDelivery', checked as boolean)}
-            />
-            <Label htmlFor="villageDelivery" className="cursor-pointer">
-              التوصيل لقرية (رسوم إضافية: 15 جنيه)
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* تفاصيل الشحن والدفع */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Package className="h-5 w-5 mr-2" />
-            تفاصيل الشحن والدفع
-          </CardTitle>
-          <CardDescription>
-            نوع الشحن وطريقة الدفع والفرع المختص
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* نوع الشحن */}
-          <div className="space-y-2">
-            <Label htmlFor="shippingType" className="flex items-center">
-              <Package className="h-4 w-4 mr-2" />
-              نوع الشحن *
-            </Label>
-            <Select value={formData.shippingType} onValueChange={(value) => handleInputChange('shippingType', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر نوع الشحن" />
-              </SelectTrigger>
-              <SelectContent className='bg-blue-50'>
-                {shippingTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    <div className="flex justify-between items-center w-full">
-                      <span>{type.name}</span>
-                      <Badge variant={type.cost > 0 ? "destructive" : type.cost < 0 ? "default" : "secondary"}>
-                        {type.cost > 0 ?`+${type.cost}` : type.cost < 0 ? `type.cost `: 'مجاني' } جنيه
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {formData.shippingType && (
-              <p className="text-sm text-muted-foreground">
-                {shippingTypes.find(type => type.id === formData.shippingType)?.description}
-              </p>
-            )}
-          </div>
-
-          {/* نوع الدفع */}
-          <div className="space-y-2">
-            <Label htmlFor="paymentType" className="flex items-center">
-              <DollarSign className="h-4 w-4 mr-2" />
-              نوع الدفع *
-            </Label>
-            <Select value={formData.paymentType} onValueChange={(value) => handleInputChange('paymentType', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر نوع الدفع" />
-              </SelectTrigger>
-              <SelectContent className='bg-blue-50'>
-                {paymentTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    <div>
-                      <div>{type.name}</div>
-                      <div className="text-sm text-gray-500">{type.description}</div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* الفرع */}
-          <div className="space-y-2">
-            <Label htmlFor="branch" className="flex items-center">
-              <Building className="h-4 w-4 mr-2" />
-              الفرع *
-            </Label>
-            <Select value={formData.branchId} onValueChange={(value) => handleInputChange('branchId', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر الفرع" />
-              </SelectTrigger>
-              <SelectContent className='bg-blue-50'>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* تكلفة الطلب وإجمالي الوزن */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="orderCost" className="flex items-center">
-                <DollarSign className="h-4 w-4 mr-2" />
-                تكلفة الطلب (جنيه)
-              </Label>
-              <Input
-                id="orderCost"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.orderCost}
-                onChange={(e) => handleInputChange('orderCost', e.target.value)}
-                placeholder="0.00"
-                className="text-right"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="totalWeight" className="flex items-center">
-                <Weight className="h-4 w-4 mr-2" />
-                إجمالي الوزن (كجم)
-              </Label>
-              <Input
-                id="totalWeight"
-                type="number"
-                step="0.1"
-                min="0"
-                value={calculateTotalWeight()}
-                readOnly
-                className="text-right bg-gray-50"
-                placeholder="سيتم الحساب تلقائياً"
-              />
-            </div>
-          </div>
-
-          {/* الملاحظات */}
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="flex items-center">
-              <FileText className="h-4 w-4 mr-2" />
-              ملاحظات
-            </Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="أي ملاحظات أو تعليمات خاصة..."
-              className="text-right"
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* إدارة المنتجات */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center">
-                <Package className="h-5 w-5 mr-2" />
-                المنتجات
-              </CardTitle>
-              <CardDescription>
-                إضافة وإدارة المنتجات في الطلب
-              </CardDescription>
-            </div>
-            <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
-              <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  إضافة منتج
-                </Button>
-              </DialogTrigger>
-              <DialogContent className='bg-blue-50'>
-                <DialogHeader>
-                  <DialogTitle>إضافة منتج جديد</DialogTitle>
-                  <DialogDescription>
-                    أدخل تفاصيل المنتج المراد إضافته للطلب
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="productName">اسم المنتج</Label>
-                    <Input
-                      id="productName"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                      placeholder="أدخل اسم المنتج"
-                      className="text-right"
-                    />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity">الكمية</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        min="1"
-                        value={newProduct.quantity}
-                        onChange={(e) => setNewProduct({...newProduct, quantity: parseInt(e.target.value) || 1})}
-                        className="text-right"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="weight">الوزن (كجم)</Label>
-                      <Input
-                        id="weight"
-                        type="number"
-                        step="0.1"
-                        min="0.1"
-                        value={newProduct.weight}
-                        onChange={(e) => setNewProduct({...newProduct, weight: parseFloat(e.target.value) || 0})}
-                        className="text-right"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddingProduct(false)}>
-                    إلغاء
-                  </Button>
-                  <Button onClick={handleAddProduct}>
-                    إضافة المنتج
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {products.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">اسم المنتج</TableHead>
-                    <TableHead className="text-center">الكمية</TableHead>
-                    <TableHead className="text-center">الوزن (كجم)</TableHead>
-                    <TableHead className="text-center">إجمالي الوزن</TableHead>
-                    <TableHead className="text-center">الإجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell className="text-center">{product.quantity}</TableCell>
-                      <TableCell className="text-center">{product.weight}</TableCell>
-                      <TableCell className="text-center font-medium">
-                        {(product.quantity * product.weight).toFixed(1)} كجم
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteProduct(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+      
+      {['admin', 'employee'].includes(user?.userType || '') && (
+          <Card className={`border-2 shadow-sm transition-all ${selectedMerchant ? 'border-green-500 bg-green-50/30' : 'border-secondary'}`}>
+            <CardHeader className='pb-4 border-b mb-4 bg-secondary'>
+                <CardTitle className="text-lg flex items-center ">
+                    <Store className="h-5 w-5 mx-2 text-blue-800" /> تحديد التاجر (المرسل)<span className="text-red-500 mr-1 text-sm">*</span>
+                </CardTitle>
+                <CardDescription>ابحث واختر التاجر الذي سيتم تسجيل الطلب باسمه.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {selectedMerchant ? (
+                    <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-green-200 shadow-sm">
+                        <div className="flex items-center space-x-3 space-x-reverse">
+                            <div className="bg-green-100 p-3 rounded-full">
+                                <Store className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-lg text-gray-800">{selectedMerchant.fullName}</h4>
+                                <div className="flex text-sm text-muted-foreground space-x-3 space-x-reverse mt-1">
+                                    <span className="bg-gray-100 px-2 py-0.5 rounded">{selectedMerchant.phone}</span>
+                                    {selectedMerchant.storeName && (
+                                        <span className="text-blue-600 font-medium">{selectedMerchant.storeName}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={handleClearMerchant} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            تغيير
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Package className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="text-muted-foreground mt-2">لم يتم إضافة أي منتجات بعد</p>
-              <p className="text-sm text-muted-foreground">اضغط على "إضافة منتج" لبدء إضافة المنتجات</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    </div>
+                ) : (
+                    <div className="relative">
+                        <div className="relative">
+                            <Search className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+                            <Input 
+                                placeholder="ابحث بالاسم، اسم المتجر، أو الهاتف (مثال: أحمد مجدي)"
+                                className="pr-10 text-right h-12 text-lg border-gray-300 focus:border-blue-500"
+                                value={merchantSearchQuery}
+                                onChange={(e) => setMerchantSearchQuery(e.target.value)}
+                            />
+                        </div>
 
-      {/* ملخص التكلفة */}
-      {products.length > 0 && (
-        <Card className="border-green-200 bg-green-50">
-          <CardHeader>
-            <CardTitle className="text-green-800 flex items-center">
-              <Calculator className="h-5 w-5 mr-2" />
-              ملخص التكلفة
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>التكلفة الأساسية (حتى 1.0 كجم):</span>
-                <span>25 جنيه</span>
-              </div>
-              {calculateTotalWeight() > 1.0 && (
-                <div className="flex justify-between">
-                  <span>تكلفة الوزن الإضافي ({(calculateTotalWeight() - 1.0).toFixed(1)} كجم):</span>
-                  <span>{((calculateTotalWeight() - 1.0) * 5).toFixed(2)} جنيه</span>
-                </div>
-              )}
-              <div className="flex justify-between font-medium">
-                <span>إجمالي تكلفة الوزن ({calculateTotalWeight().toFixed(1)} كجم):</span>
-                <span>{Math.max(25, 25 + Math.max(0, calculateTotalWeight() - 1.0) * 5).toFixed(2)} جنيه</span>
-              </div>
-              {formData.shippingType && (
-                <div className="flex justify-between">
-                  <span>رسوم نوع الشحن:</span>
-                  <span>{shippingTypes.find(type => type.id === formData.shippingType)?.cost || 0} جنيه</span>
-                </div>
-              )}
-              {formData.villageDelivery && (
-                <div className="flex justify-between">
-                  <span>رسوم التوصيل للقرية:</span>
-                  <span>15 جنيه</span>
-                </div>
-              )}
-              <Separator />
-              <div className="flex justify-between font-bold text-lg">
-                <span>إجمالي تكلفة الشحن:</span>
-                <span className="text-green-700">{calculateShippingCost().toFixed(2)} جنيه</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                        {showMerchantList && (
+                            <div className="absolute w-full z-50 mt-2 bg-white border rounded-md shadow-xl max-h-60 overflow-auto">
+                                {merchantResults.length > 0 ? (
+                                    merchantResults.map((merchant) => (
+                                        <div 
+                                            key={merchant._id}
+                                            onClick={() => handleSelectMerchant(merchant)}
+                                            className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 flex justify-between items-center group transition-colors"
+                                        >
+                                            <div className="flex flex-col">
+                                                <span className="font-medium group-hover:text-blue-700">{merchant.fullName}</span>
+                                                {merchant.storeName && <span className="text-xs text-muted-foreground">{merchant.storeName}</span>}
+                                            </div>
+                                            <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">{merchant.phone}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    !isSearchingMerchant && merchantSearchQuery.length > 1 && (
+                                        <div className="p-4 text-center text-muted-foreground">لا يوجد تاجر بهذا الاسم</div>
+                                    )
+                                )}
+                                {isSearchingMerchant && (
+                                    <div className="p-4 text-center text-blue-600 flex items-center justify-center">
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> جاري البحث...
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </CardContent>
+          </Card>
       )}
 
-      {/* أزرار الإجراءات */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-between">
-            <Button variant="outline" disabled={loading}>
-              إلغاء
-            </Button>
-            <Button 
-              onClick={handleSubmit} 
-              className="bg-green-600 hover:bg-green-700"
-              disabled={products.length === 0 || loading} // (تعديل)
-            >
-              {loading ? (
-                "جاري الإنشاء..."
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  إنشاء الطلب
-                </>
-              )}
-            </Button>
-          </div>
+     
+      <Card className="shadow-sm">
+          <CardHeader className="bg-secondary border-b pb-4 mb-4">
+              <CardTitle className='flex items-center text-lg'><UserIcon className='h-5 w-5 mx-2 text-blue-600'/>معلومات العميل (المستلم)</CardTitle>
+          </CardHeader>
+          <CardContent className='space-y-5'>
+              <div className='grid gap-6 md:grid-cols-2'>
+                  <div className='space-y-2'>
+                      <Label className="text-base">نوع الطلب <span className="text-red-500">*</span></Label>
+                      <Select value={formData.type} onValueChange={(v) => handleInputChange('type', v)} dir="rtl">
+                          <SelectTrigger className="h-11"><SelectValue placeholder="اختر نوع الطلب" /></SelectTrigger>
+                          <SelectContent className='bg-background'>{orderTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                      </Select>
+                  </div>
+                  <div className='space-y-2'>
+                      <Label className="text-base">اسم العميل (المستلم) <span className="text-red-500">*</span></Label>
+                      <Input 
+                          value={formData.customerName} 
+                          onChange={(e)=>handleInputChange('customerName', e.target.value)} 
+                          className='text-right h-11' 
+                          placeholder='مثال: محمد أحمد محمود'
+                      />
+                  </div>
+              </div>
+              <div className='grid gap-6 md:grid-cols-3'>
+                  <div className='space-y-2'>
+                      <Label className="text-base">رقم الهاتف <span className="text-red-500">*</span></Label>
+                      <Input 
+                          value={formData.phone} 
+                          onChange={(e)=>handleInputChange('phone', e.target.value)} 
+                          className='text-right h-11' 
+                          placeholder='010xxxxxxxxx'
+                      />
+                  </div>
+                  <div className='space-y-2'>
+                      <Label className="text-base">رقم هاتف 2 (اختياري)</Label>
+                      <Input 
+                          value={formData.phone2} 
+                          onChange={(e)=>handleInputChange('phone2', e.target.value)} 
+                          className='text-right h-11' 
+                          placeholder='011xxxxxxxxx'
+                      />
+                  </div>
+                  <div className='space-y-2'>
+                      <Label className="text-base">البريد الإلكتروني (اختياري)</Label>
+                      <Input 
+                          value={formData.email} 
+                          onChange={(e)=>handleInputChange('email', e.target.value)} 
+                          className='text-right h-11' 
+                          placeholder='client@example.com'
+                      />
+                  </div>
+              </div>
+          </CardContent>
+      </Card>
+
+     
+      <Card className="shadow-sm">
+          <CardHeader className="bg-secondary border-b pb-4 mb-4">
+              <CardTitle className='flex items-center text-lg'><MapPin className='h-5 w-5 mx-2 text-orange-600'/>عنوان التوصيل</CardTitle>
+          </CardHeader>
+          <CardContent className='space-y-5'>
+              <div className='grid gap-6 md:grid-cols-2'>
+                  <div className='space-y-2'>
+                      <Label className="text-base">المحافظة <span className="text-red-500">*</span></Label>
+                      <Select value={formData.governorateName} onValueChange={handleGovernorateChange} dir='rtl'>
+                          <SelectTrigger className="h-11"><SelectValue placeholder="اختر المحافظة" /></SelectTrigger>
+                          <SelectContent className='bg-background'>{governoratesList.map(g => <SelectItem key={g._id} value={g.govName}>{g.govName}</SelectItem>)}</SelectContent>
+                      </Select>
+                  </div>
+                  <div className='space-y-2'>
+                      <Label className="text-base">المدينة <span className="text-red-500">*</span></Label>
+                      <Select value={formData.cityName} onValueChange={(v) => handleInputChange('cityName', v)} disabled={availableCities.length===0} dir="rtl">
+                          <SelectTrigger className="h-11"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
+                          <SelectContent className='bg-background'>
+                              {availableCities.map(c => (
+                                  <SelectItem key={c._id} value={c.cityName}>
+                                      <div className="flex justify-between w-full gap-4">
+                                          <span>{c.cityName}</span>
+                                          <Badge variant="secondary" className="text-xs">{c.shippingCost} ج.م</Badge>
+                                      </div>
+                                  </SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                  </div>
+              </div>
+              <div className='grid gap-6 md:grid-cols-3'>
+                <div className='space-y-2'>
+                    <Label className="text-base">القرية (اختياري)</Label>
+                    <Input 
+                        value={formData.village} 
+                        onChange={(e)=>handleInputChange('village', e.target.value)} 
+                        className='text-right h-11'
+                        placeholder="اسم القرية إن وجدت"
+                        disabled={!formData.villageDelivery} // هنا نمنع الكتابة إذا لم يتم تفعيل checkbox
+                    />
+                </div>
+                <div className='space-y-2 md:col-span-2'>
+                    <Label className="text-base">الشارع / العنوان بالتفصيل <span className="text-red-500">*</span></Label>
+                    <Input 
+                        value={formData.street} 
+                        onChange={(e)=>handleInputChange('street', e.target.value)} 
+                        className='text-right h-11'
+                        placeholder="مثال: 15 شارع الجمهورية، بجوار المسجد الكبير، الدور الثاني"
+                    />
+                </div>
+            </div>
+
+            <div className="flex items-center space-x-2 space-x-reverse bg-orange-50 p-4 rounded-md border border-orange-100">
+                <Checkbox 
+                    id="villageDelivery" 
+                    className='ml-2 border-orange-500' 
+                    checked={formData.villageDelivery} 
+                    onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} 
+                />
+                <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
+                    هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)
+                </Label>
+            </div>
+
+          </CardContent>
+      </Card>
+
+      
+      <Card className="shadow-sm">
+        <CardHeader className="bg-secondary border-b pb-4 mb-4">
+            <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mx-2 text-green-600'/>تفاصيل الشحن والدفع</CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-5'>
+            <div className="grid gap-6 md:grid-cols-3">
+                <div className='space-y-2'>
+                    <Label className="text-base">نوع الشحن <span className="text-red-500">*</span></Label>
+                    <Select value={formData.shippingType} onValueChange={(v) => handleInputChange('shippingType', v)} dir="rtl">
+                        <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                        <SelectContent className='bg-background'>
+                            {shippingTypesList.map(t => (
+                                <SelectItem key={t._id} value={t.name}>
+                                    <div className="flex justify-between w-full gap-2">
+                                        <span>{t.name}</span>
+                                        <Badge variant={t.adjustmentAmount > 0 ? "destructive" : "secondary"}>
+                                            {t.adjustmentAmount > 0 ? `+${t.adjustmentAmount}` : t.adjustmentAmount} ج
+                                        </Badge>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className='space-y-2'>
+                    <Label className="text-base">نوع الدفع <span className="text-red-500">*</span></Label>
+                    <Select value={formData.paymentType} onValueChange={(v) => handleInputChange('paymentType', v)} dir="rtl">
+                        <SelectTrigger className="h-11"><SelectValue placeholder="اختر الطريقة" /></SelectTrigger>
+                        <SelectContent className='bg-background'>{paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className='space-y-2'>
+                    <Label className="text-base">الفرع المختص <span className="text-red-500">*</span></Label>
+                    <Select value={formData.branchName} onValueChange={(v) => handleInputChange('branchName', v)} dir="rtl">
+                        <SelectTrigger className="h-11"><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
+                        <SelectContent className='bg-background'>{branches.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+            </div>
+            
+            <div className="grid gap-6 md:grid-cols-2">
+                <div className='space-y-2'>
+                    <Label className="flex items-center text-base"><Weight className="h-4 w-4 mr-1"/> إجمالي الوزن (كجم)</Label>
+                    <Input 
+                        value={formData.totalWeight} 
+                        readOnly 
+                        className='bg-gray-100 text-right font-bold text-lg border-gray-300 h-12' 
+                    />
+                    <p className="text-xs text-muted-foreground">يتم حسابه تلقائياً بناءً على المنتجات المضافة.</p>
+                </div>
+                <div className='space-y-2'>
+                    <Label className="text-base">ملاحظات إضافية</Label>
+                    <Textarea 
+                        value={formData.notes} 
+                        onChange={(e)=>handleInputChange('notes', e.target.value)} 
+                        className='text-right min-h-[50px]'
+                        placeholder="أي تعليمات خاصة للتوصيل، مثال: الاتصال قبل الوصول بساعة..."
+                    />
+                </div>
+            </div>
         </CardContent>
       </Card>
 
-      {/* ملاحظات مهمة */}
-      <Card className="border-orange-200 bg-orange-50">
-        <CardHeader>
-          <CardTitle className="text-orange-800">ملاحظات مهمة</CardTitle>
+      
+      <Card className="shadow-sm">
+        <CardHeader className="bg-secondary border-b pb-4 mb-4">
+            <div className="flex items-center justify-between">
+                <CardTitle className='flex items-center text-lg'><Package className='h-5 w-5 mx-2 text-purple-600'/>محتويات الشحنة</CardTitle>
+                <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
+                    <DialogTrigger asChild>
+                        <Button className='bg-blue-600 hover:bg-blue-700'> 
+                            <Plus className='mr-2 h-4 w-4'/> إضافة منتج
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className='bg-background' dir='rtl'>
+                        <DialogHeader><DialogTitle className='text-blue-600 text-center'>إضافة منتج جديد</DialogTitle></DialogHeader>
+                        <div className='space-y-4 py-4'>
+                            <div className='space-y-2'>
+                                <Label>اسم المنتج <span className="text-red-500">*</span></Label>
+                                <Input 
+                                    value={newProduct.name} 
+                                    onChange={(e)=>setNewProduct({...newProduct, name:e.target.value})} 
+                                    className='text-right'
+                                    placeholder="مثال: قميص قطني، حذاء رياضي..."
+                                />
+                            </div>
+                            <div className='grid gap-4 grid-cols-2'>
+                                <div className='space-y-2'>
+                                    <Label>الكمية <span className="text-red-500">*</span></Label>
+                                    <Input 
+                                        type="number" 
+                                        value={newProduct.quantity} 
+                                        onChange={(e)=>setNewProduct({...newProduct, quantity: +e.target.value})} 
+                                        className='text-right'
+                                        min={1}
+                                    />
+                                </div>
+                                <div className='space-y-2'>
+                                    <Label>وزن القطعة (كجم) <span className="text-red-500">*</span></Label>
+                                    <Input 
+                                        type="number" 
+                                        step="0.1" 
+                                        value={newProduct.weight} 
+                                        onChange={(e)=>setNewProduct({...newProduct, weight: +e.target.value})} 
+                                        className='text-right'
+                                        min={0.1}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={handleAddProduct} className="w-full sm:w-auto">إضافة للقائمة</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </CardHeader>
-        <CardContent className="text-orange-700">
-          <ul className="list-disc list-inside space-y-1 text-sm">
-            <li>جميع الحقول المميزة بـ (*) مطلوبة لإنشاء الطلب</li>
-            <li>يجب إضافة منتج واحد على الأقل لإكمال الطلب</li>
-            <li>يتم حساب إجمالي الوزن تلقائياً بناءً على المنتجات المضافة</li>
-            <li>رسوم التوصيل للقرية إضافية وتبلغ 15 جنيه</li>
-            <li>تختلف تكلفة الشحن حسب النوع المختار</li>
-          </ul>
+        <CardContent>
+            {products.length > 0 ? (
+                <div className="rounded-md border overflow-hidden">
+                    <Table>
+                        <TableHeader className="bg-background">
+                            <TableRow>
+                                <TableHead className='text-right'>الاسم</TableHead>
+                                <TableHead className='text-center'>الكمية</TableHead>
+                                <TableHead className='text-center'>وزن الوحدة</TableHead>
+                                <TableHead className='text-center'>الإجراءات</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {products.map(p => (
+                                <TableRow key={p.id}>
+                                    <TableCell className="font-medium">{p.name}</TableCell>
+                                    <TableCell className='text-center'>{p.quantity}</TableCell>
+                                    <TableCell className='text-center'>{p.weight} كجم</TableCell>
+                                    <TableCell className='text-center'>
+                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={()=>handleDeleteProduct(p.id)}>
+                                            <Trash2 className='h-4 w-4'/>
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            ) : (
+                <div className='flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg text-muted-foreground bg-secondary'>
+                    <div className="bg-foreground p-4 rounded-full mb-3 shadow-sm">
+                        <Package className="h-10 w-10 text-gray-300" />
+                    </div>
+                    <p className="font-medium">لا يوجد منتجات مضافة بعد</p>
+                    <p className="text-sm mt-1 text-gray-500">اضغط على زر "إضافة منتج" بالأعلى للبدء</p>
+                </div>
+            )}
+        </CardContent>
+      </Card>
+
+      
+      <Card className="bg-secondary border-t bottom-4 shadow-lg ">
+        <CardContent className="p-4 flex justify-between items-center">
+            <Button variant="ghost" size="lg" onClick={() => window.history.back()} disabled={loading} className="text-gray-600">
+                إلغاء ورجوع
+            </Button>
+            <Button 
+                onClick={handleSubmit} 
+                size="lg"
+                className="bg-green-600 hover:bg-green-700 min-w-[200px] text-base font-bold shadow-md" 
+                disabled={products.length === 0 || loading}
+            >
+                {loading ? (
+                    <><Loader2 className="h-5 w-5 mr-2 animate-spin"/> جاري الحفظ...</> 
+                ) : (
+                    <><CheckCircle className="h-5 w-5 mr-2"/> تأكيد وإنشاء الطلب</>
+                )}
+            </Button>
         </CardContent>
       </Card>
     </div>

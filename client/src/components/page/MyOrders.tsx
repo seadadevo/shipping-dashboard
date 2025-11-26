@@ -47,29 +47,23 @@ import {
   Loader2,
   MoreHorizontal,
   Eye,
-  Trash2, // إضافة أيقونة الحذف
+  Trash2, 
 } from "lucide-react";
 import api from "../../lib/api";
 import type { ApiError, GetOrdersResponse, Order } from "../../types";
 
-// (تصليح): دي الـ imports الصح من مكتبة shadcn/ui
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-// (إضافة): جلب اليوزر الحالي عشان نعرف صلاحياته
-import { useAuth } from "../../hooks/useAuth";
 
-// (تصليح): بنعرف الـ labels هنا عشان نستخدمها في كذا مكان
+
+
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
@@ -79,7 +73,7 @@ const statusLabels: Record<string, string> = {
   all: "جميع الحالات",
 };
 
-// (تصليح): الـ value بالإنجليزي (زي الـ API) والـ label بالعربي (لليوزر)
+
 const statusOptions = [
   { value: "all", label: "جميع الحالات" },
   { value: "Pending", label: statusLabels.Pending },
@@ -89,7 +83,7 @@ const statusOptions = [
   { value: "Cancelled", label: statusLabels.Cancelled },
 ];
 
-export function OrderManagement() {
+export function MyOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -98,30 +92,40 @@ export function OrderManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- (إضافة States جديدة) ---
-  const { user } = useAuth(); // اليوزر الحالي
-  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null); // الطلب اللي هيتحذف
-  const [isDeleting, setIsDeleting] = useState(false); // مؤشر لـ loading الحذف
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null); // مؤشر لـ loading تعديل الحالة
-  // --- (نهاية الإضافة) ---
+
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null); 
+  const [isDeleting, setIsDeleting] = useState(false); 
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null); 
+ 
 
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get<GetOrdersResponse>("/api/orders");
+     const response = await api.get<GetOrdersResponse>("/api/orders/my-orders", {
+        params: {
+          status: statusFilter,
+          q: searchQuery
+        }
+      });
       setAllOrders(response.data.data.orders);
     } catch (err) {
       const error = err as ApiError;
-      setError(error.response?.data?.message || "فشل في جلب الطلبات.");
+      setError(error.response?.data?.message || "فشل في جلب طلباتك.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    const handler = setTimeout(() => {
+      fetchOrders();
+    }, 500); 
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [statusFilter, searchQuery]); 
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -157,38 +161,12 @@ export function OrderManagement() {
     }
   };
 
-  const filteredOrders = allOrders.filter((order) => {
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch =
-      order._id.toLowerCase().includes(searchLower) ||
-      order.customerName.toLowerCase().includes(searchLower) ||
-      order.customerPhone1.includes(searchQuery) ||
-      order.createdBy.fullName.toLowerCase().includes(searchLower);
-
-    const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const statusCounts = {
-    Pending: allOrders.filter((o) => o.status === "Pending").length,
-    Processing: allOrders.filter((o) => o.status === "Processing").length,
-    Shipped: allOrders.filter((o) => o.status === "Shipped").length,
-    Delivered: allOrders.filter((o) => o.status === "Delivered").length,
-    Cancelled: allOrders.filter((o) => o.status === "Cancelled").length,
-  };
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
   };
 
-  // --- (دوال جديدة للحذف وتعديل الحالة) ---
-  const handleDeleteClick = (order: Order) => {
-    setError(null);
-    setOrderToDelete(order);
-  };
 
   const handleConfirmDelete = async () => {
     if (!orderToDelete) return;
@@ -224,9 +202,10 @@ export function OrderManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>إدارة الطلبات</h1>
+          {/* (تعديل): تغيير العنوان */}
+          <h1>طلباتي</h1>
           <p className="text-muted-foreground">
-            عرض وإدارة جميع طلبات الشحن في النظام
+            عرض ومتابعة جميع طلبات الشحن الخاصة بك
           </p>
         </div>
         <div className="flex space-x-3 space-x-reverse">
@@ -234,7 +213,6 @@ export function OrderManagement() {
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          {/* (تعديل): زر التحديث بقى شغال */}
           <Button variant="outline" onClick={fetchOrders} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -246,64 +224,14 @@ export function OrderManagement() {
         </div>
       </div>
 
-      {/* ... (الإحصائيات السريعة زي ما هي) ... */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">إجمالي الطلبات</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{allOrders.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">قيد الانتظار</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {statusCounts["Pending"]}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">قيد المعالجة</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {statusCounts["Processing"]}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">تم التسليم</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {statusCounts["Delivered"]}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">ملغي</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {statusCounts["Cancelled"]}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* (إزالة): كروت الإحصائيات السريعة (موجودة في الداشبورد) */}
 
       {/* جدول الطلبات */}
       <Card>
         <CardHeader>
-          <CardTitle>قائمة الطلبات</CardTitle>
+          <CardTitle>قائمة طلباتي</CardTitle>
           <CardDescription>
-            جميع طلبات الشحن مع إمكانية البحث والتصفية
+            جميع طلباتك مع إمكانية البحث والتصفية
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -312,18 +240,18 @@ export function OrderManagement() {
             <div className="relative flex-1 max-w-sm ml-2">
               <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="البحث في الطلبات..."
+                placeholder="البحث باسم العميل أو هاتفه..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pr-8 text-right"
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={setStatusFilter} dir="rtl">
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
-              <SelectContent className="bg-blue-50">
+              <SelectContent className="bg-background">
                 {statusOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -341,7 +269,6 @@ export function OrderManagement() {
                   <TableHead className="text-right">الطلب</TableHead>
                   <TableHead className="text-right">العميل</TableHead>
                   <TableHead className="text-right">الوجهة</TableHead>
-                  <TableHead className="text-right">الموظف/التاجر</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
                   <TableHead className="text-right">التكلفة</TableHead>
                   <TableHead className="text-right">تاريخ الإنشاء</TableHead>
@@ -351,22 +278,22 @@ export function OrderManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12"> {/* (تعديل ColSpan) */}
                       <Loader2 className="h-8 w-8 text-blue-600 animate-spin mx-auto" />
                       <p className="text-muted-foreground mt-2">
-                        جاري تحميل الطلبات...
+                        جاري تحميل طلباتك...
                       </p>
                     </TableCell>
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12"> {/* (تعديل ColSpan) */}
                       <AlertCircle className="h-8 w-8 text-red-600 mx-auto" />
                       <p className="text-red-600 mt-2">{error}</p>
                     </TableCell>
                   </TableRow>
-                ) : filteredOrders.length > 0 ? (
-                  filteredOrders.map((order) => (
+                ) : allOrders.length > 0 ? ( // (تعديل): استخدام allOrders
+                  allOrders.map((order) => (
                     <TableRow key={order._id}>
                       <TableCell className="font-medium">
                         <div>
@@ -395,23 +322,12 @@ export function OrderManagement() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {order.createdBy.fullName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {order.createdBy.userType}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
                         <Badge
                           className={`${getStatusColor(
                             order.status
                           )} flex items-center w-fit`}
                         >
                           {getStatusIcon(order.status)}
-                          {/* (تعديل): بنعرض الاسم العربي */}
                           <span className="mr-1">
                             {statusLabels[order.status] || order.status}
                           </span>
@@ -424,14 +340,14 @@ export function OrderManagement() {
                         {new Date(order.createdAt).toLocaleDateString("ar-EG")}
                       </TableCell>
                       <TableCell>
-                        {/* --- (تعديل القائمة المنسدلة) --- */}
+                        {/* (تعديل): التاجر له "عرض التفاصيل" فقط */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-blue-50" align="end">
+                          <DropdownMenuContent className="bg-background" align="end"  dir="rtl">
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() => handleViewOrder(order)}
@@ -439,58 +355,6 @@ export function OrderManagement() {
                               <Eye className="mr-2 h-4 w-4" />
                               عرض التفاصيل
                             </DropdownMenuItem>
-
-                            {/* قائمة تعديل الحالة */}
-                            <DropdownMenuSub >
-                              <DropdownMenuSubTrigger
-                                disabled={isUpdatingStatus === order._id}
-                              >
-                                {isUpdatingStatus === order._id ? (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="mr-2 h-4 w-4" />
-                                )}
-                                تغيير الحالة
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuPortal>
-                                <DropdownMenuSubContent className="bg-blue-50">
-                                  {statusOptions
-                                    .filter((s) => s.value !== "all")
-                                    .map((status) => (
-                                      <DropdownMenuItem
-                                        key={status.value}
-                                        onClick={() =>
-                                          handleStatusChange(
-                                            order._id,
-                                            status.value
-                                          )
-                                        }
-                                        disabled={
-                                          order.status === status.value ||
-                                          !!isUpdatingStatus
-                                        }
-                                      >
-                                        {status.label}
-                                      </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuPortal>
-                            </DropdownMenuSub>
-
-                            {/* زر الحذف (للأدمن فقط) */}
-                            {user?.userType === "employee" && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-600"
-                                  onClick={() => handleDeleteClick(order)}
-                                  disabled={isDeleting}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  حذف الطلب
-                                </DropdownMenuItem>
-                              </>
-                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -498,10 +362,10 @@ export function OrderManagement() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12"> {/* (تعديل ColSpan) */}
                       <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
-                        لا توجد طلبات تطابق معايير البحث
+                        لم تقم بإنشاء أي طلبات بعد
                       </p>
                     </TableCell>
                   </TableRow>
@@ -514,9 +378,9 @@ export function OrderManagement() {
 
       {/* ... (نافذة عرض تفاصيل الطلب زي ما هي) ... */}
       <Dialog  open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className=" bg-blue-50 max-w-4xl">
+        <DialogContent className=" bg-background max-w-4xl"  dir="rtl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-blue-600">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
             <DialogDescription>

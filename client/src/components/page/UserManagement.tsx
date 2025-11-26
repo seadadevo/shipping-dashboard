@@ -24,7 +24,6 @@ import {
 	MoreHorizontal,
 	UserPlus,
 	Eye,
-	Key,
 } from "lucide-react";
 import {
 	DropdownMenu,
@@ -46,6 +45,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import api from "../../lib/api";
 import { toast } from "sonner";
 import type { User } from "../../types";
+// import validator from "validator";
 
 interface UserManagementProps {
 	onNavigate?: (page: string) => void;
@@ -59,8 +59,10 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 	const [viewModalOpen, setViewModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
+    const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string }>({});
 
-	const getUsers = async () => {
+
+    const getUsers = async () => {
 		const res = await api.get("api/users/");
 		setUsers(res.data);
 	};
@@ -101,13 +103,85 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		}
 	};
 
-	// Reset password
-	const handleResetPassword = async (id: string) => {
+	const validateUserForm = (
+		formData: { fullName: string; email: string },
+		users: User[],
+		currentUserId?: string
+	) => {
+		const errors: { fullName?: string; email?: string } = {};
+
+		// Full Name
+		if (!formData.fullName.trim()) {
+			errors.fullName = "الاسم الكامل مطلوب";
+		} else if (
+			users.some(
+				(u) =>
+					(u.fullName.trim() === formData.fullName.trim()) && u._id !== currentUserId
+			)
+		) {
+			errors.fullName = "الاسم موجود بالفعل";
+		}
+
+		// Email
+		if (!formData.email.trim()) {
+			errors.email = "البريد الإلكتروني مطلوب";
+		} else if (!validator.isEmail(formData.email)) {
+			errors.email = "صيغة البريد الإلكتروني غير صحيحة";
+		} else if (
+			users.some(
+				(u) => u.email === formData.email && u._id !== currentUserId
+			)
+		) {
+			errors.email = "البريد الإلكتروني موجود بالفعل";
+		}
+
+		return errors;
+	};
+
+	const [formData, setFormData] = useState({
+		fullName: selectedUser?.fullName || "",
+		email: selectedUser?.email || "",
+	});
+
+	const handleChange = (field: string, value: string) => {
+		setFormData((prev) => ({ ...prev, [field]: value }));
+        // Run validation for the changed field only
+        const errors = validateUserForm(
+            { ...formData, [field]: value },
+            users,
+            selectedUser?._id
+        );
+        setFormErrors(errors);
+	};
+
+	// update user
+	const updateUser = async (id: string) => {
 		try {
-			await api.post(`/api/users/${id}/reset-password`);
-			toast.success("تمت إعادة تعيين كلمة المرور بنجاح");
-		} catch {
-			toast.error("حدث خطأ أثناء إعادة التعيين");
+			// Validate form using already fetched users
+			const errors = validateUserForm(formData, users, id);
+			if (Object.keys(errors).length > 0) {
+				Object.values(errors).forEach((err) => toast.error(err));
+				return;
+			}
+			await api.put(`/api/users/${id}`, {
+				fullName: formData.fullName,
+				email: formData.email,
+			});
+			toast.success("تم تحديث المستخدم بنجاح");
+
+			// ✅ Close popup after success
+			setEditModalOpen(false);
+
+			// ✅ Reset all fields
+			setFormData({
+				fullName: "",
+				email: "",
+			});
+
+			// ✅ Refresh the user list immediately
+			await getUsers(); // 🔹 Re-fetch updated users from the server
+		} catch (error) {
+			toast.error("حدث خطأ أثناء تحديث المستخدم");
 		}
 	};
 
@@ -252,6 +326,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 						<Select
 							value={roleFilter}
 							onValueChange={setRoleFilter}
+							 dir="rtl"
 						>
 							<SelectTrigger className="w-48 me-1">
 								<SelectValue placeholder="تصفية حسب الدور" />
@@ -322,9 +397,10 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 												<DropdownMenuContent
 													align="end"
 													sideOffset={6}
-													className="w-52 rounded-xl border border-gray-200 bg-white shadow-lg ring-1 ring-gray-100"
+													className="w-52 rounded-xl border border-gray-200 bg-background shadow-lg ring-1 ring-gray-100"
+													dir="rtl"
 												>
-													<DropdownMenuLabel className="text-gray-500 text-sm font-medium px-3 py-1">
+													<DropdownMenuLabel className="text-foreground text-sm font-medium px-3 py-1">
 														الإجراءات
 													</DropdownMenuLabel>
 
@@ -340,7 +416,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 																true
 															);
 														}}
-														className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer rounded-md transition"
+														className="flex items-center gap-2 px-3 py-2 text-foreground hover:bg-blue-50 hover:text-blue-600 cursor-pointer rounded-md transition"
 													>
 														<Edit className="h-4 w-4 text-blue-500" />
 														تعديل المستخدم
@@ -356,23 +432,10 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 																true
 															);
 														}}
-														className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-green-50 hover:text-green-600 cursor-pointer rounded-md transition"
+														className="flex items-center gap-2 px-3 py-2 text-foreground hover:bg-green-50 hover:text-green-600 cursor-pointer rounded-md transition"
 													>
 														<Eye className="h-4 w-4 text-green-500" />
 														عرض التفاصيل
-													</DropdownMenuItem>
-
-													{/* 🔑 Reset Password */}
-													<DropdownMenuItem
-														onClick={() =>
-															handleResetPassword(
-																user._id
-															)
-														}
-														className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-amber-50 hover:text-amber-600 cursor-pointer rounded-md transition"
-													>
-														<Key className="h-4 w-4 text-amber-500" />
-														إعادة تعيين كلمة المرور
 													</DropdownMenuItem>
 
 													<DropdownMenuSeparator className="my-1" />
@@ -408,9 +471,9 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 
 			{/* View Modal */}
 			<Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-				<DialogContent>
+				<DialogContent className="bg-background">
 					<DialogHeader>
-						<DialogTitle>تفاصيل المستخدم</DialogTitle>
+						<DialogTitle className="text-blue-600 text-center" dir="rtl">تفاصيل المستخدم</DialogTitle>
 					</DialogHeader>
 					{selectedUser && (
 						<div className="space-y-3 text-right">
@@ -425,21 +488,36 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 
 			{/*  Edit Modal (simplified example) */}
 			<Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>تعديل بيانات المستخدم</DialogTitle>
+				<DialogContent className="bg-background">
+					<DialogHeader >
+						<DialogTitle className="text-blue-600 text-center" dir="rtl">تعديل بيانات المستخدم</DialogTitle>
 					</DialogHeader>
 					{selectedUser && (
 						<div className="space-y-4">
 							<Input
-								defaultValue={selectedUser.fullName}
+								value={formData.fullName}
+								onChange={(e) =>
+									handleChange("fullName", e.target.value)
+								}
 								placeholder="الاسم الكامل"
 							/>
+                            {formErrors.fullName && (
+                                <p className="text-red-500 text-sm mt-1">{formErrors.fullName}</p>
+                            )}
 							<Input
-								defaultValue={selectedUser.email}
+								value={formData.email}
+								onChange={(e) =>
+									handleChange("email", e.target.value)
+								}
 								placeholder="البريد الإلكتروني"
 							/>
-							<Button className="bg-blue-600 hover:bg-blue-700 text-white w-full">
+                            {formErrors.email && (
+                                <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>
+                            )}
+							<Button
+								onClick={() => updateUser?.(selectedUser._id)}
+								className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+							>
 								حفظ التغييرات
 							</Button>
 						</div>

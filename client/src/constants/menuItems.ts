@@ -1,5 +1,5 @@
 import { 
-  Home, Users, Package, Building, Weight, Shield, 
+  Home, Users, Package, Weight, Shield, 
   MapPin, Plus, Truck 
 } from 'lucide-react';
 import type { MenuItem } from '../types';
@@ -9,9 +9,10 @@ export const adminMenuItems: MenuItem[] = [
   { id: 'admin-dashboard', label: 'لوحة التحكم', icon: Home },
   { id: 'order-management', label: 'إدارة الطلبات', icon: Package },
   { id: 'user-management', label: 'إدارة المستخدمين', icon: Users },
-  { id: 'weight-settings', label: 'إعدادات الوزن والتكلفة', icon: Weight },
-  { id: 'user-groups', label: 'المجموعات والأذونات', icon: Shield },
+  { id: 'shipping-types', label: 'إعدادات أنواع الشحن', icon: Truck, },
+  { id: 'weight-settings', label: 'إعدادات الوزن', icon: Weight },
   { id: 'regions-management', label: 'إدارة المناطق', icon: MapPin },
+  { id: 'user-groups', label: 'المجموعات والأذونات', icon: Shield },
 ];
 
 
@@ -29,7 +30,7 @@ export const employeeMenuItems: MenuItem[] = [
 ];
 
 export const driverMenuItems: MenuItem[] = [
-  { id: 'driver-dashboard', label: 'لوحة التحكم', icon: Home },
+  { id: 'courier-dashboard', label: 'لوحة التحكم', icon: Home },
   { id: 'my-deliveries', label: 'توصيلاتي', icon: Truck },
 ];
 
