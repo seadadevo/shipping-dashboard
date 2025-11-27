@@ -21,7 +21,6 @@ router.get("/", restrictTo("admin", "employee"), getAllOrders);
 
 
 router.get("/my-orders", restrictTo("merchant"), getMyOrders);
--
 
 router.get("/search", restrictTo("admin", "employee"), searchOrders);
 
