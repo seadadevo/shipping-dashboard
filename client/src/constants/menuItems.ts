@@ -30,7 +30,7 @@ export const employeeMenuItems: MenuItem[] = [
 ];
 
 export const driverMenuItems: MenuItem[] = [
-  { id: 'driver-dashboard', label: 'لوحة التحكم', icon: Home },
+  { id: 'courier-dashboard', label: 'لوحة التحكم', icon: Home },
   { id: 'my-deliveries', label: 'توصيلاتي', icon: Truck },
 ];
 

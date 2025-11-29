@@ -21,6 +21,7 @@ import { DriverDashboard } from "../dashboards/DriverDashboard";
 import Sidebar from "../Layout/Sidebar";
 import { AddUser } from "./../page/AddUser";
 import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
+import { AccountSettings } from "../page/AccountSettings";
 
 const DashboardLayout: React.FC = () => {
   const { user, logout } = useAuth();

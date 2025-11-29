@@ -43,6 +43,7 @@ export interface SidebarProps {
 export interface HeaderProps {
   user: User | null;
   onLogout: () => void;
+  onNavigate: (page: string) => void;
 }
 
 /**

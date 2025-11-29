@@ -45,7 +45,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Incorrect email or password" });
     }
 
-    const allowedTypes = ["admin", "employee", "merchant"];
+    const allowedTypes = ["admin", "employee", "merchant", "courier"];
     if (!allowedTypes.includes(user.userType)) {
       return res.status(403).json({
         message: "Your user type is not authorized to access this dashboard.",

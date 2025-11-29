@@ -344,9 +344,9 @@ export function MerchantDashboard() {
             )}
           </div>
 
-          <div className="mt-4 text-center">
-            <Button variant="outline">عرض جميع الطلبات</Button>
-          </div>
+          {/*<div className="mt-4 text-center">*/}
+          {/*  <Button variant="outline">عرض جميع الطلبات</Button>*/}
+          {/*</div>*/}
         </CardContent>
       </Card>
     </div>

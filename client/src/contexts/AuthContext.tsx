@@ -36,7 +36,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
   if (user && token) {
-    console.log("✅ Auth state updated:", { user, token });
+    // console.log("✅ Auth state updated:", { user, token });
+      console.log("✅ Auth state updated:");
   }
 }, [user, token]);
   

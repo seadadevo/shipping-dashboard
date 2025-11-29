@@ -1,11 +1,11 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 import {
-  Package,
-  Clock,
-  DollarSign,
-  Users,
-  TrendingUp,
-  Truck,
+    Package,
+    Clock,
+    DollarSign,
+    Users, Download,
+    // TrendingUp,
+    // Truck,
 } from "lucide-react";
 import {
   LineChart,
@@ -25,19 +25,171 @@ import {
   CardContent,
 } from "../ui/card";
 import { Button } from "../ui/button";
+import type {ApiError, GetOrdersResponse, Order, SidebarProps, User} from '../../types';
+import {getMenuItemsByRole} from "../../constants/menuItems.ts";
+import api from "../../lib/api.ts";
 
-const chartData = [
-  { day: "السبت", orders: 45 },
-  { day: "الأحد", orders: 52 },
-  { day: "الاثنين", orders: 38 },
-  { day: "الثلاثاء", orders: 67 },
-  { day: "الأربعاء", orders: 71 },
-  { day: "الخميس", orders: 58 },
-  { day: "الجمعة", orders: 43 },
-];
+const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, userRole}) => {
+    const menuItems = getMenuItemsByRole(userRole);
 
-const AdminDashboard: React.FC = () => {
-  return (
+    // calc order number today ////////////////////////////////////////////////////////
+    const [users, setUsers] = useState<User[]>([]);
+    const getUsers = async (): Promise<void> => {
+        const res = await api.get<User[]>("api/users/");
+        setUsers(res.data);
+    };
+
+    useEffect(() => {
+        getUsers().catch(console.error);
+    }, []);
+
+    function isDateToday(dateString: string): "today" | "normal" | "oldOrder" {
+        const date = new Date(dateString);
+
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
+        twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 15); // subtract ~2 weeks
+
+        // Start of today (UTC)
+        const start = new Date();
+        start.setUTCHours(0, 0, 0, 0);
+
+        // End of today (UTC)
+        const end = new Date();
+        end.setUTCHours(23, 59, 59, 999);
+
+        return date >= start && date <= end ? "today" : date > twoWeeksAgo && date <= end ? "normal" : "oldOrder";
+    }
+
+    function getDayOfLast7DaysOrders(dateString: string): boolean {
+        const date = new Date(dateString);
+
+        // Start of today (UTC)
+        const start = new Date();
+        start.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
+        start.setUTCDate(start.getUTCDate() - 6); // subtract 14 days
+
+        // End of today (UTC)
+        const end = new Date();
+        end.setUTCHours(23, 59, 59, 999);
+
+        return date >= start && date <= end;
+    }
+
+    const [allOrders, setAllOrders] = useState<Order[]>([]);
+    // const [loading, setLoading] = useState<boolean>(true);
+    // const [error, setError] = useState<string | null>(null);
+
+    const [countOrdersToday, setCountOrdersToday] = useState<number>(0);
+    const [pendingOrdersToday, setPendingOrdersToday] = useState<number>(0);
+    const [previousPendingOrders, setPreviousPendingOrders] = useState<number>(0);
+    const [moneysToday, setMoneysToday] = useState<number>(0);
+    const [chartData, setChartData] = useState<{ day: string; orders: number }[]>([]);
+    const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState<number>(0);
+    const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState<number>(0);
+
+    const fetchOrders = async (): Promise<void> => {
+        // setLoading(true);
+        // setError(null);
+        try {
+            const response = await api.get<GetOrdersResponse>("/api/orders");
+            setAllOrders(response.data.data.orders);
+        } catch (err) {
+            const error = err as ApiError;
+            console.error("Error fetching orders:", error);
+            // setError(error.response?.data?.message || "فشل في جلب الطلبات.");
+        } finally {
+            console.log("Orders fetched successfully");
+            // setLoading(false);
+        }
+    };
+    useEffect(() => {
+        fetchOrders();
+    }, []);
+
+    useEffect(() => {
+        // Local accumulators to avoid multiple re-renders and keep calculations consistent
+        let localCountOrdersToday = 0;
+        let localPendingOrdersToday = 0;
+        let localPreviousPendingOrders = 0;
+        let localMoneysToday = 0;
+        let localTotalOrders = 0;
+        let localTotalProfitAWeek = 0;
+
+        const counts: Record<string, number> = {
+            "الأحد": 0,
+            "الاثنين": 0,
+            "الثلاثاء": 0,
+            "الأربعاء": 0,
+            "الخميس": 0,
+            "الجمعة": 0,
+            "السبت": 0,
+        };
+
+        if (allOrders.length) {
+            const todayNum = new Date().getDay();
+            for (const order of allOrders) {
+                if (isDateToday(order.createdAt) === "today") {
+                    localCountOrdersToday += 1;
+                }
+                if (order.status.toLowerCase() === "pending") {
+                    localPendingOrdersToday += 1;
+                }
+                if (
+                    order.status.toLowerCase() === "delivered" &&
+                    isDateToday(order.updatedAt) === "today"
+                ) {
+                    localMoneysToday += order.orderCost;
+                }
+                if (isDateToday(order.updatedAt) === "oldOrder") {
+                    localPreviousPendingOrders += 1;
+                }
+                if (getDayOfLast7DaysOrders(order.createdAt)) {
+                    const day = new Date(order.createdAt).getDay();
+                    if (day !== todayNum) {
+                        localTotalProfitAWeek += order.orderCost;
+                    }
+                    const dayKey = Object.keys(counts)[day];
+                    counts[dayKey] += 1;
+                }
+            }
+
+            const todayIndex = new Date().getDay();
+            const sortedChart = Array.from({ length: 7 })
+                .map((_, i) => {
+                    const index = (todayIndex - i + 7) % 7;
+                    const day = Object.keys(counts)[index];
+                    if (i !== 0) localTotalOrders += counts[day];
+                    return { day, orders: counts[day] };
+                })
+                .reverse();
+
+            setChartData(sortedChart);
+        } else {
+            setChartData([]);
+        }
+
+        const avgOrders = localTotalOrders / 6 || 0; // average over last 6 days (excluding today)
+        const avgProfit = localTotalProfitAWeek / 6 || 0; // average over last 6 days (excluding today)
+
+        const localOrdersTodayRelativeToWeek = avgOrders > 0
+            ? Math.ceil((localCountOrdersToday / avgOrders) * 100)
+            : 0;
+        const localProfitTodayRelativeToWeek = avgProfit > 0
+            ? Math.ceil((localMoneysToday / avgProfit) * 100)
+            : 0;
+
+        // Single batched state update pattern
+        setCountOrdersToday(localCountOrdersToday);
+        setPendingOrdersToday(localPendingOrdersToday);
+        setPreviousPendingOrders(localPreviousPendingOrders);
+        setMoneysToday(localMoneysToday);
+        setOrdersTodayRelativeToWeek(localOrdersTodayRelativeToWeek);
+        setProfitTodayRelativeToWeek(localProfitTodayRelativeToWeek);
+    }, [allOrders]);
+
+///////////////////////////////////////////////////////////////////////
+    return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -46,7 +198,32 @@ const AdminDashboard: React.FC = () => {
         </div>
         <div className="flex space-x-2 space-x-reverse">
           <Button>إنشاء تقرير</Button>
-          <Button variant="outline">تصدير البيانات</Button>
+          <Button variant="outline"
+                className="ml-2"
+                onClick={() => {
+                    const data = [{
+                        "الطلبات اليوم": countOrdersToday,
+                        "الشحنات المعلقة": pendingOrdersToday,
+                        "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                        "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
+                        "الإيرادات اليوم": moneysToday,
+                        "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
+                        "المستخدمين النشطين": users.length,
+                    }];
+                    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "dashboard-info.json";
+                    a.click();
+
+                    URL.revokeObjectURL(url);
+                    }}
+          >
+              <Download className="h-4 w-4 mr-2" />
+              تصدير البيانات
+          </Button>
         </div>
       </div>
 
@@ -57,9 +234,9 @@ const AdminDashboard: React.FC = () => {
             <Package className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">127</div>
+            <div className="text-2xl font-bold">{countOrdersToday}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+12%</span> من الأمس
+              <span className="text-green-600">%{ordersTodayRelativeToWeek} </span>بالنسبة لمتوسط الطلبات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -72,9 +249,9 @@ const AdminDashboard: React.FC = () => {
             <Clock className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23</div>
+            <div className="text-2xl font-bold">{pendingOrdersToday}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-orange-600">+3</span> منذ الصباح
+              <span className="text-orange-600">+{previousPendingOrders} </span> منذ اكثر من اسبوعين
             </p>
           </CardContent>
         </Card>
@@ -87,9 +264,9 @@ const AdminDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,450 جنيه</div>
+            <div className="text-2xl font-bold">{moneysToday} جنيه</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+8%</span> من الأمس
+              <span className="text-green-600">{profitTodayRelativeToWeek}%</span> بالنسبة لمتوسط الايرادات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -102,9 +279,9 @@ const AdminDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
+            <div className="text-2xl font-bold">{users.length}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+5</span> مستخدمين جدد
+              <span className="text-green-600">+createdAt(db)</span> مستخدمين جدد
             </p>
           </CardContent>
         </Card>
@@ -142,27 +319,26 @@ const AdminDashboard: React.FC = () => {
             <CardDescription>الوصول السريع للمهام الأساسية</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {[
-              {
-                label: "إدارة المستخدمين",
-                icon: <Users className="h-4 w-4" />,
-              },
-              { label: "إدارة الطلبات", icon: <Package className="h-4 w-4" /> },
-              {
-                label: "تقارير الأداء",
-                icon: <TrendingUp className="h-4 w-4" />,
-              },
-              { label: "تتبع المركبات", icon: <Truck className="h-4 w-4" /> },
-            ].map((item, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                className="flex justify-between"
-              >
-                <span>{item.label}</span>
-                {item.icon}
-              </Button>
-            ))}
+              {menuItems.map((item) => {
+                  if(item.label !== "لوحة التحكم" && item.label !== "المجموعات والأذونات"){
+                  const Icon = item.icon;
+                  const isActive = currentPage === item.id;
+
+                  return (
+                      <button
+                          key={item.id}
+                          onClick={() => onPageChange(item.id)}
+                          className={`w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
+                              isActive
+                                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                                  : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                          <Icon className={`h-5 w-5 ml-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <span>{item.label}</span>
+                      </button>
+                  );
+              }})}
           </CardContent>
         </Card>
       </div>
