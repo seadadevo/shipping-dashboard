@@ -50,6 +50,7 @@ import {
   Trash2,
 } from "lucide-react";
 import api from "../../lib/api";
+import { Pagination } from "../ui/pagination";
 import type { ApiError, GetOrdersResponse, Order } from "../../types";
 
 import {
@@ -93,6 +94,10 @@ export function OrderManagement() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { user } = useAuth();
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
@@ -100,7 +105,7 @@ export function OrderManagement() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
 
   // --- (🚀 تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = currentPage, limit = itemsPerPage) => {
     setLoading(true);
     setError(null);
     try {
@@ -109,9 +114,15 @@ export function OrderManagement() {
         params: {
           status: statusFilter,
           q: searchQuery,
+          page,
+          limit,
         },
       });
       setAllOrders(response.data.data.orders);
+      setCurrentPage(response.data?.meta?.page || page);
+      setTotalPages(response.data?.meta?.totalPages || 1);
+      setTotalItems(response.data?.meta?.total || response.data.data.orders.length);
+      setItemsPerPage(response.data?.meta?.limit || limit);
     } catch (err) {
       const error = err as ApiError;
       setError(error.response?.data?.message || "فشل في جلب الطلبات.");
@@ -515,6 +526,23 @@ export function OrderManagement() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                fetchOrders(p, itemsPerPage);
+              }}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+              onItemsPerPageChange={(n) => {
+                setItemsPerPage(n);
+                setCurrentPage(1);
+                fetchOrders(1, n);
+              }}
+            />
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../../lib/api";
+import { Pagination } from "../ui/pagination";
 import type { ApiError } from "../../types"; // افترض أن لديك هذا النوع
 
 // --- استيراد مكونات UI ---
@@ -78,6 +79,10 @@ export function ShippingTypeManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // --- حالات لإدارة الـ Dialog ---
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,11 +94,16 @@ export function ShippingTypeManagement() {
   const [typeToDelete, setTypeToDelete] = useState<string | null>(null);
 
   // --- 1. جلب البيانات ---
-  const fetchTypes = async () => {
+  const fetchTypes = async (page = 1, limit = itemsPerPage) => {
     setLoading(true);
     try {
-      const res = await api.get("/api/shipping-types");
-      setTypes(res.data.data);
+      const res = await api.get(`/api/shipping-types?page=${page}&limit=${limit}`);
+      const payload = res.data?.data || [];
+      setTypes(Array.isArray(payload) ? payload : payload);
+      setCurrentPage(res.data?.meta?.page || page);
+      setTotalPages(res.data?.meta?.totalPages || 1);
+      setTotalItems(res.data?.meta?.total || payload.length);
+      setItemsPerPage(res.data?.meta?.limit || limit);
     } catch (err) {
       setError("فشل جلب أنواع الشحن.");
     } finally {
@@ -102,7 +112,7 @@ export function ShippingTypeManagement() {
   };
 
   useEffect(() => {
-    fetchTypes();
+    fetchTypes(currentPage, itemsPerPage);
   }, []);
 
   // --- 2. فتح الـ Dialog (إما للإضافة أو التعديل) ---
@@ -352,6 +362,23 @@ export function ShippingTypeManagement() {
             </Table>
           </div>
         </CardContent>
+        <div className="p-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(p) => {
+              setCurrentPage(p);
+              fetchTypes(p, itemsPerPage);
+            }}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+            onItemsPerPageChange={(n) => {
+              setItemsPerPage(n);
+              setCurrentPage(1);
+              fetchTypes(1, n);
+            }}
+          />
+        </div>
       </Card>
 
       {/* --- Dialog للإضافة والتعديل --- */}

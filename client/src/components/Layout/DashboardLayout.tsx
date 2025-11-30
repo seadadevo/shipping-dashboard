@@ -14,7 +14,6 @@ import { UserGroups } from "../page/UserGroup";
 import { RegionsManagement } from "../page/RegionsManagement";
 import { MyOrders } from "../page/MyOrders";
 import { MyDeliveries } from "../page/MyDeliveries";
-// import { UserLookup } from "../page/UserLookup";
 import { EmployeeDashboard } from "../dashboards/EmplyeeDashboard";
 import { MerchantDashboard } from "../dashboards/MerchantDashboard";
 import { DriverDashboard } from "../dashboards/DriverDashboard";
@@ -54,7 +53,7 @@ const DashboardLayout: React.FC = () => {
   const renderCurrentPage = () => {
     switch (currentPage) {
       case "admin-dashboard":
-        return <AdminDashboard />;
+        return <AdminDashboard currentPage={currentPage} onPageChange={setCurrentPage} userRole={user?.userType} />;
       case "employee-dashboard":
         return <EmployeeDashboard />;
       case "merchant-dashboard":
@@ -68,8 +67,8 @@ const DashboardLayout: React.FC = () => {
         return <OrderManagement />;
       case "create-order":
         return <CreateOrder />;
-      case "branch-management":
-        return <BranchManagement />;
+      case "shipping-type-management":
+        return <ShippingTypeManagement />;
       case "weight-settings":
         return <WeightSettings />;
       case "user-groups":
@@ -81,12 +80,15 @@ const DashboardLayout: React.FC = () => {
       case "my-orders":
         return <MyOrders />;
       case "my-deliveries":
-        return <MyDeliveries />;
-      case "user-lookup":
-        return <UserLookup />;
+        return <MyDeliveries />; 
+      case "shipping-types":
+        return <ShippingTypeManagement />;
+      case "account-settings": 
+			return <AccountSettings />;
+      
 
       default:
-        return <AdminDashboard />;
+        return <AdminDashboard currentPage={currentPage} onPageChange={setCurrentPage} userRole={user!.userType} />;
     }
   };
 
@@ -132,6 +134,7 @@ const DashboardLayout: React.FC = () => {
           user={user}
           onLogout={logout}
           onToggleSidebar={() => setSidebarOpen(true)}
+          onNavigate={setCurrentPage}
         />
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto  p-6">

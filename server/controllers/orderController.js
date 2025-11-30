@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const User = require("../models/User"); // 👈 ده السطر اللي كان ناقص ومسبب المشكلة
+const { paginate } = require("../utils/pagination");
 
 // --- باقي الموديلات ---
 const WeightSetting = require("../models/WeightSetting");
@@ -155,15 +156,15 @@ exports.getAllOrders = async (req, res) => {
         ];
       }
   
-      const orders = await Order.find(query)
-        .populate("createdBy", "fullName userType email phone storeName") // Populate كاملة
-        .sort({ createdAt: -1 });
-  
-      res.status(200).json({
-        status: "success",
-        results: orders.length,
-        data: { orders },
-      });
+          const { page, limit } = req.query;
+          const { data: orders, meta } = await paginate(Order, query, {
+            page,
+            limit,
+            populate: { path: "createdBy", select: "fullName userType email phone storeName" },
+            sort: { createdAt: -1 },
+          });
+
+          res.status(200).json({ status: "success", results: orders.length, meta, data: { orders } });
   
     } catch (error) {
       console.error("!!! GET ALL ORDERS CRASHED !!!", error);
@@ -182,21 +183,23 @@ exports.searchOrders = async (req, res) => {
   
       const searchRegex = new RegExp(q, "i");
   
-      const orders = await Order.find({
+      const { page, limit } = req.query;
+      const filter = {
         $or: [
           { customerName: searchRegex },
           { customerPhone1: searchRegex },
           { customerEmail: searchRegex },
         ],
-      }).populate("createdBy", "fullName userType email phone storeName");
-  
-      res.status(200).json({
-        status: "success",
-        results: orders.length,
-        data: {
-          orders,
-        },
+      };
+
+      const { data: orders, meta } = await paginate(Order, filter, {
+        page,
+        limit,
+        populate: { path: "createdBy", select: "fullName userType email phone storeName" },
+        sort: { createdAt: -1 },
       });
+
+      res.status(200).json({ status: "success", results: orders.length, meta, data: { orders } });
     } catch (error) {
         res.status(500).json({message: "Search Error", error: error.message});
     }
@@ -247,8 +250,14 @@ exports.searchOrders = async (req, res) => {
         const searchRegex = new RegExp(q, "i");
         query.$or = [{ customerName: searchRegex }, { customerPhone1: searchRegex }];
       }
-      const orders = await Order.find(query).populate("createdBy", "fullName userType").sort({ createdAt: -1 });
-      res.status(200).json({ status: "success", results: orders.length, data: { orders } });
+      const { page, limit } = req.query;
+      const { data: orders, meta } = await paginate(Order, query, {
+        page,
+        limit,
+        populate: { path: "createdBy", select: "fullName userType" },
+        sort: { createdAt: -1 },
+      });
+      res.status(200).json({ status: "success", results: orders.length, meta, data: { orders } });
     } catch (error) {
       res.status(500).json({ message: "Server error while fetching my orders" });
     }

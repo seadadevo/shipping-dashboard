@@ -35,8 +35,10 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
     // calc order number today ////////////////////////////////////////////////////////
     const [users, setUsers] = useState<User[]>([]);
     const getUsers = async (): Promise<void> => {
-        const res = await api.get<User[]>("api/users/");
-        setUsers(res.data);
+        const res = await api.get("/api/users?limit=1000");
+        // Handle paginated response: { status, results, meta, data: { users } }
+        const usersList = res.data?.data?.users || res.data || [];
+        setUsers(Array.isArray(usersList) ? usersList : []);
     };
 
     useEffect(() => {
@@ -92,8 +94,9 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
         // setLoading(true);
         // setError(null);
         try {
-            const response = await api.get<GetOrdersResponse>("/api/orders");
-            setAllOrders(response.data.data.orders);
+            const response = await api.get<GetOrdersResponse>("/api/orders?limit=1000");
+            const ordersList = response.data?.data?.orders || [];
+            setAllOrders(Array.isArray(ordersList) ? ordersList : []);
         } catch (err) {
             const error = err as ApiError;
             console.error("Error fetching orders:", error);

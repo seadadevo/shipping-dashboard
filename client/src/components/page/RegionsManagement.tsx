@@ -63,6 +63,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import api from '../../lib/api';
+import { Pagination } from '../ui/pagination';
 import type { 
   Governorate, 
   City, 
@@ -76,6 +77,14 @@ export function RegionsManagement() {
   // States for data
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [govCurrentPage, setGovCurrentPage] = useState(1);
+  const [govTotalPages, setGovTotalPages] = useState(1);
+  const [govTotalItems, setGovTotalItems] = useState(0);
+  const [govItemsPerPage, setGovItemsPerPage] = useState(10);
+  const [cityCurrentPage, setCityCurrentPage] = useState(1);
+  const [cityTotalPages, setCityTotalPages] = useState(1);
+  const [cityTotalItems, setCityTotalItems] = useState(0);
+  const [cityItemsPerPage, setCityItemsPerPage] = useState(10);
   
   // States for loading
   const [isLoadingGovs, setIsLoadingGovs] = useState(true);
@@ -117,11 +126,16 @@ export function RegionsManagement() {
     fetchCities();
   }, []);
 
-  const fetchGovernorates = async () => {
+  const fetchGovernorates = async (page = govCurrentPage, limit = govItemsPerPage) => {
     setIsLoadingGovs(true);
     try {
-      const response = await api.get<GetGovernoratesResponse>('/api/locations/governorates');
-      setGovernorates(response.data.data || []);
+      const response = await api.get<GetGovernoratesResponse>(`/api/locations/governorates?page=${page}&limit=${limit}`);
+      const payload = response.data.data || [];
+      setGovernorates(Array.isArray(payload) ? payload : payload);
+      setGovCurrentPage(response.data?.meta?.page || page);
+      setGovTotalPages(response.data?.meta?.totalPages || 1);
+      setGovTotalItems(response.data?.meta?.total || payload.length);
+      setGovItemsPerPage(response.data?.meta?.limit || limit);
     } catch (err) {
       setError('فشل في جلب المحافظات');
     } finally {
@@ -129,11 +143,16 @@ export function RegionsManagement() {
     }
   };
 
-  const fetchCities = async () => {
+  const fetchCities = async (page = cityCurrentPage, limit = cityItemsPerPage) => {
     setIsLoadingCities(true);
     try {
-      const response = await api.get<GetCitiesResponse>('/api/locations/cities');
-      setCities(response.data.data || []);
+      const response = await api.get<GetCitiesResponse>(`/api/locations/cities?page=${page}&limit=${limit}`);
+      const payload = response.data.data || [];
+      setCities(Array.isArray(payload) ? payload : payload);
+      setCityCurrentPage(response.data?.meta?.page || page);
+      setCityTotalPages(response.data?.meta?.totalPages || 1);
+      setCityTotalItems(response.data?.meta?.total || payload.length);
+      setCityItemsPerPage(response.data?.meta?.limit || limit);
     } catch (err) {
       setError('فشل في جلب المدن');
     } finally {
@@ -588,6 +607,23 @@ export function RegionsManagement() {
                 </Table>
               </div>
             </CardContent>
+            <div className="p-4">
+              <Pagination
+                currentPage={govCurrentPage}
+                totalPages={govTotalPages}
+                onPageChange={(p) => {
+                  setGovCurrentPage(p);
+                  fetchGovernorates(p, govItemsPerPage);
+                }}
+                itemsPerPage={govItemsPerPage}
+                totalItems={govTotalItems}
+                onItemsPerPageChange={(n) => {
+                  setGovItemsPerPage(n);
+                  setGovCurrentPage(1);
+                  fetchGovernorates(1, n);
+                }}
+              />
+            </div>
           </Card>
         </TabsContent>
 
@@ -810,6 +846,23 @@ export function RegionsManagement() {
                 </Table>
               </div>
             </CardContent>
+            <div className="p-4">
+              <Pagination
+                currentPage={cityCurrentPage}
+                totalPages={cityTotalPages}
+                onPageChange={(p) => {
+                  setCityCurrentPage(p);
+                  fetchCities(p, cityItemsPerPage);
+                }}
+                itemsPerPage={cityItemsPerPage}
+                totalItems={cityTotalItems}
+                onItemsPerPageChange={(n) => {
+                  setCityItemsPerPage(n);
+                  setCityCurrentPage(1);
+                  fetchCities(1, n);
+                }}
+              />
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const bcrypt = require('bcryptjs');
+const { paginate } = require("../utils/pagination");
 
 const allowedFields = [
 	"userType",
@@ -139,11 +140,12 @@ exports.addUser = async (req, res) => {
 	}
 };
 
-// Get all users
+// Get all users (paginated)
 exports.getUsers = async (req, res) => {
 	try {
-		const users = await User.find().select("-password"); // hide password
-		res.status(200).json(users);
+		const { page, limit } = req.query;
+		const { data: users, meta } = await paginate(User, {}, { page, limit, select: '-password', sort: { createdAt: -1 } });
+		res.status(200).json({ status: 'success', results: users.length, meta, data: { users } });
 	} catch (error) {
 		res.status(500).json({ message: "Error fetching users" });
 	}
@@ -152,14 +154,15 @@ exports.getUsers = async (req, res) => {
 // Get users with search
 exports.getUsersWithSearch = async (req, res) => {
 	try {
-		const { q } = req.query;
-		const users = await User.find({
+		const { q, page, limit } = req.query;
+		const filter = {
 			$or: [
 				{ fullName: new RegExp(q, "i") },
 				{ email: new RegExp(q, "i") },
 			],
-		});
-		res.status(200).json(users);
+		};
+		const { data: users, meta } = await paginate(User, filter, { page, limit, select: '-password', sort: { createdAt: -1 } });
+		res.status(200).json({ status: 'success', results: users.length, meta, data: { users } });
 	} catch (error) {
 		res.status(500).json({ message: "User not found" });
 	}
