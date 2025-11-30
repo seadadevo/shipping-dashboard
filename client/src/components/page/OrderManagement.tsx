@@ -52,6 +52,7 @@ import {
 import api from "../../lib/api";
 import { Pagination } from "../ui/pagination";
 import type { ApiError, GetOrdersResponse, Order } from "../../types";
+import { exportOrdersToExcel } from "../../lib/exportUtils";
 
 import {
   DropdownMenu,
@@ -247,7 +248,7 @@ export function OrderManagement() {
           </p>
         </div>
         <div className="flex space-x-3 space-x-reverse">
-          <Button variant="outline" className="ml-2">
+          <Button variant="outline" className="ml-2" onClick={() => exportOrdersToExcel(allOrders, `طلبات-${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.csv`)}>
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
