@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Package,
     Clock,
@@ -25,13 +26,16 @@ import {
   CardContent,
 } from "../ui/card";
 import { Button } from "../ui/button";
-import type {ApiError, GetOrdersResponse, Order, SidebarProps, User} from '../../types';
+import type {ApiError, GetOrdersResponse, Order, User} from '../../types';
 import {getMenuItemsByRole} from "../../constants/menuItems.ts";
+import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api.ts";
 import { generatePDFReport, generateAdminReport } from "../../lib/exportUtils";
 
-const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, userRole}) => {
-    const menuItems = getMenuItemsByRole(userRole);
+const AdminDashboard: React.FC = () => {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const menuItems = getMenuItemsByRole(user?.userType || 'admin');
 
     // calc order number today ////////////////////////////////////////////////////////
     const [users, setUsers] = useState<User[]>([]);
@@ -335,19 +339,14 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
               {menuItems.map((item) => {
                   if(item.label !== "لوحة التحكم" && item.label !== "المجموعات والأذونات"){
                   const Icon = item.icon;
-                  const isActive = currentPage === item.id;
 
                   return (
                       <button
                           key={item.id}
-                          onClick={() => onPageChange(item.id)}
-                          className={`w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
-                              isActive
-                                  ? 'bg-blue-50 text-blue-700 font-semibold'
-                                  : 'text-gray-700 hover:bg-gray-50'
-                          }`}
+                          onClick={() => navigate(item.path)}
+                          className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-gray-700 hover:bg-gray-50"
                       >
-                          <Icon className={`h-5 w-5 ml-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <Icon className="h-5 w-5 ml-3 text-gray-400" />
                           <span>{item.label}</span>
                       </button>
                   );
