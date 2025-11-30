@@ -14,13 +14,14 @@ import { UserGroups } from "../page/UserGroup";
 import { RegionsManagement } from "../page/RegionsManagement";
 import { MyOrders } from "../page/MyOrders";
 import { MyDeliveries } from "../page/MyDeliveries";
+// import { UserLookup } from "../page/UserLookup";
 import { EmployeeDashboard } from "../dashboards/EmplyeeDashboard";
 import { MerchantDashboard } from "../dashboards/MerchantDashboard";
 import { DriverDashboard } from "../dashboards/DriverDashboard";
 import Sidebar from "../Layout/Sidebar";
 import { AddUser } from "./../page/AddUser";
-import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
 import { AccountSettings } from "../page/AccountSettings";
+import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
 
 const DashboardLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -67,8 +68,6 @@ const DashboardLayout: React.FC = () => {
         return <OrderManagement />;
       case "create-order":
         return <CreateOrder />;
-      case "shipping-type-management":
-        return <ShippingTypeManagement />;
       case "weight-settings":
         return <WeightSettings />;
       case "user-groups":
@@ -80,15 +79,14 @@ const DashboardLayout: React.FC = () => {
       case "my-orders":
         return <MyOrders />;
       case "my-deliveries":
-        return <MyDeliveries />; 
+        return <MyDeliveries />;
       case "shipping-types":
         return <ShippingTypeManagement />;
-      case "account-settings": 
-			return <AccountSettings />;
-      
+      case "account-settings":
+        return <AccountSettings />;
 
       default:
-        return <AdminDashboard currentPage={currentPage} onPageChange={setCurrentPage} userRole={user!.userType} />;
+        return <AdminDashboard currentPage={currentPage} onPageChange={setCurrentPage} userRole={user?.userType} />;
     }
   };
 
