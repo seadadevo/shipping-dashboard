@@ -45,7 +45,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import api from "../../lib/api";
 import { toast } from "sonner";
 import type { User } from "../../types";
-// import validator from "validator";
+import { Pagination } from "../ui/pagination";
+import validator from "validator";
 
 interface UserManagementProps {
 	onNavigate?: (page: string) => void;
@@ -55,6 +56,10 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [roleFilter, setRoleFilter] = useState("all");
 	const [users, setUsers] = useState<User[]>([]);
+	const [currentPage, setCurrentPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
+	const [totalItems, setTotalItems] = useState(0);
+	const [itemsPerPage, setItemsPerPage] = useState(10);
 	const [selectedUser, setSelectedUser] = useState<User | null>(null);
 	const [viewModalOpen, setViewModalOpen] = useState(false);
 	const [editModalOpen, setEditModalOpen] = useState(false);
@@ -62,13 +67,26 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
     const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string }>({});
 
 
-    const getUsers = async () => {
-		const res = await api.get("api/users/");
-		setUsers(res.data);
+	const getUsers = async (page = 1, limit = itemsPerPage) => {
+		try {
+			setLoading(true);
+			const res = await api.get(`/api/users?page=${page}&limit=${limit}`);
+			// response shape: { status, results, meta, data: { users }}
+			const payload = res.data?.data?.users || [];
+			setUsers(payload);
+			setCurrentPage(res.data?.meta?.page || page);
+			setTotalPages(res.data?.meta?.totalPages || 1);
+			setTotalItems(res.data?.meta?.total || payload.length);
+			setItemsPerPage(res.data?.meta?.limit || limit);
+		} catch (err) {
+			console.error(err);
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	useEffect(() => {
-		getUsers().catch(console.error);
+		getUsers(currentPage, itemsPerPage).catch(console.error);
 	}, []);
 
 	// Role translation
@@ -199,12 +217,13 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		}
 	};
 
+	// Apply client-side role filter and search (server search available via endpoint)
 	const filteredUsers = users.filter((user) => {
 		const matchesSearch =
+			searchQuery.trim() === "" ||
 			user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			user.email.toLowerCase().includes(searchQuery.toLowerCase());
-		const matchesRole =
-			roleFilter === "all" || user.userType === roleFilter;
+		const matchesRole = roleFilter === "all" || user.userType === roleFilter;
 		return matchesSearch && matchesRole;
 	});
 
@@ -466,6 +485,25 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 							لا توجد نتائج تطابق البحث
 						</div>
 					)}
+
+					{/* Pagination controls */}
+					<div className="mt-4">
+						<Pagination
+							currentPage={currentPage}
+							totalPages={totalPages}
+							onPageChange={(p) => {
+								setCurrentPage(p);
+								getUsers(p, itemsPerPage);
+							}}
+							itemsPerPage={itemsPerPage}
+							totalItems={totalItems}
+							onItemsPerPageChange={(n) => {
+								setItemsPerPage(n);
+								setCurrentPage(1);
+								getUsers(1, n);
+							}}
+						/>
+					</div>
 				</CardContent>
 			</Card>
 

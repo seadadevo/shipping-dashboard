@@ -1,5 +1,6 @@
 const Governorate = require("../models/Governotate");
 const City = require("../models/City");
+const { paginate } = require('../utils/pagination');
 
 // --- Governorate Controllers ---
 
@@ -36,14 +37,9 @@ exports.addGovernorate = async (req, res) => {
 
 exports.getAllGovernorates = async (req, res) => {
   try {
-    // ---- ADDED FILTER ----
-    const governorates = await Governorate.find({ isActive: true }).sort({ govName: 1 });
-    // ---- END ADDED ----
-    res.status(200).json({
-      status: "success",
-      results: governorates.length,
-      data: governorates,
-    });
+    const { page, limit } = req.query;
+    const { data: governorates, meta } = await paginate(Governorate, { isActive: true }, { page, limit, sort: { govName: 1 } });
+    res.status(200).json({ status: "success", results: governorates.length, meta, data: governorates });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -189,17 +185,9 @@ exports.addCity = async (req, res) => {
 
 exports.getAllCities = async (req, res) => {
   try {
-    // ---- ADDED FILTER ----
-    const cities = await City.find({ isActive: true })
-      .populate("governorate", "govName govCode")
-      .sort({ "governorate.govName": 1, cityName: 1 });
-    // ---- END ADDED ----
-      
-    res.status(200).json({
-      status: "success",
-      results: cities.length,
-      data: cities,
-    });
+    const { page, limit } = req.query;
+    const { data: cities, meta } = await paginate(City, { isActive: true }, { page, limit, populate: { path: 'governorate', select: 'govName govCode' }, sort: { 'governorate.govName': 1, cityName: 1 } });
+    res.status(200).json({ status: "success", results: cities.length, meta, data: cities });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -296,24 +284,16 @@ exports.deleteCity = async (req, res) => {
 
 
 exports.getCitiesByGovernorate = async (req, res) => {
-    try {
-        const { govId } = req.params;
-        if (!govId) {
-             return res.status(400).json({ message: "Governorate ID is required" });
-        }
-        
-        // ---- ADDED FILTER ----
-        const cities = await City.find({ governorate: govId, isActive: true })
-            .populate("governorate", "govName govCode")
-            .sort({ cityName: 1 });
-        // ---- END ADDED ----
-
-        res.status(200).json({
-            status: "success",
-            results: cities.length,
-            data: cities
-        });
-    } catch (error) {
-        res.status(500).json({ message: "Server error" });
+  try {
+    const { govId } = req.params;
+    if (!govId) {
+       return res.status(400).json({ message: "Governorate ID is required" });
     }
+    const { page, limit } = req.query;
+    const { data: cities, meta } = await paginate(City, { governorate: govId, isActive: true }, { page, limit, populate: { path: 'governorate', select: 'govName govCode' }, sort: { cityName: 1 } });
+
+    res.status(200).json({ status: "success", results: cities.length, meta, data: cities });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };

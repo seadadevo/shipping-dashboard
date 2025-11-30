@@ -1,4 +1,5 @@
 const ShippingType = require('../models/ShippingType');
+const { paginate } = require('../utils/pagination');
 
 // 1. إضافة نوع شحن (Admin)
 exports.addShippingType = async (req, res) => {
@@ -22,14 +23,9 @@ exports.addShippingType = async (req, res) => {
 // 2. جلب كل أنواع الشحن (Any User)
 exports.getAllShippingTypes = async (req, res) => {
     try {
-        // ---- ADDED FILTER ----
-        const types = await ShippingType.find({ isActive: true }).sort({ adjustmentAmount: 1 });
-        // ---- END ADDED ----
-        res.status(200).json({
-            status: 'success',
-            results: types.length,
-            data: types
-        });
+        const { page, limit } = req.query;
+        const { data: types, meta } = await paginate(ShippingType, { isActive: true }, { page, limit, sort: { adjustmentAmount: 1 } });
+        res.status(200).json({ status: 'success', results: types.length, meta, data: types });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
