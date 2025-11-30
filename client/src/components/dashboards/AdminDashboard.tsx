@@ -28,6 +28,7 @@ import { Button } from "../ui/button";
 import type {ApiError, GetOrdersResponse, Order, SidebarProps, User} from '../../types';
 import {getMenuItemsByRole} from "../../constants/menuItems.ts";
 import api from "../../lib/api.ts";
+import { generatePDFReport, generateAdminReport } from "../../lib/exportUtils";
 
 const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, userRole}) => {
     const menuItems = getMenuItemsByRole(userRole);
@@ -35,8 +36,10 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
     // calc order number today ////////////////////////////////////////////////////////
     const [users, setUsers] = useState<User[]>([]);
     const getUsers = async (): Promise<void> => {
-        const res = await api.get<User[]>("api/users/");
-        setUsers(res.data);
+        const res = await api.get("/api/users?limit=1000");
+        // Handle paginated response: { status, results, meta, data: { users } }
+        const usersList = res.data?.data?.users || res.data || [];
+        setUsers(Array.isArray(usersList) ? usersList : []);
     };
 
     useEffect(() => {
@@ -92,8 +95,9 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
         // setLoading(true);
         // setError(null);
         try {
-            const response = await api.get<GetOrdersResponse>("/api/orders");
-            setAllOrders(response.data.data.orders);
+            const response = await api.get<GetOrdersResponse>("/api/orders?limit=1000");
+            const ordersList = response.data?.data?.orders || [];
+            setAllOrders(Array.isArray(ordersList) ? ordersList : []);
         } catch (err) {
             const error = err as ApiError;
             console.error("Error fetching orders:", error);
@@ -197,11 +201,28 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
           <p className="text-gray-500">نظرة شاملة على أداء نظام الشحن</p>
         </div>
         <div className="flex space-x-2 space-x-reverse">
-          <Button>إنشاء تقرير</Button>
+          <Button onClick={() => {
+            generatePDFReport({
+              orders: allOrders,
+              users: users,
+              stats: {
+                "الطلبات اليوم": countOrdersToday,
+                "الشحنات المعلقة": pendingOrdersToday,
+                "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
+                "الإيرادات اليوم": moneysToday,
+                "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
+                "المستخدمين النشطين": users.length,
+              }
+            });
+          }}>إنشاء تقرير</Button>
           <Button variant="outline"
                 className="ml-2"
                 onClick={() => {
-                    const data = [{
+                    generateAdminReport({
+                      orders: allOrders,
+                      users: users,
+                      stats: {
                         "الطلبات اليوم": countOrdersToday,
                         "الشحنات المعلقة": pendingOrdersToday,
                         "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
@@ -209,16 +230,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
                         "الإيرادات اليوم": moneysToday,
                         "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
                         "المستخدمين النشطين": users.length,
-                    }];
-                    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "dashboard-info.json";
-                    a.click();
-
-                    URL.revokeObjectURL(url);
+                      }
+                    });
                     }}
           >
               <Download className="h-4 w-4 mr-2" />

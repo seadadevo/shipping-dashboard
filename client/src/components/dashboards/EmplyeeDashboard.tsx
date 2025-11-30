@@ -41,8 +41,10 @@ export function EmployeeDashboard() {
     // get all users
     const [users, setUsers] = useState<User[]>([]);
     const getUsers = async (): Promise<void> => {
-        const res = await api.get<User[]>("api/users/");
-        setUsers(res.data);
+        const res = await api.get("/api/users?limit=1000");
+        // Handle paginated response: { status, results, meta, data: { users } }
+        const usersList = res.data?.data?.users || res.data || [];
+        setUsers(Array.isArray(usersList) ? usersList : []);
     };
 
     useEffect(() => {
@@ -57,9 +59,10 @@ export function EmployeeDashboard() {
     // get all order to processing operations
     const [orders, setOrders] = useState<Order[]>([]);
     const getAllOrders = async (): Promise<void> => {
-        const res = await api.get<Order[]>("api/orders/");
-        // @ts-ignore
-        setOrders(res.data.data.orders);
+        const res = await api.get("/api/orders?limit=1000");
+        // Handle paginated response: { status, results, meta, data: { orders } }
+        const ordersList = res.data?.data?.orders || [];
+        setOrders(Array.isArray(ordersList) ? ordersList : []);
     };
 
     useEffect(() => {
@@ -327,7 +330,7 @@ export function EmployeeDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentOrders.map((order) => (
+            {allRecentOrders.map((order) => (
               <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors">
                 <div className="flex items-center space-x-4 space-x-reverse">
                   <div className="h-10 w-10 ml-3 rounded-full flex items-center justify-center bg-gray-50">

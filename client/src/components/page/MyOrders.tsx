@@ -50,7 +50,9 @@ import {
   Trash2, 
 } from "lucide-react";
 import api from "../../lib/api";
+import { Pagination } from "../ui/pagination";
 import type { ApiError, GetOrdersResponse, Order } from "../../types";
+import { exportOrdersToExcel } from "../../lib/exportUtils";
 
 
 import {
@@ -91,6 +93,10 @@ export function MyOrders() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
 
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null); 
@@ -98,17 +104,23 @@ export function MyOrders() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null); 
  
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = currentPage, limit = itemsPerPage) => {
     setLoading(true);
     setError(null);
     try {
      const response = await api.get<GetOrdersResponse>("/api/orders/my-orders", {
         params: {
           status: statusFilter,
-          q: searchQuery
+          q: searchQuery,
+          page,
+          limit,
         }
       });
       setAllOrders(response.data.data.orders);
+      setCurrentPage(response.data?.meta?.page || page);
+      setTotalPages(response.data?.meta?.totalPages || 1);
+      setTotalItems(response.data?.meta?.total || response.data.data.orders.length);
+      setItemsPerPage(response.data?.meta?.limit || limit);
     } catch (err) {
       const error = err as ApiError;
       setError(error.response?.data?.message || "فشل في جلب طلباتك.");
@@ -209,7 +221,7 @@ export function MyOrders() {
           </p>
         </div>
         <div className="flex space-x-3 space-x-reverse">
-          <Button variant="outline" className="ml-2">
+          <Button variant="outline" className="ml-2" onClick={() => exportOrdersToExcel(allOrders, `طلباتي-${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.csv`)}>
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
@@ -372,6 +384,23 @@ export function MyOrders() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                fetchOrders(p, itemsPerPage);
+              }}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+              onItemsPerPageChange={(n) => {
+                setItemsPerPage(n);
+                setCurrentPage(1);
+                fetchOrders(1, n);
+              }}
+            />
           </div>
         </CardContent>
       </Card>
