@@ -67,17 +67,38 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
     const [formErrors, setFormErrors] = useState<{ fullName?: string; email?: string }>({});
 
 
-	const getUsers = async (page = 1, limit = itemsPerPage) => {
+	const getUsers = async (page = 1, limit = itemsPerPage, role = roleFilter) => {
 		try {
 			setLoading(true);
-			const res = await api.get(`/api/users?page=${page}&limit=${limit}`);
+			// When filtering by role, fetch ALL users first, then paginate client-side
+			const fetchLimit = role !== "all" ? 1000 : limit;
+			let url = `/api/users?page=1&limit=${fetchLimit}`;
+			
+			// Add search query if provided
+			if (searchQuery.trim()) {
+				url += `&q=${encodeURIComponent(searchQuery)}`;
+			}
+			const res = await api.get(url);
 			// response shape: { status, results, meta, data: { users }}
-			const payload = res.data?.data?.users || [];
-			setUsers(payload);
-			setCurrentPage(res.data?.meta?.page || page);
-			setTotalPages(res.data?.meta?.totalPages || 1);
-			setTotalItems(res.data?.meta?.total || payload.length);
-			setItemsPerPage(res.data?.meta?.limit || limit);
+			let allUsers = res.data?.data?.users || [];
+			
+			// Apply role filter if not "all"
+			if (role !== "all") {
+				allUsers = allUsers.filter((u: User) => u.userType === role);
+			}
+			
+			// Apply client-side pagination
+			const total = allUsers.length;
+			const totalPagesCalc = Math.ceil(total / limit);
+			const startIndex = (page - 1) * limit;
+			const endIndex = startIndex + limit;
+			const paginatedUsers = allUsers.slice(startIndex, endIndex);
+			
+			setUsers(paginatedUsers);
+			setCurrentPage(page);
+			setTotalPages(totalPagesCalc);
+			setTotalItems(total);
+			setItemsPerPage(limit);
 		} catch (err) {
 			console.error(err);
 		} finally {
@@ -86,8 +107,14 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 	};
 
 	useEffect(() => {
-		getUsers(currentPage, itemsPerPage).catch(console.error);
+		getUsers(currentPage, itemsPerPage, roleFilter).catch(console.error);
 	}, []);
+
+	// Refetch when filter changes
+	useEffect(() => {
+		setCurrentPage(1);
+		getUsers(1, itemsPerPage, roleFilter).catch(console.error);
+	}, [roleFilter, searchQuery]);
 
 	// Role translation
 	const getRoleLabel = (role: string) => {
@@ -217,15 +244,8 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 		}
 	};
 
-	// Apply client-side role filter and search (server search available via endpoint)
-	const filteredUsers = users.filter((user) => {
-		const matchesSearch =
-			searchQuery.trim() === "" ||
-			user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			user.email.toLowerCase().includes(searchQuery.toLowerCase());
-		const matchesRole = roleFilter === "all" || user.userType === roleFilter;
-		return matchesSearch && matchesRole;
-	});
+	// Use users directly since filtering is now handled in getUsers
+	const filteredUsers = users;
 
 	return (
 		<div className="space-y-6">
@@ -355,7 +375,7 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 									جميع الأدوار
 								</SelectItem>
 								<SelectItem value="admin">مدير</SelectItem>
-								<SelectItem value="employee">عامل</SelectItem>
+								<SelectItem value="employee">موظف</SelectItem>
 								<SelectItem value="merchant">تاجر</SelectItem>
 								<SelectItem value="courier">
 									مندوب توصيل
@@ -493,14 +513,14 @@ export function UserManagement({ onNavigate }: UserManagementProps = {}) {
 							totalPages={totalPages}
 							onPageChange={(p) => {
 								setCurrentPage(p);
-								getUsers(p, itemsPerPage);
+								getUsers(p, itemsPerPage, roleFilter);
 							}}
 							itemsPerPage={itemsPerPage}
 							totalItems={totalItems}
 							onItemsPerPageChange={(n) => {
 								setItemsPerPage(n);
 								setCurrentPage(1);
-								getUsers(1, n);
+								getUsers(1, n, roleFilter);
 							}}
 						/>
 					</div>
