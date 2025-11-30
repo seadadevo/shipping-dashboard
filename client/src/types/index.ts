@@ -111,6 +111,12 @@ export interface Order {
 export interface GetOrdersResponse {
   status: string;
   results: number;
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
   data: {
     orders: Order[];
   };
@@ -137,6 +143,7 @@ export interface Governorate {
   _id: string;
   govName: string;
   govCode: string;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -148,6 +155,7 @@ export interface City {
   _id: string;
   cityName: string;
   shippingCost: number;
+  isActive?: boolean;
   governorate: Governorate; // تم عمل Populate لها في الباك إند
   createdAt?: string;
   updatedAt?: string;
@@ -159,6 +167,12 @@ export interface City {
 export interface GetGovernoratesResponse {
   status: string;
   results: number;
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
   data: Governorate[];
 }
 
@@ -168,6 +182,12 @@ export interface GetGovernoratesResponse {
 export interface GetCitiesResponse {
   status: string;
   results: number;
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
   data: City[];
 }
 
