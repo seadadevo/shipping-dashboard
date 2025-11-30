@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	Card,
 	CardContent,
@@ -35,7 +36,6 @@ import api from "../../lib/api";
 
 // ... (Interface and constant data remain unchanged)
 interface AddUserProps {
-	onBack?: () => void;
 	onSave?: (userData: any) => void;
 }
 
@@ -85,7 +85,8 @@ const governorates = [
 	},
 ];
 
-export function AddUser({ onBack, onSave }: AddUserProps) {
+export function AddUser({ onSave }: AddUserProps) {
+	const navigate = useNavigate();
 	const [userType, setUserType] = useState<
 		"merchant" | "courier" | "employee"
 	>("employee");
@@ -203,7 +204,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 			setSelectedGovernorate(null);
 			setAvailableCities([]);
 
-			onBack?.();
+			navigate('/user-management');
 		} catch (error: any) {
 			console.error(error);
 			if (error.response) {
@@ -654,7 +655,7 @@ export function AddUser({ onBack, onSave }: AddUserProps) {
 					<Button
 						className="cursor-pointer"
 						variant="outline"
-						onClick={() => onBack?.()}
+						onClick={() => navigate('/user-management')}
 					>
 						<X className="h-4 w-4 mr-2" />
 						إلغاء
