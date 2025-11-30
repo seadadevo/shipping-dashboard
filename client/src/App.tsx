@@ -1,13 +1,12 @@
 import React from "react";
-import { LogIn, Package } from "lucide-react";
+import { Package } from "lucide-react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
-import DashboardLayout from "./components/Layout/DashboardLayout";
-import Login from "../src/components/Auth/Login"
+import { AppRoutes } from "./routes";
 import './App.css'
 
 const AppContent: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -20,7 +19,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  return user ? <DashboardLayout /> : <Login />;
+  return <AppRoutes />;
 };
 
 const App: React.FC = () => {

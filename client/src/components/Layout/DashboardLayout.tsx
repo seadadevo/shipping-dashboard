@@ -1,35 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Outlet, Navigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { getDefaultPageByRole } from "../../constants/menuItems";
 import Header from "./Header";
-
-import AdminDashboard from "../dashboards/AdminDashboard";
-
-import { UserManagement } from "../page/UserManagement";
-import { OrderManagement } from "../page/OrderManagement";
-import { CreateOrder } from "../page/CreateOrder";
-// import { BranchManagement } from "../page/BranchManagement";
-import { WeightSettings } from "../page/WeightSettings";
-import { UserGroups } from "../page/UserGroup";
-import { RegionsManagement } from "../page/RegionsManagement";
-import { MyOrders } from "../page/MyOrders";
-import { MyDeliveries } from "../page/MyDeliveries";
-// import { UserLookup } from "../page/UserLookup";
-import { EmployeeDashboard } from "../dashboards/EmplyeeDashboard";
-import { MerchantDashboard } from "../dashboards/MerchantDashboard";
-import { DriverDashboard } from "../dashboards/DriverDashboard";
 import Sidebar from "../Layout/Sidebar";
-import { AddUser } from "./../page/AddUser";
-import { AccountSettings } from "../page/AccountSettings";
-import { ShippingTypeManagement } from "../page/ShippingTypeManagement";
 
 const DashboardLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(
-    getDefaultPageByRole(user?.userType || "merchant")
-  );
-
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Close the sidebar when clicking outside of it
@@ -51,60 +28,16 @@ const DashboardLayout: React.FC = () => {
     };
   }, [sidebarOpen]);
 
-  const renderCurrentPage = () => {
-    switch (currentPage) {
-      case "admin-dashboard":
-        return <AdminDashboard currentPage={currentPage} onPageChange={setCurrentPage} userRole={user?.userType} />;
-      case "employee-dashboard":
-        return <EmployeeDashboard />;
-      case "merchant-dashboard":
-        return <MerchantDashboard />;
-      case "driver-dashboard":
-        return <DriverDashboard />;
-
-      case "user-management":
-        return <UserManagement onNavigate={setCurrentPage} />;
-      case "order-management":
-        return <OrderManagement />;
-      case "create-order":
-        return <CreateOrder />;
-      case "weight-settings":
-        return <WeightSettings />;
-      case "user-groups":
-        return <UserGroups />;
-      case "regions-management":
-        return <RegionsManagement />;
-      case "add-user":
-        return <AddUser onBack={() => setCurrentPage("user-management")} />;
-      case "my-orders":
-        return <MyOrders />;
-      case "my-deliveries":
-        return <MyDeliveries />;
-      case "shipping-types":
-        return <ShippingTypeManagement />;
-      case "account-settings":
-        return <AccountSettings />;
-
-      default:
-        return <AdminDashboard currentPage={currentPage} onPageChange={setCurrentPage} userRole={user?.userType} />;
-    }
-  };
-
   if (!user) {
     logout();
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   return (
-    <div className="flex h-screen " dir="rtl">
-
+    <div className="flex h-screen" dir="rtl">
       {/* Sidebar Desktop */}
       <div className="hidden lg:block">
-        <Sidebar
-          userRole={user.userType}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-        />
+        <Sidebar userRole={user.userType} />
       </div>
 
       {/* Sidebar Mobile Drawer */}
@@ -114,13 +47,9 @@ const DashboardLayout: React.FC = () => {
           ref={sidebarRef}
         >
           <div className="h-full w-64 bg-background shadow-xl">
-            <Sidebar
+            <Sidebar 
               userRole={user.userType}
-              currentPage={currentPage}
-              onPageChange={(page) => {
-                setCurrentPage(page);
-                setSidebarOpen(false);
-              }}
+              onNavigate={() => setSidebarOpen(false)}
             />
           </div>
         </div>
@@ -132,11 +61,10 @@ const DashboardLayout: React.FC = () => {
           user={user}
           onLogout={logout}
           onToggleSidebar={() => setSidebarOpen(true)}
-          onNavigate={setCurrentPage}
         />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto  p-6">
-          {renderCurrentPage()}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
+          <Outlet />
         </main>
       </div>
     </div>

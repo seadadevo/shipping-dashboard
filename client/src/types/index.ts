@@ -26,6 +26,7 @@ export interface MenuItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  path: string;
 }
 
 /**
@@ -43,7 +44,6 @@ export interface SidebarProps {
 export interface HeaderProps {
   user: User | null;
   onLogout: () => void;
-  onNavigate: (page: string) => void;
 }
 
 /**
