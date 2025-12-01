@@ -51,8 +51,7 @@ exports.addOrder = async (req, res) => {
         city,
         street,
         shippingType,
-        paymentType,
-        branch
+        paymentType
     };
 
     for (const [key, value] of Object.entries(requiredStrings)) {
@@ -114,6 +113,7 @@ exports.addOrder = async (req, res) => {
       ...orderData,
       orderCost: calculatedOrderCost,
       createdBy: creatorId, // 👈 استخدام ID التاجر (سواء الحالي أو المختار)
+      assignedDriver: orderData.assignedDriver || null, // Driver assignment
     });
 
     await newOrder.save();

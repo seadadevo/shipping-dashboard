@@ -45,8 +45,13 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
       lowercase: true,
-      
-      validate: [validator.isEmail, "Invalid email format"],
+      validate: {
+        validator: function(v) {
+          // Allow empty string or valid email
+          return !v || validator.isEmail(v);
+        },
+        message: "Invalid email format"
+      }
     },
 
    
@@ -80,7 +85,6 @@ const orderSchema = new mongoose.Schema(
     },
     branch: {
       type: String,
-      required: [true, "Branch is required"],
       enum: ["القاهرة", "الجيزة", "الاسكندرية", "الشرقية", "اسوان"],
     },
     
@@ -120,6 +124,17 @@ const orderSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    
+    // Driver assignment
+    assignedDriver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    driverStatus: {
+      type: String,
+      enum: ['pending', 'picked-up', 'in-transit', 'delivered'],
+      default: 'pending'
+    }
   },
   {
     timestamps: true,

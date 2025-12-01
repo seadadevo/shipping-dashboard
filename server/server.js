@@ -10,6 +10,7 @@ const weightSettingsRouter = require("./routes/weightSettingsRoute");
 const orderRoutes = require("./routes/orderRoutes"); 
 const locationRoutes = require("./routes/locationRoutes");
 const shippingTypeRoutes = require("./routes/shippingTypeRoutes");
+const driverRoutes = require("./routes/driverRoutes");
 
 const app = express();
 
@@ -27,5 +28,6 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/locations", locationRoutes);  
  
 app.use("/api/shipping-types", shippingTypeRoutes);
+app.use("/api/drivers", driverRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
