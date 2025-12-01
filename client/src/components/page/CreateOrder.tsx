@@ -87,6 +87,10 @@ export function CreateOrder() {
   const [shippingTypesList, setShippingTypesList] = useState<ShippingTypeData[]>([]);
   const [availableCities, setAvailableCities] = useState<City[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(true);
+  
+  // Driver selection
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<string>('');
 
  
   const [merchantSearchQuery, setMerchantSearchQuery] = useState("");
@@ -108,9 +112,9 @@ export function CreateOrder() {
     villageDelivery: false,
     shippingType: '',
     paymentType: '',
-    branchName: '',
     totalWeight: '0',
-    notes: ''
+    notes: '',
+    assignedDriver: ''
   });
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -164,6 +168,8 @@ export function CreateOrder() {
   const handleGovernorateChange = async (governorateName: string) => {
     handleInputChange('governorateName', governorateName);
     handleInputChange('cityName', '');
+    setAvailableDrivers([]);
+    setSelectedDriver('');
     setAvailableCities([]);
     const selectedGov = governoratesList.find(g => g.govName === governorateName);
     if (!selectedGov) return;
@@ -171,6 +177,22 @@ export function CreateOrder() {
       const res = await api.get(`/api/locations/governorates/${selectedGov._id}/cities`);
       setAvailableCities(res.data.data);
     } catch (err) { setError('فشل في تحميل المدن'); }
+  };
+
+  const handleCityChange = async (cityName: string) => {
+    handleInputChange('cityName', cityName);
+    setSelectedDriver('');
+    
+    // Fetch available drivers for this city
+    if (formData.governorateName && cityName) {
+      try {
+        const res = await api.get(`/api/drivers/by-city?governorate=${formData.governorateName}&city=${cityName}`);
+        setAvailableDrivers(res.data.data);
+      } catch (err) {
+        console.error('Failed to fetch drivers:', err);
+        setAvailableDrivers([]);
+      }
+    }
   };
 
   const calculateTotalWeight = () => products.reduce((t, p) => t + (p.quantity * p.weight), 0);
@@ -206,7 +228,7 @@ export function CreateOrder() {
         return;
     }
 
-    const requiredFields = ['type', 'customerName', 'phone', 'governorateName', 'cityName', 'street', 'shippingType', 'paymentType', 'branchName'];
+    const requiredFields = ['type', 'customerName', 'phone', 'governorateName', 'cityName', 'street', 'shippingType', 'paymentType'];
     const missing = requiredFields.filter(f => !formData[f as keyof typeof formData]);
     
     if (missing.length > 0) return setError(`يرجى ملء الحقول المطلوبة: ${missing.join(', ')}`);
@@ -227,11 +249,11 @@ export function CreateOrder() {
         isVillageDelivery: formData.villageDelivery,
         shippingType: formData.shippingType,
         paymentType: formData.paymentType,
-        branch: formData.branchName,
         totalWeight: calculateTotalWeight(),
         notes: formData.notes,
         products: products.map(p => ({ productName: p.name, quantity: p.quantity, weight: p.weight })),
-        merchantId: selectedMerchant ? selectedMerchant._id : undefined
+        merchantId: selectedMerchant ? selectedMerchant._id : undefined,
+        assignedDriver: (formData.assignedDriver && formData.assignedDriver !== 'none') ? formData.assignedDriver : undefined
       };
       
       await api.post<AddOrderResponse>('/api/orders/add', payload);
@@ -437,7 +459,7 @@ export function CreateOrder() {
                   </div>
                   <div className='space-y-2'>
                       <Label className="text-base">المدينة <span className="text-red-500">*</span></Label>
-                      <Select value={formData.cityName} onValueChange={(v) => handleInputChange('cityName', v)} disabled={availableCities.length===0} dir="rtl">
+                      <Select value={formData.cityName} onValueChange={handleCityChange} disabled={availableCities.length===0} dir="rtl">
                           <SelectTrigger className="h-11"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
                           <SelectContent className='bg-background'>
                               {availableCities.map(c => (
@@ -486,6 +508,31 @@ export function CreateOrder() {
                 </Label>
             </div>
 
+            {/* Driver Selection */}
+            {availableDrivers.length > 0 && (
+              <div className='space-y-2'>
+                <Label className="text-base">السائق المتاح (اختياري)</Label>
+                <Select value={selectedDriver} onValueChange={setSelectedDriver} dir='rtl'>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="اختر سائق لهذا الطلب" />
+                  </SelectTrigger>
+                  <SelectContent className='bg-background'>
+                    {availableDrivers.map(driver => (
+                      <SelectItem key={driver._id} value={driver._id}>
+                        <div className="flex items-center gap-2">
+                          <span>{driver.fullName}</span>
+                          <Badge variant="outline" className="text-xs">{driver.phoneNumber}</Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {availableDrivers.length} سائق متاح لهذه المدينة
+                </p>
+              </div>
+            )}
+
           </CardContent>
       </Card>
 
@@ -522,11 +569,34 @@ export function CreateOrder() {
                     </Select>
                 </div>
                 <div className='space-y-2'>
-                    <Label className="text-base">الفرع المختص <span className="text-red-500">*</span></Label>
-                    <Select value={formData.branchName} onValueChange={(v) => handleInputChange('branchName', v)} dir="rtl">
-                        <SelectTrigger className="h-11"><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
-                        <SelectContent className='bg-background'>{branches.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    <Label className="text-base">السائق المختص (اختياري)</Label>
+                    <Select 
+                        value={formData.assignedDriver} 
+                        onValueChange={(v) => handleInputChange('assignedDriver', v)} 
+                        disabled={availableDrivers.length === 0}
+                        dir="rtl"
+                    >
+                        <SelectTrigger className="h-11">
+                            <SelectValue placeholder={
+                                availableDrivers.length === 0 
+                                    ? "لا يوجد سائقين متاحين لهذه المدينة"
+                                    : "اختر سائق"
+                            } />
+                        </SelectTrigger>
+                        <SelectContent className='bg-background'>
+                            <SelectItem value="none">لا يوجد</SelectItem>
+                            {availableDrivers.map(driver => (
+                                <SelectItem key={driver._id} value={driver._id}>
+                                    {driver.fullName} - {driver.phoneNumber}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
                     </Select>
+                    {availableDrivers.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                            متاح {availableDrivers.length} سائق لهذه المدينة
+                        </p>
+                    )}
                 </div>
             </div>
             

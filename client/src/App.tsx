@@ -3,6 +3,7 @@ import { Package } from "lucide-react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import { AppRoutes } from "./routes";
+import { Toaster } from "sonner";
 import './App.css'
 
 const AppContent: React.FC = () => {
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <AppContent />
+      <Toaster position="top-center" richColors />
     </AuthProvider>
   );
 };

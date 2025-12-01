@@ -68,6 +68,10 @@ import {
 } from "../ui/dropdown-menu";
 
 import { useAuth } from "../../hooks/useAuth";
+import { toast } from "sonner";
+import { orderStateService } from "../../lib/orderStateService";
+import { getStatusDropdownOptions, isStatusSelectDisabled, getDisabledSelectTooltip } from "../../lib/orderStateManager";
+import type { OrderState, UserRole } from "../../types";
 
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
@@ -229,10 +233,45 @@ export function OrderManagement() {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setIsUpdatingStatus(orderId);
     try {
+      // Find the order to get its current status
+      const order = allOrders.find(o => o._id === orderId);
+      if (!order) {
+        toast.error('الطلب غير موجود');
+        return;
+      }
+
+      const previousStatus = order.status;
+      
       await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
+      
+      // Generate and show notification
+      const notification = orderStateService.generateNotificationMessage(
+        order,
+        previousStatus as OrderState,
+        newStatus as OrderState,
+        user?.userType as UserRole
+      );
+      
+      if (notification.type === 'success') {
+        toast.success(notification.title, {
+          description: notification.description
+        });
+      } else if (notification.type === 'warning') {
+        toast.warning(notification.title, {
+          description: notification.description
+        });
+      } else {
+        toast.error(notification.title, {
+          description: notification.description
+        });
+      }
+      
       fetchOrders(); // (⭐ تعديل): نستخدم fetchOrders المحدثة
     } catch (err) {
       console.error("Failed to update status", err);
+      toast.error('فشل تحديث حالة الطلب', {
+        description: 'حدث خطأ أثناء تحديث حالة الطلب'
+      });
     } finally {
       setIsUpdatingStatus(null);
     }
@@ -463,7 +502,15 @@ export function OrderManagement() {
 
                             <DropdownMenuSub>
                               <DropdownMenuSubTrigger
-                                disabled={isUpdatingStatus === order._id}
+                                disabled={
+                                  isUpdatingStatus === order._id ||
+                                  isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
+                                }
+                                title={
+                                  isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
+                                    ? getDisabledSelectTooltip(user?.userType as UserRole, order.status as OrderState)
+                                    : undefined
+                                }
                               >
                                 {isUpdatingStatus === order._id ? (
                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -474,21 +521,23 @@ export function OrderManagement() {
                               </DropdownMenuSubTrigger>
                               <DropdownMenuPortal>
                                 <DropdownMenuSubContent className="bg-background" dir="rtl">
-                                  {statusOptions
-                                    .filter((s) => s.value !== "all")
-                                    .map((status) => (
+                                  {getStatusDropdownOptions(
+                                    user?.userType as UserRole,
+                                    order.status as OrderState
+                                  ).map((status) => (
                                       <DropdownMenuItem
                                         key={status.value}
                                         onClick={() =>
-                                          handleStatusChange(
+                                          !status.disabled && handleStatusChange(
                                             order._id,
                                             status.value
                                           )
                                         }
                                         disabled={
-                                          order.status === status.value ||
+                                          status.disabled ||
                                           !!isUpdatingStatus
                                         }
+                                        title={status.reason}
                                       >
                                         {status.label}
                                       </DropdownMenuItem>

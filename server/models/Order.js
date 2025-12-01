@@ -113,10 +113,18 @@ const orderSchema = new mongoose.Schema(
   
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: ["Pending", "Processing", "On the Way", "Delivered", "Cancelled"],
       default: "Pending",
     },
     
+    // Order state history for tracking changes
+    stateHistory: [{
+      previousState: { type: String },
+      newState: { type: String },
+      changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      changeReason: { type: String },
+      changedAt: { type: Date, default: Date.now }
+    }],
     
     notes: String,
     createdBy: {

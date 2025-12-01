@@ -208,23 +208,142 @@ exports.searchOrders = async (req, res) => {
   exports.updateOrderStatus = async (req, res) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
-      const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+      const { status, changeReason } = req.body;
+      const userRole = req.user.userType;
+      const userId = req.user._id;
+      
+      const validStatuses = ["Pending", "Processing", "On the Way", "Delivered", "Cancelled"];
       if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({ message: "Invalid status provided" });
       }
-      const updatedOrder = await Order.findByIdAndUpdate(
-        id,
-        { status: status }, 
-        { new: true, runValidators: true }
-      );
-      if (!updatedOrder) {
+
+      // Get current order
+      const currentOrder = await Order.findById(id);
+      if (!currentOrder) {
         return res.status(404).json({ message: "Order not found" });
       }
-      res.status(200).json({ status: "success", data: { order: updatedOrder } });
+
+      const currentState = currentOrder.status;
+      
+      // Role-based validation
+      const stateChangeResult = validateStateChange(userRole, currentState, status);
+      if (!stateChangeResult.success) {
+        return res.status(403).json({ 
+          message: stateChangeResult.message,
+          error: stateChangeResult.error 
+        });
+      }
+
+      // Add to state history
+      const stateHistoryEntry = {
+        previousState: currentState,
+        newState: status,
+        changedBy: userId,
+        changeReason: changeReason || `State changed by ${userRole}`,
+        changedAt: new Date()
+      };
+
+      const updatedOrder = await Order.findByIdAndUpdate(
+        id,
+        { 
+          status: status,
+          $push: { stateHistory: stateHistoryEntry }
+        }, 
+        { new: true, runValidators: true }
+      ).populate('stateHistory.changedBy', 'fullName userType email');
+
+      res.status(200).json({ 
+        success: true,
+        message: `Order status updated from ${currentState} to ${status}`,
+        data: { 
+          order: updatedOrder,
+          stateHistory: `${currentState} → ${status}`
+        }
+      });
     } catch (error) {
-      res.status(500).json({ message: "Server error while updating status" });
+      console.error("Update Order Status Error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Server error while updating status",
+        error: error.message 
+      });
     }
+  };
+
+  // State change validation function
+  const validateStateChange = (userRole, currentState, newState) => {
+    const stateTransitionRules = {
+      admin: {
+        'Pending': ['Processing', 'On the Way', 'Delivered', 'Cancelled'],
+        'Processing': ['Pending', 'On the Way', 'Delivered', 'Cancelled'],
+        'On the Way': ['Pending', 'Processing', 'Delivered', 'Cancelled'],
+        'Delivered': ['Pending', 'Processing', 'On the Way', 'Cancelled'], // Admin can undo Delivered
+        'Cancelled': ['Pending', 'Processing', 'On the Way', 'Delivered']
+      },
+      employee: {
+        'Pending': ['Processing', 'Cancelled'],
+        'Processing': ['Cancelled'],
+        'On the Way': [],
+        'Delivered': [],
+        'Cancelled': []
+      },
+      merchant: {
+        'Pending': [], // Merchant is READ-ONLY, cannot change anything
+        'Processing': [],
+        'On the Way': [],
+        'Delivered': [],
+        'Cancelled': []
+      },
+      courier: {
+        'Pending': [],
+        'Processing': ['On the Way'],
+        'On the Way': ['Delivered'],
+        'Delivered': [], // CRITICAL: Cannot revert delivered
+        'Cancelled': []
+      }
+    };
+
+    const allowedTransitions = stateTransitionRules[userRole]?.[currentState] || [];
+    
+    if (!allowedTransitions.includes(newState)) {
+      let errorMessage = "Unauthorized state transition.";
+      
+      switch (userRole) {
+        case 'employee':
+          if (currentState === 'Pending') {
+            errorMessage = "Employee can only move orders from Pending to Processing or cancel them.";
+          } else if (currentState === 'Processing') {
+            errorMessage = "Employee can only cancel orders that haven't been shipped yet.";
+          } else if (currentState === 'Delivered') {
+            errorMessage = "Employee cannot modify delivered orders. Contact admin for changes.";
+          } else if (currentState === 'On the Way') {
+            errorMessage = "Employee cannot modify orders that are out for delivery.";
+          } else {
+            errorMessage = "Employee cannot undo cancelled orders.";
+          }
+          break;
+          
+        case 'merchant':
+          errorMessage = "Merchant has read-only access. Cannot modify order status.";
+          break;
+          
+        case 'courier':
+          if (currentState === 'Delivered') {
+            errorMessage = "Delivery agent cannot revert delivered orders. Contact admin if there's an issue.";
+          } else if (currentState === 'Cancelled') {
+            errorMessage = "Cannot work on cancelled orders.";
+          } else if (currentState === 'Pending') {
+            errorMessage = "Delivery agent can only work on orders that are being processed.";
+          } else {
+            errorMessage = "Delivery agent can only move orders from Processing → On the Way → Delivered.";
+          }
+          break;
+      }
+      
+      return { success: false, message: errorMessage, error: "UNAUTHORIZED_TRANSITION" };
+    }
+
+    return { success: true, message: "State transition authorized." };
   };
   
   exports.deleteOrder = async (req, res) => {

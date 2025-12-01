@@ -106,12 +106,23 @@ exports.getDriversByCity = async (req, res) => {
 exports.getDriverDeliveries = async (req, res) => {
 	try {
 		const driverId = req.user.id;
-		const { status, page = 1, limit = 10 } = req.query;
+		const { status, page = 1, limit = 10, q } = req.query;
 
 		// Build query
 		let query = { assignedDriver: driverId };
 		if (status && status !== 'all') {
 			query.driverStatus = status;
+		}
+
+		// Add search functionality
+		if (q && q.trim()) {
+			const searchRegex = new RegExp(q.trim(), 'i');
+			query.$or = [
+				{ customerName: searchRegex },
+				{ customerPhone1: searchRegex },
+				{ customerPhone2: searchRegex },
+				{ customerEmail: searchRegex }
+			];
 		}
 
 		// Pagination

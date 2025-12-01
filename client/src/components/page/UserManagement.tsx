@@ -114,11 +114,21 @@ export function UserManagement() {
     getUsers(currentPage, itemsPerPage, roleFilter).catch(console.error);
   }, []);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      getUsers(1, itemsPerPage, roleFilter).catch(console.error);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Refetch when filter changes
   useEffect(() => {
     setCurrentPage(1);
     getUsers(1, itemsPerPage, roleFilter).catch(console.error);
-  }, [roleFilter, searchQuery]);
+  }, [roleFilter]);
 
   // Role translation
   const getRoleLabel = (role: string) => {

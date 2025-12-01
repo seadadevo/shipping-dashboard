@@ -1,10 +1,23 @@
+/**
+ * حالات الطلبات المسموحة
+ */
+export type OrderState = 'Pending' | 'Processing' | 'On the Way' | 'Delivered' | 'Cancelled';
+
+/**
+ * أدوار المستخدمين
+ */
+export type UserRole = 'admin' | 'employee' | 'merchant' | 'courier';
+
 export interface User {
 	_id: string;
-	userType: "admin" | "employee" | "merchant" | "courier";
+	userType: UserRole;
 	fullName: string;
 	email: string;
 	phone: string;
 	username: string;
+	assignedCities?: { governorate: string; city: string }[];
+	isAvailable?: boolean;
+	storeName?: string;
 	// أضف أي بيانات أخرى تحتاجها من الموديل
 }
 
@@ -101,10 +114,50 @@ export interface Order {
   products: OrderProduct[];
   createdBy: User; // اليوزر اللي أنشأ الطلب
   status: string;
+  assignedDriver?: User | string; // Can be populated or just ID
+  driverStatus?: 'pending' | 'picked-up' | 'in-transit' | 'delivered';
+  stateHistory?: OrderStateHistory[];
   createdAt: string;
   updatedAt: string;
 }
 
+/**
+ * نوع بيانات تاريخ حالات الطلب
+ */
+export interface OrderStateHistory {
+  _id?: string;
+  previousState?: string;
+  newState: string;
+  changedBy: User;
+  changeReason?: string;
+  changedAt: string;
+}
+
+/**
+ * نوع بيانات طلب تغيير حالة الطلب
+ */
+export interface OrderStateChangeRequest {
+  orderId: string;
+  newState: OrderState;
+  userRole: UserRole;
+  userId: string;
+  changeReason?: string;
+}
+
+/**
+ * نوع بيانات استجابة تغيير حالة الطلب
+ */
+export interface OrderStateChangeResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    orderId: string;
+    previousState: string;
+    newState: string;
+    stateHistory: string;
+  };
+  error?: string;
+}
 /**
  * نوع بيانات استجابة جلب الطلبات
  */

@@ -13,17 +13,24 @@ import { WeightSettings } from "../components/page/WeightSettings";
 import { UserGroups } from "../components/page/UserGroup";
 import { RegionsManagement } from "../components/page/RegionsManagement";
 import { MyOrders } from "../components/page/MyOrders";
-import { MyDeliveries } from "../components/page/MyDeliveries";
 import { ShippingTypeManagement } from "../components/page/ShippingTypeManagement";
 import { AddUser } from "../components/page/AddUser";
 import { AccountSettings } from "../components/page/AccountSettings";
+import DriverManagement from "../components/page/DriverManagement";
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -41,7 +48,18 @@ const RoleProtectedRoute = ({
   children: React.ReactNode; 
   allowedRoles: string[] 
 }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user || !allowedRoles.includes(user.userType)) {
     return <Navigate to="/" replace />;
@@ -51,7 +69,18 @@ const RoleProtectedRoute = ({
 };
 
 export function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-lg text-muted-foreground">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
@@ -71,7 +100,11 @@ export function AppRoutes() {
         }
       >
         {/* Dashboard Routes */}
-        <Route index element={<Navigate to={`/${user?.userType}-dashboard`} replace />} />
+        <Route index element={
+          user?.userType === 'courier' 
+            ? <Navigate to="/driver-dashboard" replace /> 
+            : <Navigate to={`/${user?.userType}-dashboard`} replace />
+        } />
         
         <Route 
           path="admin-dashboard" 
@@ -165,6 +198,15 @@ export function AppRoutes() {
         />
         
         <Route 
+          path="driver-management" 
+          element={
+            <RoleProtectedRoute allowedRoles={["admin"]}>
+              <DriverManagement />
+            </RoleProtectedRoute>
+          } 
+        />
+        
+        <Route 
           path="shipping-types" 
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
@@ -188,16 +230,6 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute allowedRoles={["merchant"]}>
               <MyOrders />
-            </RoleProtectedRoute>
-          } 
-        />
-
-        {/* Driver Routes */}
-        <Route 
-          path="my-deliveries" 
-          element={
-            <RoleProtectedRoute allowedRoles={["courier"]}>
-              <MyDeliveries />
             </RoleProtectedRoute>
           } 
         />
