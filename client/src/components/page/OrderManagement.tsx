@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -92,8 +93,13 @@ const statusOptions = [
 ];
 
 export function OrderManagement() {
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(() => {
+    // Read initial status from URL query parameter
+    const statusParam = searchParams.get('status');
+    return statusParam || "all";
+  });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [allOrders, setAllOrders] = useState<Order[]>([]);

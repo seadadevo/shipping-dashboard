@@ -90,7 +90,7 @@ export function CreateOrder() {
   
   // Driver selection
   const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
-  const [selectedDriver, setSelectedDriver] = useState<string>('');
+
 
  
   const [merchantSearchQuery, setMerchantSearchQuery] = useState("");
@@ -169,7 +169,6 @@ export function CreateOrder() {
     handleInputChange('governorateName', governorateName);
     handleInputChange('cityName', '');
     setAvailableDrivers([]);
-    setSelectedDriver('');
     setAvailableCities([]);
     const selectedGov = governoratesList.find(g => g.govName === governorateName);
     if (!selectedGov) return;
@@ -181,7 +180,6 @@ export function CreateOrder() {
 
   const handleCityChange = async (cityName: string) => {
     handleInputChange('cityName', cityName);
-    setSelectedDriver('');
     
     // Fetch available drivers for this city
     if (formData.governorateName && cityName) {
@@ -507,31 +505,6 @@ export function CreateOrder() {
                     هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)
                 </Label>
             </div>
-
-            {/* Driver Selection */}
-            {availableDrivers.length > 0 && (
-              <div className='space-y-2'>
-                <Label className="text-base">السائق المتاح (اختياري)</Label>
-                <Select value={selectedDriver} onValueChange={setSelectedDriver} dir='rtl'>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="اختر سائق لهذا الطلب" />
-                  </SelectTrigger>
-                  <SelectContent className='bg-background'>
-                    {availableDrivers.map(driver => (
-                      <SelectItem key={driver._id} value={driver._id}>
-                        <div className="flex items-center gap-2">
-                          <span>{driver.fullName}</span>
-                          <Badge variant="outline" className="text-xs">{driver.phoneNumber}</Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  {availableDrivers.length} سائق متاح لهذه المدينة
-                </p>
-              </div>
-            )}
 
           </CardContent>
       </Card>
