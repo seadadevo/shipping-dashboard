@@ -1,10 +1,15 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import { getMenuItemsByRole } from '../../constants/menuItems';
-import type { SidebarProps, User } from '../../types';
+import type { User } from '../../types';
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }) => {
+interface SidebarProps {
+  userRole: User['userType'];
+  onNavigate?: () => void;
+}
 
+const Sidebar: React.FC<SidebarProps> = ({ userRole, onNavigate }) => {
   const menuItems = getMenuItemsByRole(userRole);
 
   const getRoleName = (role: User['userType']): string => {
@@ -36,21 +41,27 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, userRole }
       <nav className="mt-6 flex-1 px-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentPage === item.id;
 
           return (
-            <button
+            <NavLink
               key={item.id}
-              onClick={() => onPageChange(item.id)}
-              className={`w-full flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
-                isActive
-                  ? ' text-blue-700 font-semibold'
-                  : ' hover:bg-gray-200 hover:text-black'
-              }`}
+              to={item.path}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `w-full flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
+                  isActive
+                    ? ' text-blue-700 font-semibold'
+                    : ' hover:bg-gray-200 hover:text-black'
+                }`
+              }
             >
-              <Icon className={`h-5 w-5 ml-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-              <span>{item.label}</span>
-            </button>
+              {({ isActive }) => (
+                <>
+                  <Icon className={`h-5 w-5 ml-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <span>{item.label}</span>
+                </>
+              )}
+            </NavLink>
           );
         })}
       </nav>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, Menu } from 'lucide-react';
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from '../ui/button';
@@ -18,6 +19,7 @@ interface HeaderWithSidebarProps extends HeaderProps {
 }
 
 const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSidebar }) => {
+  const navigate = useNavigate();
 
   const getRoleName = (role: User['userType'] | undefined): string => {
     if (!role) return 'مستخدم';
@@ -79,7 +81,7 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>حسابي</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>إعدادات الحساب</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/account-settings')}>إعدادات الحساب</DropdownMenuItem>
               <DropdownMenuItem>المساعدة والدعم</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 

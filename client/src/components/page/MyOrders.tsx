@@ -47,11 +47,12 @@ import {
   Loader2,
   MoreHorizontal,
   Eye,
-  Trash2, 
+  Trash2,
 } from "lucide-react";
 import api from "../../lib/api";
+import { Pagination } from "../ui/pagination";
 import type { ApiError, GetOrdersResponse, Order } from "../../types";
-
+import { exportOrdersToExcel } from "../../lib/exportUtils";
 
 import {
   DropdownMenu,
@@ -61,9 +62,6 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
-
-
-
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
@@ -72,7 +70,6 @@ const statusLabels: Record<string, string> = {
   Cancelled: "ملغي",
   all: "جميع الحالات",
 };
-
 
 const statusOptions = [
   { value: "all", label: "جميع الحالات" },
@@ -91,24 +88,37 @@ export function MyOrders() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
 
-  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null); 
-  const [isDeleting, setIsDeleting] = useState(false); 
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null); 
- 
-
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = currentPage, limit = itemsPerPage) => {
     setLoading(true);
     setError(null);
     try {
-     const response = await api.get<GetOrdersResponse>("/api/orders/my-orders", {
-        params: {
-          status: statusFilter,
-          q: searchQuery
+      const response = await api.get<GetOrdersResponse>(
+        "/api/orders/my-orders",
+        {
+          params: {
+            status: statusFilter,
+            q: searchQuery,
+            page,
+            limit,
+          },
         }
-      });
+      );
       setAllOrders(response.data.data.orders);
+      setCurrentPage(response.data?.meta?.page || page);
+      setTotalPages(response.data?.meta?.totalPages || 1);
+      setTotalItems(
+        response.data?.meta?.total || response.data.data.orders.length
+      );
+      setItemsPerPage(response.data?.meta?.limit || limit);
     } catch (err) {
       const error = err as ApiError;
       setError(error.response?.data?.message || "فشل في جلب طلباتك.");
@@ -120,12 +130,12 @@ export function MyOrders() {
   useEffect(() => {
     const handler = setTimeout(() => {
       fetchOrders();
-    }, 500); 
+    }, 500);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [statusFilter, searchQuery]); 
+  }, [statusFilter, searchQuery]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -161,12 +171,10 @@ export function MyOrders() {
     }
   };
 
-
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
   };
-
 
   const handleConfirmDelete = async () => {
     if (!orderToDelete) return;
@@ -209,7 +217,18 @@ export function MyOrders() {
           </p>
         </div>
         <div className="flex space-x-3 space-x-reverse">
-          <Button variant="outline" className="ml-2">
+          <Button
+            variant="outline"
+            className="ml-2"
+            onClick={() =>
+              exportOrdersToExcel(
+                allOrders,
+                `طلباتي-${new Date()
+                  .toLocaleDateString("ar-EG")
+                  .replace(/\//g, "-")}.csv`
+              )
+            }
+          >
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
@@ -247,7 +266,11 @@ export function MyOrders() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter} dir="rtl">
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              dir="rtl"
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
@@ -278,7 +301,9 @@ export function MyOrders() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12"> {/* (تعديل ColSpan) */}
+                    <TableCell colSpan={7} className="text-center py-12">
+                      {" "}
+                      {/* (تعديل ColSpan) */}
                       <Loader2 className="h-8 w-8 text-blue-600 animate-spin mx-auto" />
                       <p className="text-muted-foreground mt-2">
                         جاري تحميل طلباتك...
@@ -287,7 +312,9 @@ export function MyOrders() {
                   </TableRow>
                 ) : error ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12"> {/* (تعديل ColSpan) */}
+                    <TableCell colSpan={7} className="text-center py-12">
+                      {" "}
+                      {/* (تعديل ColSpan) */}
                       <AlertCircle className="h-8 w-8 text-red-600 mx-auto" />
                       <p className="text-red-600 mt-2">{error}</p>
                     </TableCell>
@@ -347,7 +374,11 @@ export function MyOrders() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-background" align="end"  dir="rtl">
+                          <DropdownMenuContent
+                            className="bg-background"
+                            align="end"
+                            dir="rtl"
+                          >
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() => handleViewOrder(order)}
@@ -362,7 +393,9 @@ export function MyOrders() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12"> {/* (تعديل ColSpan) */}
+                    <TableCell colSpan={7} className="text-center py-12">
+                      {" "}
+                      {/* (تعديل ColSpan) */}
                       <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
                         لم تقم بإنشاء أي طلبات بعد
@@ -373,12 +406,29 @@ export function MyOrders() {
               </TableBody>
             </Table>
           </div>
+          <div className="mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                fetchOrders(p, itemsPerPage);
+              }}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+              onItemsPerPageChange={(n) => {
+                setItemsPerPage(n);
+                setCurrentPage(1);
+                fetchOrders(1, n);
+              }}
+            />
+          </div>
         </CardContent>
       </Card>
 
       {/* ... (نافذة عرض تفاصيل الطلب زي ما هي) ... */}
-      <Dialog  open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className=" bg-background max-w-4xl"  dir="rtl">
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className=" bg-background max-w-4xl" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-blue-600">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
@@ -578,7 +628,7 @@ export function MyOrders() {
               إلغاء
             </Button>
             <Button
-            className="text-[red] ml-1 border-2"
+              className="text-[red] ml-1 border-2"
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={isDeleting}

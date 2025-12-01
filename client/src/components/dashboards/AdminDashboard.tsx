@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Package,
     Clock,
@@ -25,18 +26,24 @@ import {
   CardContent,
 } from "../ui/card";
 import { Button } from "../ui/button";
-import type {ApiError, GetOrdersResponse, Order, SidebarProps, User} from '../../types';
+import type {ApiError, GetOrdersResponse, Order, User} from '../../types';
 import {getMenuItemsByRole} from "../../constants/menuItems.ts";
+import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api.ts";
+import { generatePDFReport, generateAdminReport } from "../../lib/exportUtils";
 
-const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, userRole}) => {
-    const menuItems = getMenuItemsByRole(userRole);
+const AdminDashboard: React.FC = () => {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const menuItems = getMenuItemsByRole(user?.userType || 'admin');
 
     // calc order number today ////////////////////////////////////////////////////////
     const [users, setUsers] = useState<User[]>([]);
     const getUsers = async (): Promise<void> => {
-        const res = await api.get<User[]>("api/users/");
-        setUsers(res.data);
+        const res = await api.get("/api/users?limit=1000");
+        // Handle paginated response: { status, results, meta, data: { users } }
+        const usersList = res.data?.data?.users || res.data || [];
+        setUsers(Array.isArray(usersList) ? usersList : []);
     };
 
     useEffect(() => {
@@ -92,8 +99,9 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
         // setLoading(true);
         // setError(null);
         try {
-            const response = await api.get<GetOrdersResponse>("/api/orders");
-            setAllOrders(response.data.data.orders);
+            const response = await api.get<GetOrdersResponse>("/api/orders?limit=1000");
+            const ordersList = response.data?.data?.orders || [];
+            setAllOrders(Array.isArray(ordersList) ? ordersList : []);
         } catch (err) {
             const error = err as ApiError;
             console.error("Error fetching orders:", error);
@@ -197,11 +205,28 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
           <p className="text-gray-500">نظرة شاملة على أداء نظام الشحن</p>
         </div>
         <div className="flex space-x-2 space-x-reverse">
-          <Button>إنشاء تقرير</Button>
+          <Button onClick={() => {
+            generatePDFReport({
+              orders: allOrders,
+              users: users,
+              stats: {
+                "الطلبات اليوم": countOrdersToday,
+                "الشحنات المعلقة": pendingOrdersToday,
+                "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
+                "الإيرادات اليوم": moneysToday,
+                "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
+                "المستخدمين النشطين": users.length,
+              }
+            });
+          }}>إنشاء تقرير</Button>
           <Button variant="outline"
                 className="ml-2"
                 onClick={() => {
-                    const data = [{
+                    generateAdminReport({
+                      orders: allOrders,
+                      users: users,
+                      stats: {
                         "الطلبات اليوم": countOrdersToday,
                         "الشحنات المعلقة": pendingOrdersToday,
                         "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
@@ -209,16 +234,8 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
                         "الإيرادات اليوم": moneysToday,
                         "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
                         "المستخدمين النشطين": users.length,
-                    }];
-                    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "dashboard-info.json";
-                    a.click();
-
-                    URL.revokeObjectURL(url);
+                      }
+                    });
                     }}
           >
               <Download className="h-4 w-4 mr-2" />
@@ -322,19 +339,14 @@ const AdminDashboard: React.FC<SidebarProps> = ({currentPage, onPageChange, user
               {menuItems.map((item) => {
                   if(item.label !== "لوحة التحكم" && item.label !== "المجموعات والأذونات"){
                   const Icon = item.icon;
-                  const isActive = currentPage === item.id;
 
                   return (
                       <button
                           key={item.id}
-                          onClick={() => onPageChange(item.id)}
-                          className={`w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors ${
-                              isActive
-                                  ? 'bg-blue-50 text-blue-700 font-semibold'
-                                  : 'text-gray-700 hover:bg-gray-50'
-                          }`}
+                          onClick={() => navigate(item.path)}
+                          className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-gray-700 hover:bg-gray-50"
                       >
-                          <Icon className={`h-5 w-5 ml-3 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <Icon className="h-5 w-5 ml-3 text-gray-400" />
                           <span>{item.label}</span>
                       </button>
                   );
