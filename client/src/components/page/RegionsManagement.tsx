@@ -749,7 +749,7 @@ export function RegionsManagement() {
                     onValueChange={(value) => setSelectedGovernorate(value === 'all' ? '' : value)}
                     dir="rtl"
                   >
-                    <SelectTrigger className="w-48 ml-2">
+                    <SelectTrigger className="w-48 mr-2">
                       <SelectValue placeholder="تصفية بالمحافظة" />
                     </SelectTrigger>
                     <SelectContent className="bg-background">

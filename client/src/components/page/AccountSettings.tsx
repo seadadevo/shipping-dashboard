@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
-import Swal from 'sweetalert2'
+// import Swal from 'sweetalert2'
 
 interface UserProfile {
   id: string;
