@@ -17,7 +17,7 @@ exports.getAllDrivers = async (req, res) => {
 		console.error('Error fetching drivers:', error);
 		res.status(500).json({
 			success: false,
-			message: 'Error fetching drivers',
+			message: 'خطأ في جلب السائقين',
 			error: error.message
 		});
 	}
@@ -51,14 +51,14 @@ exports.assignCitiesToDriver = async (req, res) => {
 
 		res.status(200).json({
 			success: true,
-			message: 'Cities assigned successfully',
+			message: 'تم تعيين المدن بنجاح',
 			data: driver
 		});
 	} catch (error) {
 		console.error('Error assigning cities:', error);
 		res.status(500).json({
 			success: false,
-			message: 'Error assigning cities to driver',
+			message: 'خطأ في تعيين المدن للسائق',
 			error: error.message
 		});
 	}
@@ -72,7 +72,7 @@ exports.getDriversByCity = async (req, res) => {
 		if (!governorate || !city) {
 			return res.status(400).json({
 				success: false,
-				message: 'Governorate and city are required'
+				message: 'المحافظة والمدينة مطلوبان'
 			});
 		}
 
@@ -96,7 +96,7 @@ exports.getDriversByCity = async (req, res) => {
 		console.error('Error fetching drivers by city:', error);
 		res.status(500).json({
 			success: false,
-			message: 'Error fetching available drivers',
+			message: 'خطأ في جلب السائقين المتاحين',
 			error: error.message
 		});
 	}
@@ -146,10 +146,10 @@ exports.getDriverDeliveries = async (req, res) => {
 			data: orders
 		});
 	} catch (error) {
-		console.error('Error fetching driver deliveries:', error);
+		console.error('Error fetching deliveries:', error);
 		res.status(500).json({
 			success: false,
-			message: 'Error fetching deliveries',
+			message: 'خطأ في جلب عمليات التوصيل',
 			error: error.message
 		});
 	}
@@ -167,7 +167,7 @@ exports.updateDriverStatus = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: 'Order not found or not assigned to you'
+				message: 'الطلب غير موجود أو غير مخصص لك'
 			});
 		}
 
@@ -184,14 +184,14 @@ exports.updateDriverStatus = async (req, res) => {
 
 		res.status(200).json({
 			success: true,
-			message: 'Status updated successfully',
+			message: 'تم تحديث الحالة بنجاح',
 			data: order
 		});
 	} catch (error) {
 		console.error('Error updating driver status:', error);
 		res.status(500).json({
 			success: false,
-			message: 'Error updating status',
+			message: 'خطأ في تحديث الحالة',
 			error: error.message
 		});
 	}
@@ -208,14 +208,14 @@ exports.updateDriverAvailability = async (req, res) => {
 		if (!driver) {
 			return res.status(404).json({
 				success: false,
-				message: 'Driver not found'
+				message: 'السائق غير موجود'
 			});
 		}
 
 		if (driver.userType !== 'courier') {
 			return res.status(400).json({
 				success: false,
-				message: 'User is not a courier/driver'
+				message: 'المستخدم ليس سائقًا'
 			});
 		}
 
@@ -225,14 +225,14 @@ exports.updateDriverAvailability = async (req, res) => {
 
 		res.status(200).json({
 			success: true,
-			message: `Driver availability updated to ${isAvailable ? 'available' : 'unavailable'}`,
+			message: `تم ${isAvailable ? 'تفعيل' : 'إلغاء تفعيل'} توفر السائق`,
 			data: driver
 		});
 	} catch (error) {
 		console.error('Error updating driver availability:', error);
 		res.status(500).json({
 			success: false,
-			message: 'Error updating driver availability',
+			message: 'خطأ في تحديث توفر السائق',
 			error: error.message
 		});
 	}
@@ -289,7 +289,7 @@ exports.getDriverStats = async (req, res) => {
 		console.error('Error fetching driver stats:', error);
 		res.status(500).json({
 			success: false,
-			message: 'Error fetching statistics',
+			message: 'خطأ في جلب الإحصائيات',
 			error: error.message
 		});
 	}

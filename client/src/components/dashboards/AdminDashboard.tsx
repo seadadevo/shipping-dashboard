@@ -298,7 +298,7 @@ const AdminDashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{users.length}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+createdAt(db)</span> مستخدمين جدد
+              <span className="text-green-600"></span> مستخدمين جدد
             </p>
           </CardContent>
         </Card>

@@ -36,25 +36,25 @@ exports.login = async (req, res) => {
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: "Please provide email and password" });
+        .json({ message: "يرجى إدخال البريد الإلكتروني وكلمة المرور" });
     }
 
     const user = await User.findOne({ email }).select("+password");
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Incorrect email or password" });
+      return res.status(401).json({ message: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
     }
 
     const allowedTypes = ["admin", "employee", "merchant", "courier"];
     if (!allowedTypes.includes(user.userType)) {
       return res.status(403).json({
-        message: "Your user type is not authorized to access this dashboard.",
+        message: "نوع المستخدم غير مصرح له بالوصول إلى لوحة التحكم",
       });
     }
 
     sendToken(user, 200, res);
   } catch (error) {
     console.error("!!! LOGIN CRASHED !!!", error)
-    res.status(500).json({ message: "Server error during login" });
+    res.status(500).json({ message: "خطأ في الخادم أثناء تسجيل الدخول" });
   }
 };

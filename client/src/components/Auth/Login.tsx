@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Package, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
+import {  Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
 import { useTheme } from '../ui/theme-provider';

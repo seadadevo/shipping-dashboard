@@ -9,13 +9,13 @@ exports.addGovernorate = async (req, res) => {
     const { govName, govCode } = req.body;
 
     if (!govName || !govCode) {
-      return res.status(400).json({ message: "Governorate name and code are required" });
+      return res.status(400).json({ message: "اسم ورمز المحافظة مطلوبان" });
     }
 
     // Check for duplicates
     const existingGov = await Governorate.findOne({ $or: [{ govName }, { govCode }] });
     if (existingGov) {
-      return res.status(400).json({ message: "Governorate name or code already exists" });
+      return res.status(400).json({ message: "اسم أو رمز المحافظة موجود بالفعل" });
     }
 
     const newGovernorate = new Governorate({ govName, govCode });
@@ -29,9 +29,9 @@ exports.addGovernorate = async (req, res) => {
   } catch (error) {
     console.error("ADD GOVERNORATE ERROR:", error);
     if (error.code === 11000) {
-       return res.status(400).json({ message: "Governorate name or code already exists" });
+       return res.status(400).json({ message: "اسم أو رمز المحافظة موجود بالفعل" });
     }
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "خطأ في الخادم", error: error.message });
   }
 };
 
@@ -53,7 +53,7 @@ exports.updateGovernorate = async (req, res) => {
     const { govName, govCode } = req.body;
 
     if (!govName || !govCode) {
-      return res.status(400).json({ message: "Governorate name and code are required" });
+      return res.status(400).json({ message: "اسم ورمز المحافظة مطلوبان" });
     }
     
     // Check for uniqueness conflict (excluding self)
@@ -62,7 +62,7 @@ exports.updateGovernorate = async (req, res) => {
       _id: { $ne: id } 
     });
     if (existingGov) {
-      return res.status(400).json({ message: "Governorate name or code already exists" });
+      return res.status(400).json({ message: "اسم أو رمز المحافظة موجود بالفعل" });
     }
 
     const updatedGovernorate = await Governorate.findByIdAndUpdate(
@@ -72,7 +72,7 @@ exports.updateGovernorate = async (req, res) => {
     );
 
     if (!updatedGovernorate) {
-      return res.status(404).json({ message: "Governorate not found" });
+      return res.status(404).json({ message: "المحافظة غير موجودة" });
     }
 
     res.status(200).json({
@@ -82,9 +82,9 @@ exports.updateGovernorate = async (req, res) => {
     });
   } catch (error) {
      if (error.code === 11000) {
-       return res.status(400).json({ message: "Governorate name or code already exists" });
+       return res.status(400).json({ message: "اسم أو رمز المحافظة موجود بالفعل" });
     }
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "خطأ في الخادم", error: error.message });
   }
 };
 
@@ -95,7 +95,7 @@ exports.toggleGovernorateStatus = async (req, res) => {
         const governorate = await Governorate.findById(id);
 
         if (!governorate) {
-            return res.status(404).json({ message: "Governorate not found" });
+            return res.status(404).json({ message: "المحافظة غير موجودة" });
         }
 
         governorate.isActive = !governorate.isActive;
@@ -146,17 +146,17 @@ exports.addCity = async (req, res) => {
     const { cityName, governorateId, shippingCost } = req.body;
 
     if (!cityName || !governorateId) {
-      return res.status(400).json({ message: "City name and governorate ID are required" });
+      return res.status(400).json({ message: "اسم المدينة ومعرف المحافظة مطلوبان" });
     }
      
     const parentGov = await Governorate.findById(governorateId);
     if (!parentGov) {
-      return res.status(404).json({ message: "Governorate not found" });
+      return res.status(404).json({ message: "المحافظة غير موجودة" });
     }
 
     const existingCity = await City.findOne({ cityName, governorate: governorateId });
     if (existingCity) {
-        return res.status(400).json({ message: `City "${cityName}" already exists in this governorate` });
+        return res.status(400).json({ message: `المدينة "${cityName}" موجودة بالفعل في هذه المحافظة` });
     }
 
     const newCity = new City({
@@ -178,9 +178,9 @@ exports.addCity = async (req, res) => {
   } catch (error) {
      console.error("ADD CITY ERROR:", error);
      if (error.code === 11000) {
-         return res.status(400).json({ message: `City "${req.body.cityName}" already exists in this governorate` });
+         return res.status(400).json({ message: `المدينة "${req.body.cityName}" موجودة بالفعل في هذه المحافظة` });
      }
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "خطأ في الخادم", error: error.message });
   }
 };
 
@@ -202,7 +202,7 @@ exports.updateCity = async (req, res) => {
         const { cityName, governorateId, shippingCost } = req.body;
 
         if (!cityName || !governorateId) {
-            return res.status(400).json({ message: "City name and governorate ID are required" });
+            return res.status(400).json({ message: "اسم المدينة ومعرف المحافظة مطلوبان" });
         }
         
         // Check for uniqueness conflict (excluding self)
@@ -212,7 +212,7 @@ exports.updateCity = async (req, res) => {
             _id: { $ne: id } 
         });
         if (existingCity) {
-            return res.status(400).json({ message: `City "${cityName}" already exists in this governorate` });
+            return res.status(400).json({ message: `المدينة "${cityName}" موجودة بالفعل في هذه المحافظة` });
         }
         
         const updatedCity = await City.findByIdAndUpdate(
@@ -222,7 +222,7 @@ exports.updateCity = async (req, res) => {
         ).populate("governorate", "govName govCode");
 
         if (!updatedCity) {
-            return res.status(404).json({ message: "City not found" });
+            return res.status(404).json({ message: "المدينة غير موجودة" });
         }
 
         res.status(200).json({
@@ -232,9 +232,9 @@ exports.updateCity = async (req, res) => {
         });
     } catch (error) {
          if (error.code === 11000) {
-            return res.status(400).json({ message: `City "${req.body.cityName}" already exists in this governorate` });
+            return res.status(400).json({ message: `المدينة "${req.body.cityName}" موجودة بالفعل في هذه المحافظة` });
         }
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "خطأ في الخادم", error: error.message });
     }
 };
 
@@ -245,7 +245,7 @@ exports.toggleCityStatus = async (req, res) => {
         const city = await City.findById(id);
 
         if (!city) {
-            return res.status(404).json({ message: "City not found" });
+            return res.status(404).json({ message: "المدينة غير موجودة" });
         }
 
         city.isActive = !city.isActive;
@@ -255,7 +255,7 @@ exports.toggleCityStatus = async (req, res) => {
 
         res.status(200).json({
             status: "success",
-            message: `City status set to ${city.isActive ? 'active' : 'inactive'}`,
+            message: `تم ${city.isActive ? 'تفعيل' : 'إلغاء تفعيل'} المدينة بنجاح`,
             data: populatedCity,
         });
     } catch (error) {
@@ -271,12 +271,12 @@ exports.deleteCity = async (req, res) => {
         const deletedCity = await City.findByIdAndDelete(id);
 
         if (!deletedCity) {
-            return res.status(404).json({ message: "City not found" });
+            return res.status(404).json({ message: "المدينة غير موجودة" });
         }
 
         res.status(200).json({
             status: "success",
-            message: "City deleted successfully",
+            message: "تم حذف المدينة بنجاح",
             data: null,
         });
     } catch (error) {
@@ -289,7 +289,7 @@ exports.getCitiesByGovernorate = async (req, res) => {
   try {
     const { govId } = req.params;
     if (!govId) {
-       return res.status(400).json({ message: "Governorate ID is required" });
+       return res.status(400).json({ message: "معرف المحافظة مطلوب" });
     }
     const { page, limit } = req.query;
     const { data: cities, meta } = await paginate(City, { governorate: govId, isActive: true }, { page, limit, populate: { path: 'governorate', select: 'govName govCode' }, sort: { cityName: 1 } });

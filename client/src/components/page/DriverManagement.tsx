@@ -208,7 +208,7 @@ export default function DriverManagement() {
                   )}
                 </div>
               </div>
-              <CardDescription>
+              {/* <CardDescription>
                 <div className="flex items-center gap-1 mt-1">
                   <Phone className="h-3 w-3" />
                   <span className="text-sm">{driver.phone}</span>
@@ -219,7 +219,7 @@ export default function DriverManagement() {
                     <span className="text-sm">{driver.email}</span>
                   </div>
                 )}
-              </CardDescription>
+              </CardDescription> */}
             </CardHeader>
             <CardContent>
               <div className="space-y-3">

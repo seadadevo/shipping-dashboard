@@ -19,10 +19,10 @@ exports.addOrder = async (req, res) => {
     if (["admin", "employee"].includes(req.user.userType) && orderData.merchantId) {
         const merchantUser = await User.findById(orderData.merchantId); // 👈 هنا كان بيحصل الخطأ
         if (!merchantUser) {
-            return res.status(404).json({ message: "Selected merchant not found" });
+            return res.status(404).json({ message: "التاجر المختار غير موجود" });
         }
         if (merchantUser.userType !== 'merchant') {
-             return res.status(400).json({ message: "The selected user is not a merchant" });
+             return res.status(400).json({ message: "المستخدم المختار ليس تاجرًا" });
         }
         creatorId = orderData.merchantId; 
     }
@@ -36,9 +36,7 @@ exports.addOrder = async (req, res) => {
       street,
       shippingType, 
       paymentType,
-      branch,
       totalWeight,
-      products,
       isVillageDelivery,
     } = orderData; 
 
@@ -120,7 +118,7 @@ exports.addOrder = async (req, res) => {
 
     res.status(201).json({
       status: "success",
-      message: "Order created successfully",
+      message: "تم إنشاء الطلب بنجاح",
       data: {
         order: newOrder,
         calculatedCost: calculatedOrderCost, 
@@ -130,7 +128,7 @@ exports.addOrder = async (req, res) => {
   } catch (error) {
     console.error("!!! ADD ORDER CRASHED !!!", error); 
     res.status(500).json({
-        message: "Server error while creating order",
+        message: "خطأ في الخادم أثناء إنشاء الطلب",
         error: error.message,
       });
   }
@@ -168,7 +166,7 @@ exports.getAllOrders = async (req, res) => {
   
     } catch (error) {
       console.error("!!! GET ALL ORDERS CRASHED !!!", error);
-      res.status(500).json({ message: "Server error while fetching orders" });
+      res.status(500).json({ message: "خطأ في الخادم أثناء جلب الطلبات" });
     }
   };
 
@@ -178,7 +176,7 @@ exports.searchOrders = async (req, res) => {
       const { q } = req.query;
   
       if (!q) {
-        return res.status(400).json({ message: "Search query (q) is required" });
+        return res.status(400).json({ message: "مصطلح البحث مطلوب" });
       }
   
       const searchRegex = new RegExp(q, "i");
@@ -201,7 +199,7 @@ exports.searchOrders = async (req, res) => {
 
       res.status(200).json({ status: "success", results: orders.length, meta, data: { orders } });
     } catch (error) {
-        res.status(500).json({message: "Search Error", error: error.message});
+        res.status(500).json({message: "خطأ في البحث", error: error.message});
     }
   };
   
@@ -214,13 +212,13 @@ exports.searchOrders = async (req, res) => {
       
       const validStatuses = ["Pending", "Processing", "On the Way", "Delivered", "Cancelled"];
       if (!status || !validStatuses.includes(status)) {
-        return res.status(400).json({ message: "Invalid status provided" });
+        return res.status(400).json({ message: "حالة غير صحيحة" });
       }
 
       // Get current order
       const currentOrder = await Order.findById(id);
       if (!currentOrder) {
-        return res.status(404).json({ message: "Order not found" });
+        return res.status(404).json({ message: "الطلب غير موجود" });
       }
 
       const currentState = currentOrder.status;
@@ -264,7 +262,7 @@ exports.searchOrders = async (req, res) => {
       console.error("Update Order Status Error:", error);
       res.status(500).json({ 
         success: false,
-        message: "Server error while updating status",
+        message: "خطأ في الخادم أثناء تحديث الحالة",
         error: error.message 
       });
     }
@@ -351,11 +349,11 @@ exports.searchOrders = async (req, res) => {
       const { id } = req.params;
       const deletedOrder = await Order.findByIdAndDelete(id);
       if (!deletedOrder) {
-        return res.status(404).json({ message: "Order not found" });
+        return res.status(404).json({ message: "الطلب غير موجود" });
       }
-      res.status(200).json({ status: "success", message: "Order deleted successfully" });
+      res.status(200).json({ status: "success", message: "تم حذف الطلب بنجاح" });
     } catch (error) {
-      res.status(500).json({ message: "Server error while deleting order" });
+      res.status(500).json({ message: "خطأ في الخادم أثناء حذف الطلب" });
     }
   };
   
@@ -378,6 +376,6 @@ exports.searchOrders = async (req, res) => {
       });
       res.status(200).json({ status: "success", results: orders.length, meta, data: { orders } });
     } catch (error) {
-      res.status(500).json({ message: "Server error while fetching my orders" });
+      res.status(500).json({ message: "خطأ في الخادم أثناء جلب طلباتي" });
     }
   };
