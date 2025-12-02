@@ -39,9 +39,10 @@ import type { OrderState, UserRole, OrderStateChangeRequest, OrderStateChangeRes
  * - Cannot undo Cancelled
  * 
  * MERCHANT:
- * - READ-ONLY access to all order statuses
- * - Cannot change any status
- * - Can only view order information
+ * - Can cancel orders in Pending or Processing status
+ * - Cannot modify orders once with Delivery Agent (On the Way)
+ * - Cannot modify Delivered or already Cancelled orders
+ * - Can only view order information for other statuses
  * 
  * DELIVERY AGENT (courier):
  * - Can only work in delivery pipeline
@@ -67,11 +68,11 @@ const STATE_TRANSITION_RULES: Record<UserRole, Record<OrderState, OrderState[]>>
     'Cancelled': [] // Cannot undo cancelled
   },
   merchant: {
-    'Pending': [], // READ-ONLY - Cannot change anything
-    'Processing': [], // READ-ONLY
-    'On the Way': [], // READ-ONLY
-    'Delivered': [], // READ-ONLY
-    'Cancelled': [] // READ-ONLY
+    'Pending': ['Cancelled'], // Merchant can cancel pending orders
+    'Processing': ['Cancelled'], // Merchant can cancel processing orders
+    'On the Way': [], // Cannot cancel orders with delivery agent
+    'Delivered': [], // Cannot modify delivered orders
+    'Cancelled': [] // Cannot undo cancelled
   },
   courier: {
     'Pending': [], // Cannot touch pending orders
@@ -119,17 +120,12 @@ export const getAllowedNextStates = (
  * Check if the status select should be completely disabled
  * CRITICAL RULES:
  * - Delivered orders: Only Admin can modify
- * - Merchant: Always disabled (read-only)
+ * - Merchant: Can cancel Pending/Processing orders only
  */
 export const isStatusSelectDisabled = (
   userRole: UserRole,
   currentState: OrderState
 ): boolean => {
-  // Merchant is always read-only
-  if (userRole === 'merchant') {
-    return true;
-  }
-
   // Delivered orders: Only admin can modify
   if (currentState === 'Delivered' && userRole !== 'admin') {
     return true;
@@ -160,7 +156,7 @@ export const getStatusDropdownOptions = (
     const isAllowed = allowedTransitions.includes(status);
     const isCurrent = status === currentState;
     
-    let disabled = !isAllowed || isCurrent;
+    const disabled = !isAllowed || isCurrent;
     let reason: string | undefined;
 
     if (isCurrent) {
@@ -187,7 +183,18 @@ const getDisabledReason = (
   targetState: OrderState
 ): string => {
   if (userRole === 'merchant') {
-    return 'التاجر لديه صلاحية القراءة فقط';
+    if (currentState === 'On the Way') {
+      return 'لا يمكن إلغاء الطلبات قيد التوصيل';
+    }
+    if (currentState === 'Delivered') {
+      return 'لا يمكن تعديل الطلبات المسلمة';
+    }
+    if (currentState === 'Cancelled') {
+      return 'الطلب ملغي بالفعل';
+    }
+    if (targetState !== 'Cancelled') {
+      return 'التاجر يمكنه فقط إلغاء الطلبات';
+    }
   }
 
   if (userRole === 'courier') {
@@ -228,7 +235,15 @@ export const getDisabledSelectTooltip = (
   currentState: OrderState
 ): string => {
   if (userRole === 'merchant') {
-    return 'التاجر لديه صلاحية قراءة فقط ولا يمكنه تعديل حالة الطلب';
+    if (currentState === 'On the Way') {
+      return 'لا يمكن إلغاء الطلبات التي مع مندوب التوصيل';
+    }
+    if (currentState === 'Delivered') {
+      return 'لا يمكن تعديل الطلبات المسلمة';
+    }
+    if (currentState === 'Cancelled') {
+      return 'الطلب ملغي بالفعل. اتصل بالمدير لإعادة تفعيله';
+    }
   }
 
   if (currentState === 'Delivered' && userRole !== 'admin') {

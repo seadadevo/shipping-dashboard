@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -24,15 +25,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from '../ui/dialog';
-import { Package, TrendingUp, Clock, CheckCircle, Truck, Search, Eye } from 'lucide-react';
+import { Package, TrendingUp, CheckCircle, Truck, Search, Eye, History } from 'lucide-react';
 import api from '../../lib/api';
 import { Pagination } from '../ui/pagination';
-import type { Order, OrderState, UserRole } from '../../types';
+import type { Order } from '../../types';
 import { toast } from 'sonner';
-import { orderStateService } from '../../lib/orderStateService';
-import { useAuth } from '../../hooks/useAuth';
 
 interface DriverStats {
   todayDeliveries: number;
@@ -42,7 +40,7 @@ interface DriverStats {
 }
 
 export const DriverDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DriverStats>({
     todayDeliveries: 0,
     weekDeliveries: 0,
@@ -56,6 +54,7 @@ export const DriverDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -67,6 +66,7 @@ export const DriverDashboard: React.FC = () => {
       setInitialLoad(false);
     };
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, currentPage]);
 
   // Debounced search effect
@@ -80,6 +80,7 @@ export const DriverDashboard: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const fetchStats = async () => {
@@ -96,8 +97,8 @@ export const DriverDashboard: React.FC = () => {
   const fetchDeliveries = async () => {
     try {
       setLoading(true);
-      const params: any = {
-        status: statusFilter,
+      const params: Record<string, unknown> = {
+        status: statusFilter === 'all' ? 'Processing,On the Way' : statusFilter, // استبعاد Delivered
         page: currentPage,
         limit: 10,
       };
@@ -109,8 +110,11 @@ export const DriverDashboard: React.FC = () => {
       const res = await api.get('/api/drivers/deliveries', { params });
       
       if (res.data.success) {
-        setOrders(res.data.data);
+        // تصفية إضافية لضمان عدم ظهور الطلبات المكتملة
+        const activeOrders = res.data.data.filter((order: Order) => order.status !== 'Delivered');
+        setOrders(activeOrders);
         setTotalPages(res.data.meta.totalPages);
+        setTotalOrders(res.data.meta.totalOrders || activeOrders.length);
       }
     } catch (error) {
       console.error('Error fetching deliveries:', error);
@@ -121,8 +125,6 @@ export const DriverDashboard: React.FC = () => {
 
   const handleUpdateStatus = async () => {
     if (!selectedOrder || !newStatus) return;
-
-    const previousStatus = selectedOrder.status;
 
     try {
       const res = await api.patch(`/api/orders/${selectedOrder._id}/status`, {
@@ -137,15 +139,22 @@ export const DriverDashboard: React.FC = () => {
           'Delivered': 'تم التسليم'
         };
         
-        toast.success('تم تحديث حالة التوصيل', {
-          description: `تم تغيير الحالة إلى: ${statusLabels[newStatus] || newStatus}`
-        });
+        // رسالة خاصة عند التسليم
+        if (newStatus === 'Delivered') {
+          toast.success('🎉 تم التسليم بنجاح!', {
+            description: 'تم نقل الطلب إلى صفحة "توصيلاتي"'
+          });
+        } else {
+          toast.success('تم تحديث حالة التوصيل', {
+            description: `تم تغيير الحالة إلى: ${statusLabels[newStatus] || newStatus}`
+          });
+        }
         
         setIsDialogOpen(false);
         fetchStats();
         fetchDeliveries();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating status:', error);
       toast.error('فشل تحديث حالة التوصيل', {
         description: 'حدث خطأ أثناء تحديث حالة التوصيل'
@@ -189,7 +198,17 @@ export const DriverDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">لوحة تحكم السائق</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">لوحة تحكم السائق</h1>
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/my-deliveries')}
+          className="gap-2"
+        >
+          <History className="h-4 w-4" />
+          توصيلاتي المكتملة
+        </Button>
+      </div>
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -225,11 +244,12 @@ export const DriverDashboard: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">قيد التوصيل</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">الطلبات النشطة</CardTitle>
+            <Truck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pendingDeliveries}</div>
+            <p className="text-xs text-muted-foreground mt-1">قيد المعالجة والتوصيل</p>
           </CardContent>
         </Card>
       </div>
@@ -253,11 +273,9 @@ export const DriverDashboard: React.FC = () => {
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">جميع الطلبات</SelectItem>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-                <SelectItem value="picked-up">تم الاستلام</SelectItem>
-                <SelectItem value="in-transit">في الطريق</SelectItem>
-                <SelectItem value="delivered">تم التوصيل</SelectItem>
+                <SelectItem value="all">الطلبات النشطة</SelectItem>
+                <SelectItem value="Processing">قيد المعالجة</SelectItem>
+                <SelectItem value="On the Way">في الطريق</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -324,6 +342,8 @@ export const DriverDashboard: React.FC = () => {
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={setCurrentPage}
+                    itemsPerPage={10}
+                    totalItems={totalOrders}
                   />
                 </div>
               )}
@@ -334,34 +354,34 @@ export const DriverDashboard: React.FC = () => {
 
       {/* View Order Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle>تفاصيل الطلب #{selectedOrder?._id.slice(-6)}</DialogTitle>
+            <DialogTitle className="text-right">تفاصيل الطلب #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4">
+            <div className="space-y-4 text-right">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-medium mb-2">معلومات العميل</h4>
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">الاسم:</span>{' '}
-                      {selectedOrder.customerName}
+                      <span className="font-medium">{selectedOrder.customerName}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">الهاتف 1:</span>{' '}
-                      {selectedOrder.customerPhone1}
+                      <span className="font-medium">{selectedOrder.customerPhone1}</span>
                     </div>
                     {selectedOrder.customerPhone2 && (
                       <div>
                         <span className="text-muted-foreground">الهاتف 2:</span>{' '}
-                        {selectedOrder.customerPhone2}
+                        <span className="font-medium">{selectedOrder.customerPhone2}</span>
                       </div>
                     )}
                     {selectedOrder.customerEmail && (
                       <div>
                         <span className="text-muted-foreground">البريد:</span>{' '}
-                        {selectedOrder.customerEmail}
+                        <span className="font-medium">{selectedOrder.customerEmail}</span>
                       </div>
                     )}
                   </div>
@@ -371,21 +391,21 @@ export const DriverDashboard: React.FC = () => {
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">المحافظة:</span>{' '}
-                      {selectedOrder.governorate}
+                      <span className="font-medium">{selectedOrder.governorate}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">المدينة:</span>{' '}
-                      {selectedOrder.city}
+                      <span className="font-medium">{selectedOrder.city}</span>
                     </div>
                     {selectedOrder.village && (
                       <div>
                         <span className="text-muted-foreground">القرية:</span>{' '}
-                        {selectedOrder.village}
+                        <span className="font-medium">{selectedOrder.village}</span>
                       </div>
                     )}
                     <div>
                       <span className="text-muted-foreground">العنوان:</span>{' '}
-                      {selectedOrder.street}
+                      <span className="font-medium">{selectedOrder.street}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">الحالة:</span>{' '}
@@ -400,27 +420,27 @@ export const DriverDashboard: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">نوع الطلب:</span>{' '}
-                    {selectedOrder.orderType}
+                    <span className="font-medium">{selectedOrder.orderType}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">نوع الشحن:</span>{' '}
-                    {selectedOrder.shippingType}
+                    <span className="font-medium">{selectedOrder.shippingType}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">نوع الدفع:</span>{' '}
-                    {selectedOrder.paymentType}
+                    <span className="font-medium">{selectedOrder.paymentType}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">الفرع:</span>{' '}
-                    {selectedOrder.branch}
+                    <span className="font-medium">{selectedOrder.branch}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">التكلفة:</span>{' '}
-                    {selectedOrder.orderCost} ج.م
+                    <span className="font-medium">{selectedOrder.orderCost} ج.م</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">الوزن الكلي:</span>{' '}
-                    {selectedOrder.totalWeight} كجم
+                    <span className="font-medium">{selectedOrder.totalWeight} كجم</span>
                   </div>
                 </div>
               </div>
@@ -428,7 +448,7 @@ export const DriverDashboard: React.FC = () => {
               {selectedOrder.notes && (
                 <div>
                   <h4 className="font-medium mb-2">ملاحظات</h4>
-                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg text-right">
                     {selectedOrder.notes}
                   </p>
                 </div>
@@ -441,17 +461,17 @@ export const DriverDashboard: React.FC = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>المنتج</TableHead>
-                          <TableHead>الكمية</TableHead>
-                          <TableHead>الوزن</TableHead>
+                          <TableHead className="text-right">المنتج</TableHead>
+                          <TableHead className="text-right">الكمية</TableHead>
+                          <TableHead className="text-right">الوزن</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedOrder.products.map((product, index) => (
                           <TableRow key={index}>
-                            <TableCell>{product.productName}</TableCell>
-                            <TableCell>{product.quantity}</TableCell>
-                            <TableCell>{product.weight} كجم</TableCell>
+                            <TableCell className="text-right">{product.productName}</TableCell>
+                            <TableCell className="text-right">{product.quantity}</TableCell>
+                            <TableCell className="text-right">{product.weight} كجم</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

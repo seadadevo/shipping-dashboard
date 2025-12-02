@@ -1,6 +1,6 @@
 import { 
   Home, Users, Package, Weight, 
-  MapPin, Plus, Truck 
+  MapPin, Plus, Truck, CheckCircle 
 } from 'lucide-react';
 import type { MenuItem } from '../types';
 
@@ -31,6 +31,7 @@ export const employeeMenuItems: MenuItem[] = [
 
 export const driverMenuItems: MenuItem[] = [
   { id: 'driver-dashboard', label: 'لوحة التحكم', icon: Home, path: '/driver-dashboard' },
+  { id: 'my-deliveries', label: 'توصيلاتي', icon: CheckCircle, path: '/my-deliveries' },
 ];
 
 

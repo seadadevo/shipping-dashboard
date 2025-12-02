@@ -111,7 +111,9 @@ exports.getDriverDeliveries = async (req, res) => {
 		// Build query
 		let query = { assignedDriver: driverId };
 		if (status && status !== 'all') {
-			query.driverStatus = status;
+			// Handle multiple statuses separated by comma
+			const statusArray = status.split(',');
+			query.status = statusArray.length > 1 ? { $in: statusArray } : status;
 		}
 
 		// Add search functionality

@@ -6,6 +6,7 @@ import AdminDashboard from "../components/dashboards/AdminDashboard";
 import { EmployeeDashboard } from "../components/dashboards/EmplyeeDashboard";
 import { MerchantDashboard } from "../components/dashboards/MerchantDashboard";
 import { DriverDashboard } from "../components/dashboards/DriverDashboard";
+import { MyDeliveries } from "../components/page/MyDeliveries";
 import { UserManagement } from "../components/page/UserManagement";
 import { OrderManagement } from "../components/page/OrderManagement";
 import { CreateOrder } from "../components/page/CreateOrder";
@@ -138,6 +139,15 @@ export function AppRoutes() {
           element={
             <RoleProtectedRoute allowedRoles={["courier"]}>
               <DriverDashboard />
+            </RoleProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="my-deliveries" 
+          element={
+            <RoleProtectedRoute allowedRoles={["courier"]}>
+              <MyDeliveries />
             </RoleProtectedRoute>
           } 
         />

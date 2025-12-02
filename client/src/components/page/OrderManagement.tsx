@@ -50,6 +50,8 @@ import {
   MoreHorizontal,
   Eye,
   Trash2,
+  Store,
+  DollarSign,
 } from "lucide-react";
 import api from "../../lib/api";
 import { Pagination } from "../ui/pagination";
@@ -134,7 +136,10 @@ export function OrderManagement() {
   // Fetch all orders stats (without filters)
   const fetchOrderStats = async () => {
     try {
-      const response = await api.get<GetOrdersResponse>("/api/orders", {
+      // Use different endpoint based on user role
+      const endpoint = user?.userType === 'merchant' ? '/api/orders/my-orders' : '/api/orders';
+      
+      const response = await api.get<GetOrdersResponse>(endpoint, {
         params: {
           status: "all",
           page: 1,
@@ -159,8 +164,10 @@ export function OrderManagement() {
     setLoading(true);
     setError(null);
     try {
-      // (⭐ تعديل): قمنا بإضافة params لإرسال الفلاتر للباك إند
-      const response = await api.get<GetOrdersResponse>("/api/orders", {
+      // Use different endpoint based on user role
+      const endpoint = user?.userType === 'merchant' ? '/api/orders/my-orders' : '/api/orders';
+      
+      const response = await api.get<GetOrdersResponse>(endpoint, {
         params: {
           status: statusFilter,
           q: searchQuery,
@@ -607,51 +614,78 @@ export function OrderManagement() {
                               عرض التفاصيل
                             </DropdownMenuItem>
 
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger
-                                disabled={
-                                  isUpdatingStatus === order._id ||
-                                  isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
-                                }
-                                title={
-                                  isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
-                                    ? getDisabledSelectTooltip(user?.userType as UserRole, order.status as OrderState)
-                                    : undefined
-                                }
+                            {/* إلغاء الطلب للتاجر */}
+                            {(() => {
+                              console.log('Debug:', {
+                                userType: user?.userType,
+                                orderStatus: order.status,
+                                showCancel: user?.userType === "merchant" && (order.status === "Pending" || order.status === "Processing")
+                              });
+                              return user?.userType === "merchant" && 
+                                     (order.status === "Pending" || order.status === "Processing");
+                            })() && (
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => handleStatusChange(order._id, "Cancelled")}
+                                disabled={isUpdatingStatus === order._id}
                               >
                                 {isUpdatingStatus === order._id ? (
                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 ) : (
-                                  <RefreshCw className="mr-2 h-4 w-4" />
+                                  <XCircle className="mr-2 h-4 w-4" />
                                 )}
-                                تغيير الحالة
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuPortal>
-                                <DropdownMenuSubContent className="bg-background" dir="rtl">
-                                  {getStatusDropdownOptions(
-                                    user?.userType as UserRole,
-                                    order.status as OrderState
-                                  ).map((status) => (
-                                      <DropdownMenuItem
-                                        key={status.value}
-                                        onClick={() =>
-                                          !status.disabled && handleStatusChange(
-                                            order._id,
-                                            status.value
-                                          )
-                                        }
-                                        disabled={
-                                          status.disabled ||
-                                          !!isUpdatingStatus
-                                        }
-                                        title={status.reason}
-                                      >
-                                        {status.label}
-                                      </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuPortal>
-                            </DropdownMenuSub>
+                                إلغاء الطلب
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* تغيير الحالة للأدمن والموظف */}
+                            {user?.userType !== "merchant" && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger
+                                  disabled={
+                                    isUpdatingStatus === order._id ||
+                                    isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
+                                  }
+                                  title={
+                                    isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
+                                      ? getDisabledSelectTooltip(user?.userType as UserRole, order.status as OrderState)
+                                      : undefined
+                                  }
+                                >
+                                  {isUpdatingStatus === order._id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                  )}
+                                  تغيير الحالة
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                  <DropdownMenuSubContent className="bg-background" dir="rtl">
+                                    {getStatusDropdownOptions(
+                                      user?.userType as UserRole,
+                                      order.status as OrderState
+                                    ).map((status) => (
+                                        <DropdownMenuItem
+                                          key={status.value}
+                                          onClick={() =>
+                                            !status.disabled && handleStatusChange(
+                                              order._id,
+                                              status.value
+                                            )
+                                          }
+                                          disabled={
+                                            status.disabled ||
+                                            !!isUpdatingStatus
+                                          }
+                                          title={status.reason}
+                                        >
+                                          {status.label}
+                                        </DropdownMenuItem>
+                                      ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                              </DropdownMenuSub>
+                            )}
 
                             {user?.userType === "admin" && (
                               <>
@@ -716,197 +750,225 @@ export function OrderManagement() {
           </DialogHeader>
           
           {selectedOrder && (
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto p-2">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
               {/* معلومات أساسية */}
               <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center">
-                      <User className="h-5 w-5 mr-2" /> معلومات العميل
+                <Card className="border-blue-200">
+                  <CardHeader className="pb-3 bg-blue-50">
+                    <CardTitle className="text-sm flex items-center text-blue-800">
+                      <User className="h-4 w-4 ml-2" /> معلومات العميل
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>الاسم:</strong> {selectedOrder.customerName}
-                    </p>
-                    <p>
-                      <strong>الهاتف 1:</strong> {selectedOrder.customerPhone1}
-                    </p>
+                  <CardContent className="space-y-2 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الاسم</span>
+                      <span className="font-medium">{selectedOrder.customerName}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الهاتف 1</span>
+                      <span className="font-medium">{selectedOrder.customerPhone1}</span>
+                    </div>
                     {selectedOrder.customerPhone2 && (
-                      <p>
-                        <strong>الهاتف 2:</strong>{" "}
-                        {selectedOrder.customerPhone2}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">الهاتف 2</span>
+                        <span className="font-medium">{selectedOrder.customerPhone2}</span>
+                      </div>
                     )}
                     {selectedOrder.customerEmail && (
-                      <p>
-                        <strong>الإيميل:</strong> {selectedOrder.customerEmail}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">البريد الإلكتروني</span>
+                        <span className="font-medium text-sm">{selectedOrder.customerEmail}</span>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center">
-                      <MapPin className="h-5 w-5 mr-2" /> معلومات العنوان
+                <Card className="border-green-200">
+                  <CardHeader className="pb-3 bg-green-50">
+                    <CardTitle className="text-sm flex items-center text-green-800">
+                      <MapPin className="h-4 w-4 ml-2" /> معلومات العنوان
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>المحافظة:</strong> {selectedOrder.governorate}
-                    </p>
-                    <p>
-                      <strong>المدينة:</strong> {selectedOrder.city}
-                    </p>
-                    <p>
-                      <strong>الشارع:</strong> {selectedOrder.street}
-                    </p>
+                  <CardContent className="space-y-2 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">المحافظة</span>
+                      <span className="font-medium">{selectedOrder.governorate}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">المدينة</span>
+                      <span className="font-medium">{selectedOrder.city}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الشارع</span>
+                      <span className="font-medium">{selectedOrder.street}</span>
+                    </div>
                     {selectedOrder.village && (
-                      <p>
-                        <strong>القرية:</strong> {selectedOrder.village}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">القرية</span>
+                        <span className="font-medium">{selectedOrder.village}</span>
+                      </div>
                     )}
                     {selectedOrder.isVillageDelivery && (
-                      <Badge variant="outline">توصيل لقرية</Badge>
+                      <Badge variant="outline" className="w-fit">توصيل لقرية</Badge>
                     )}
                   </CardContent>
                 </Card>
 
-                <Card className="border-blue-200">
-        <CardHeader className="pb-3 bg-blue-100/50 rounded-t-lg">
-          <CardTitle className="text-base flex items-center text-blue-800">
-             <User className="h-5 w-5 mr-2" /> 
+                <Card className="border-purple-200">
+        <CardHeader className="pb-3 bg-purple-50">
+          <CardTitle className="text-sm flex items-center text-purple-800">
+             <Store className="h-4 w-4 ml-2" /> 
              بيانات التاجر (المرسل)
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3 pt-4">
-          <div>
-             <p className="text-sm text-muted-foreground">اسم التاجر/الموظف</p>
-             <p className="font-medium">{selectedOrder.createdBy.fullName}</p>
-             <Badge variant="secondary" className="mt-1">{selectedOrder.createdBy.userType}</Badge>
-          </div>
-          
-          <div>
-             <p className="text-sm text-muted-foreground">البريد الإلكتروني</p>
-             <p className="font-medium">{selectedOrder.createdBy.email}</p>
-          </div>
-
-          <div>
-             <p className="text-sm text-muted-foreground">رقم الهاتف</p>
-             <p className="font-medium">{selectedOrder.createdBy.phone || "غير متوفر"}</p>
-          </div>
-
-          {/* عرض اسم المتجر لو كان تاجر */}
-          {selectedOrder.createdBy.storeName && (
-            <div>
-               <p className="text-sm text-muted-foreground">اسم المتجر</p>
-               <p className="font-medium">{selectedOrder.createdBy.storeName}</p>
+        <CardContent className="pt-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-1">
+               <span className="text-xs text-muted-foreground">اسم التاجر/الموظف</span>
+               <span className="font-medium">{selectedOrder.createdBy.fullName}</span>
+               <Badge variant="secondary" className="mt-1 w-fit">{selectedOrder.createdBy.userType}</Badge>
             </div>
-          )}
+            
+            <div className="flex flex-col gap-1">
+               <span className="text-xs text-muted-foreground">البريد الإلكتروني</span>
+               <span className="font-medium text-sm break-all">{selectedOrder.createdBy.email}</span>
+            </div>
+
+            <div className="flex flex-col gap-1">
+               <span className="text-xs text-muted-foreground">رقم الهاتف</span>
+               <span className="font-medium">{selectedOrder.createdBy.phone || "غير متوفر"}</span>
+            </div>
+
+            {/* عرض اسم المتجر لو كان تاجر */}
+            {selectedOrder.createdBy.storeName && (
+              <div className="flex flex-col gap-1">
+                 <span className="text-xs text-muted-foreground">اسم المتجر</span>
+                 <span className="font-medium">{selectedOrder.createdBy.storeName}</span>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
               </div>
 
               {/* تفاصيل الطلب */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">تفاصيل الشحن</CardTitle>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="border-orange-200">
+                  <CardHeader className="pb-3 bg-orange-50">
+                    <CardTitle className="text-sm flex items-center text-orange-800">
+                      <Package className="h-4 w-4 ml-2" />
+                      تفاصيل الشحن
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>نوع الطلب:</strong> {selectedOrder.orderType}
-                    </p>
-                    <p>
-                      <strong>نوع الشحن:</strong> {selectedOrder.shippingType}
-                    </p>
-                    <p>
-                      <strong>الفرع:</strong> {selectedOrder.branch}
-                    </p>
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">نوع الطلب</span>
+                      <span className="font-medium">{selectedOrder.orderType}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">نوع الشحن</span>
+                      <span className="font-medium">{selectedOrder.shippingType}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الفرع</span>
+                      <span className="font-medium">{selectedOrder.branch}</span>
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">الدفع والوزن</CardTitle>
+                <Card className="border-teal-200">
+                  <CardHeader className="pb-3 bg-teal-50">
+                    <CardTitle className="text-sm flex items-center text-teal-800">
+                      <DollarSign className="h-4 w-4 ml-2" />
+                      الدفع والوزن
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>نوع الدفع:</strong> {selectedOrder.paymentType}
-                    </p>
-                    <p>
-                      <strong>تكلفة الطلب:</strong>{" "}
-                      {selectedOrder.orderCost.toFixed(2)} جنيه
-                    </p>
-                    <p>
-                      <strong>إجمالي الوزن:</strong> {selectedOrder.totalWeight}{" "}
-                      كجم
-                    </p>
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">نوع الدفع</span>
+                      <span className="font-medium">{selectedOrder.paymentType}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">تكلفة الطلب</span>
+                      <span className="font-medium text-lg">{selectedOrder.orderCost.toFixed(2)} جنيه</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">إجمالي الوزن</span>
+                      <span className="font-medium">{selectedOrder.totalWeight} كجم</span>
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">الحالة</CardTitle>
+                <Card className="border-indigo-200">
+                  <CardHeader className="pb-3 bg-indigo-50">
+                    <CardTitle className="text-sm flex items-center text-indigo-800">
+                      <Clock className="h-4 w-4 ml-2" />
+                      الحالة والتتبع
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Badge
-                      className={`${getStatusColor(
-                        selectedOrder.status
-                      )} text-base p-2`}
-                    >
-                      {statusLabels[selectedOrder.status] ||
-                        selectedOrder.status}
-                    </Badge>
-                    <p>
-                      <strong>أنشئ بواسطة:</strong>{" "}
-                      {selectedOrder.createdBy.fullName}
-                    </p>
-                    <p>
-                      <strong>تاريخ الإنشاء:</strong>{" "}
-                      {new Date(selectedOrder.createdAt).toLocaleString(
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">حالة الطلب</span>
+                      <Badge
+                        className={`${getStatusColor(
+                          selectedOrder.status
+                        )} w-fit text-sm px-3 py-1`}
+                      >
+                        {statusLabels[selectedOrder.status] ||
+                          selectedOrder.status}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">أنشئ بواسطة</span>
+                      <span className="font-medium">{selectedOrder.createdBy.fullName}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">تاريخ الإنشاء</span>
+                      <span className="font-medium text-sm">{new Date(selectedOrder.createdAt).toLocaleString(
                         "ar-EG"
-                      )}
-                    </p>
+                      )}</span>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
 
               {/* المنتجات */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>
+              <Card className="border-slate-200">
+                <CardHeader className="bg-slate-50">
+                  <CardTitle className="text-sm flex items-center text-slate-800">
+                    <Package className="h-4 w-4 ml-2" />
                     المنتجات ({selectedOrder.products.length})
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">اسم المنتج</TableHead>
-                        <TableHead className="text-center">الكمية</TableHead>
-                        <TableHead className="text-center">
-                          الوزن (كجم)
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder.products.map((product) => (
-                        <TableRow key={product._id}>
-                          <TableCell className="font-medium">
-                            {product.productName}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {product.quantity}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {product.weight}
-                          </TableCell>
+                <CardContent className="pt-4">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="text-right font-semibold">اسم المنتج</TableHead>
+                          <TableHead className="text-center font-semibold">الكمية</TableHead>
+                          <TableHead className="text-center font-semibold">
+                            الوزن (كجم)
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedOrder.products.map((product) => (
+                          <TableRow key={product._id}>
+                            <TableCell className="font-medium">
+                              {product.productName}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {product.quantity}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {product.weight}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </div>

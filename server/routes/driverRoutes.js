@@ -19,6 +19,7 @@ router.get('/by-city', protect, getDriversByCity);
 
 // Driver routes
 router.get('/deliveries', protect, restrictTo('courier'), getDriverDeliveries);
+router.get('/my-orders', protect, restrictTo('courier'), getDriverDeliveries); // Same endpoint for my-orders
 router.patch('/deliveries/:id/status', protect, restrictTo('courier'), updateDriverStatus);
 router.get('/stats', protect, restrictTo('courier'), getDriverStats);
 

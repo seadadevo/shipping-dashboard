@@ -95,6 +95,7 @@ export interface OrderProduct {
  */
 export interface Order {
   _id: string;
+  orderNumber?: string;
   orderType: string;
   customerName: string;
   customerPhone1: string;
@@ -142,7 +143,7 @@ export interface OrderStateChangeRequest {
   userRole: UserRole;
   userId: string;
   changeReason?: string;
-}
+} 
 
 /**
  * نوع بيانات استجابة تغيير حالة الطلب
