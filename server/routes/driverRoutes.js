@@ -6,13 +6,15 @@ const {
 	getDriversByCity,
 	getDriverDeliveries,
 	updateDriverStatus,
-	getDriverStats
+	getDriverStats,
+	updateDriverAvailability
 } = require('../controllers/driverController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 
 // Admin routes
 router.get('/all', protect, restrictTo('admin'), getAllDrivers);
 router.post('/:id/assign-cities', protect, restrictTo('admin'), assignCitiesToDriver);
+router.patch('/:id/availability', protect, restrictTo('admin'), updateDriverAvailability);
 router.get('/by-city', protect, getDriversByCity);
 
 // Driver routes

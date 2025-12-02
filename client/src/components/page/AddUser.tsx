@@ -28,6 +28,8 @@ import {
 	Phone,
 	MapPin,
 	Building,
+	Eye,
+	EyeOff,
 	Store,
 	DollarSign,
 	Percent,
@@ -41,13 +43,13 @@ interface AddUserProps {
 	onSave?: (userData: any) => void;
 }
 
-const branches = [
-	{ id: "1", name: "الفرع الرئيسي - القاهرة" },
-	{ id: "2", name: "فرع الجيزة" },
-	{ id: "3", name: "فرع الإسكندرية" },
-	{ id: "4", name: "فرع الدلتا - طنطا" },
-	{ id: "5", name: "فرع الصعيد - أسيوط" },
-];
+// const branches = [
+// 	{ id: "1", name: "الفرع الرئيسي - القاهرة" },
+// 	{ id: "2", name: "فرع الجيزة" },
+// 	{ id: "3", name: "فرع الإسكندرية" },
+// 	{ id: "4", name: "فرع الدلتا - طنطا" },
+// 	{ id: "5", name: "فرع الصعيد - أسيوط" },
+// ];
 
 export function AddUser({ onSave }: AddUserProps) {
 	const navigate = useNavigate();
@@ -55,6 +57,8 @@ export function AddUser({ onSave }: AddUserProps) {
 		"merchant" | "courier" | "employee"
 	>("employee");
 
+	const [showPassword, setShowPassword] = useState(false);
+	
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -168,6 +172,13 @@ export function AddUser({ onSave }: AddUserProps) {
 				pickupCost: formData.pickupCost || undefined,
 				rejectionFeePercentage:
 					formData.rejectionFeePercentage || undefined,
+				// For courier: add assignedCities array
+				...(userType === "courier" && selectedGov && selectedCity ? {
+					assignedCities: [{
+						governorate: selectedGov.govName,
+						city: selectedCity.cityName
+					}]
+				} : {})
 			};
 
 			// إرسال الطلب إلى الخادم
@@ -374,20 +385,33 @@ export function AddUser({ onSave }: AddUserProps) {
 								<Lock className="h-4 w-4 ml-1 text-primary" />
 								كلمة المرور *
 							</Label>
-							<Input
-								id="password"
-								type="password"
-								value={formData.password}
-								onChange={(e) =>
-									handleInputChange(
-										"password",
-										e.target.value
-									)
-								}
-								placeholder="أدخل كلمة مرور قوية"
-								className="text-right"
-								required
-							/>
+							<div className="relative">
+								<Input
+									id="password"
+									type={showPassword ? "text" : "password"}
+									value={formData.password}
+									onChange={(e) =>
+										handleInputChange(
+											"password",
+											e.target.value
+										)
+									}
+									placeholder="أدخل كلمة مرور قوية"
+									className="text-right pr-10"
+									required
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword(!showPassword)}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+								>
+									{showPassword ? (
+										<EyeOff className="h-4 w-4" />
+									) : (
+										<Eye className="h-4 w-4" />
+									)}
+								</button>
+							</div>
 						</div>
 
 						{/* رقم الهاتف */}

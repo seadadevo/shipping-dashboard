@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Package, Mail, Lock, AlertCircle } from "lucide-react";
+import {  Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
 import { useTheme } from '../ui/theme-provider';
@@ -7,7 +7,6 @@ import { useTheme } from '../ui/theme-provider';
 import {
 	Card,
 	CardHeader,
-	CardTitle,
 	CardDescription,
 	CardContent,
 } from "../ui/card";
@@ -18,6 +17,7 @@ import type { ApiError, LoginResponse } from "../../types";
 const Login: React.FC = () => {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const { login } = useAuth();
@@ -107,15 +107,26 @@ const Login: React.FC = () => {
 								<Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
 								<Input
 									id="password"
-									type="password"
+									type={showPassword ? "text" : "password"}
 									placeholder="********"
-									className="pr-10"
+									className="pr-10 pl-10"
 									value={password}
 									onChange={(e) =>
 										setPassword(e.target.value)
 									}
 									required
 								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword(!showPassword)}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+								>
+									{showPassword ? (
+										<EyeOff className="h-4 w-4" />
+									) : (
+										<Eye className="h-4 w-4" />
+									)}
+								</button>
 							</div>
 						</div>
 

@@ -197,6 +197,47 @@ exports.updateDriverStatus = async (req, res) => {
 	}
 };
 
+// Toggle driver availability
+exports.updateDriverAvailability = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { isAvailable } = req.body;
+
+		// Validate driver exists
+		const driver = await User.findById(id);
+		if (!driver) {
+			return res.status(404).json({
+				success: false,
+				message: 'Driver not found'
+			});
+		}
+
+		if (driver.userType !== 'courier') {
+			return res.status(400).json({
+				success: false,
+				message: 'User is not a courier/driver'
+			});
+		}
+
+		// Update availability
+		driver.isAvailable = isAvailable;
+		await driver.save();
+
+		res.status(200).json({
+			success: true,
+			message: `Driver availability updated to ${isAvailable ? 'available' : 'unavailable'}`,
+			data: driver
+		});
+	} catch (error) {
+		console.error('Error updating driver availability:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Error updating driver availability',
+			error: error.message
+		});
+	}
+};
+
 // Get driver statistics
 exports.getDriverStats = async (req, res) => {
 	try {

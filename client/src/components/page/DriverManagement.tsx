@@ -4,8 +4,10 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Checkbox } from '../ui/checkbox';
+import { Switch } from '../ui/switch';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Truck, MapPin, Phone, Mail } from 'lucide-react';
+import { toast } from 'sonner';
 import api from '../../lib/api';
 import type { User, Governorate, City } from '../../types';
 
@@ -77,6 +79,23 @@ export default function DriverManagement() {
     return selectedCities.some(c => c.governorate === governorate && c.city === city);
   };
 
+  const handleToggleAvailability = async (driver: User) => {
+    try {
+      const newStatus = !driver.isAvailable;
+      await api.patch(`/api/drivers/${driver._id}/availability`, {
+        isAvailable: newStatus
+      });
+      
+      toast.success(
+        newStatus ? 'تم تفعيل السائق بنجاح' : 'تم تعطيل السائق بنجاح'
+      );
+      
+      fetchDrivers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'فشل في تحديث حالة السائق');
+    }
+  };
+
   const handleSaveAssignment = async () => {
     if (!selectedDriver) return;
 
@@ -133,11 +152,22 @@ export default function DriverManagement() {
                   <Truck className="h-5 w-5 text-primary" />
                   <CardTitle className="text-lg">{driver.fullName}</CardTitle>
                 </div>
-                {driver.isAvailable ? (
-                  <Badge variant="default">متاح</Badge>
-                ) : (
-                  <Badge variant="secondary">غير متاح</Badge>
-                )}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {driver.isAvailable ? 'متاح' : 'غير متاح'}
+                    </span>
+                    <Switch
+                      checked={driver.isAvailable || false}
+                      onCheckedChange={() => handleToggleAvailability(driver)}
+                    />
+                  </div>
+                  {driver.isAvailable ? (
+                    <Badge variant="default" className="bg-green-500">متاح</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="bg-gray-400">غير متاح</Badge>
+                  )}
+                </div>
               </div>
               <CardDescription>
                 <div className="flex items-center gap-1 mt-1">
