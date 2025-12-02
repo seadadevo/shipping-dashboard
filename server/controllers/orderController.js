@@ -19,10 +19,10 @@ exports.addOrder = async (req, res) => {
     if (["admin", "employee"].includes(req.user.userType) && orderData.merchantId) {
         const merchantUser = await User.findById(orderData.merchantId); // 👈 هنا كان بيحصل الخطأ
         if (!merchantUser) {
-            return res.status(404).json({ message: "Selected merchant not found" });
+            return res.status(404).json({ message: "التاجر المختار غير موجود" });
         }
         if (merchantUser.userType !== 'merchant') {
-             return res.status(400).json({ message: "The selected user is not a merchant" });
+             return res.status(400).json({ message: "المستخدم المختار ليس تاجرًا" });
         }
         creatorId = orderData.merchantId; 
     }
@@ -36,9 +36,7 @@ exports.addOrder = async (req, res) => {
       street,
       shippingType, 
       paymentType,
-      branch,
       totalWeight,
-      products,
       isVillageDelivery,
     } = orderData; 
 
@@ -51,22 +49,21 @@ exports.addOrder = async (req, res) => {
         city,
         street,
         shippingType,
-        paymentType,
-        branch
+        paymentType
     };
 
     for (const [key, value] of Object.entries(requiredStrings)) {
       if (!value) {
         return res
           .status(400)
-          .json({ message:`Missing required field: ${key} ` });
+          .json({ message:`حقل مطلوب مفقود: ${key} ` });
       }
     } 
 
     if (totalWeight === null || totalWeight === undefined) {
       return res
         .status(400)
-        .json({ message: "Missing required field: totalWeight" });
+        .json({ message: "حقل مطلوب مفقود: totalWeight" });
     }
 
     // =============================================
@@ -80,11 +77,11 @@ exports.addOrder = async (req, res) => {
     const shippingTypeDoc = await ShippingType.findOne({ name: shippingType });
 
     // التحقق من صحة البيانات
-    if (!weightSettings) return res.status(500).json({ message: "Weight settings are not configured." });
-    if (!govDoc || !cityDoc) return res.status(400).json({ message: `Invalid governorate or city name` });
-    if (!cityDoc.isActive) return res.status(400).json({ message: `The selected city is disabled.` });
-    if (!shippingTypeDoc) return res.status(400).json({ message: `Invalid shipping type` });
-    if (!shippingTypeDoc.isActive) return res.status(400).json({ message: `The selected shipping type is disabled.` });
+    if (!weightSettings) return res.status(500).json({ message: "إعدادات الوزن غير مضبوطة" });
+    if (!govDoc || !cityDoc) return res.status(400).json({ message: `اسم المحافظة أو المدينة غير صحيح` });
+    if (!cityDoc.isActive) return res.status(400).json({ message: `المدينة المحددة غير مفعلة` });
+    if (!shippingTypeDoc) return res.status(400).json({ message: `نوع الشحن غير صحيح` });
+    if (!shippingTypeDoc.isActive) return res.status(400).json({ message: `نوع الشحن المحدد غير مفعل` });
     
     // استخراج القيم
     const baseCityCostPerKg = cityDoc.shippingCost; 
@@ -114,13 +111,14 @@ exports.addOrder = async (req, res) => {
       ...orderData,
       orderCost: calculatedOrderCost,
       createdBy: creatorId, // 👈 استخدام ID التاجر (سواء الحالي أو المختار)
+      assignedDriver: orderData.assignedDriver || null, // Driver assignment
     });
 
     await newOrder.save();
 
     res.status(201).json({
       status: "success",
-      message: "Order created successfully",
+      message: "تم إنشاء الطلب بنجاح",
       data: {
         order: newOrder,
         calculatedCost: calculatedOrderCost, 
@@ -130,7 +128,7 @@ exports.addOrder = async (req, res) => {
   } catch (error) {
     console.error("!!! ADD ORDER CRASHED !!!", error); 
     res.status(500).json({
-        message: "Server error while creating order",
+        message: "خطأ في الخادم أثناء إنشاء الطلب",
         error: error.message,
       });
   }
@@ -168,7 +166,7 @@ exports.getAllOrders = async (req, res) => {
   
     } catch (error) {
       console.error("!!! GET ALL ORDERS CRASHED !!!", error);
-      res.status(500).json({ message: "Server error while fetching orders" });
+      res.status(500).json({ message: "خطأ في الخادم أثناء جلب الطلبات" });
     }
   };
 
@@ -178,7 +176,7 @@ exports.searchOrders = async (req, res) => {
       const { q } = req.query;
   
       if (!q) {
-        return res.status(400).json({ message: "Search query (q) is required" });
+        return res.status(400).json({ message: "مصطلح البحث مطلوب" });
       }
   
       const searchRegex = new RegExp(q, "i");
@@ -201,30 +199,156 @@ exports.searchOrders = async (req, res) => {
 
       res.status(200).json({ status: "success", results: orders.length, meta, data: { orders } });
     } catch (error) {
-        res.status(500).json({message: "Search Error", error: error.message});
+        res.status(500).json({message: "خطأ في البحث", error: error.message});
     }
   };
   
   exports.updateOrderStatus = async (req, res) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
-      const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+      const { status, changeReason } = req.body;
+      const userRole = req.user.userType;
+      const userId = req.user._id;
+      
+      const validStatuses = ["Pending", "Processing", "On the Way", "Delivered", "Cancelled"];
       if (!status || !validStatuses.includes(status)) {
-        return res.status(400).json({ message: "Invalid status provided" });
+        return res.status(400).json({ message: "حالة غير صحيحة" });
       }
+
+      // Get current order
+      const currentOrder = await Order.findById(id);
+      if (!currentOrder) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      const currentState = currentOrder.status;
+      
+      // Role-based validation
+      const stateChangeResult = validateStateChange(userRole, currentState, status);
+      if (!stateChangeResult.success) {
+        return res.status(403).json({ 
+          message: stateChangeResult.message,
+          error: stateChangeResult.error 
+        });
+      }
+
+      // Add to state history
+      const stateHistoryEntry = {
+        previousState: currentState,
+        newState: status,
+        changedBy: userId,
+        changeReason: changeReason || `State changed by ${userRole}`,
+        changedAt: new Date()
+      };
+
+      // If reverting to Pending, remove assigned driver
+      const updateData = { 
+        status: status,
+        $push: { stateHistory: stateHistoryEntry }
+      };
+      
+      if (status === 'Pending' && currentState === 'Processing') {
+        updateData.assignedDriver = null; // Remove driver assignment
+      }
+
       const updatedOrder = await Order.findByIdAndUpdate(
         id,
-        { status: status }, 
+        updateData, 
         { new: true, runValidators: true }
-      );
-      if (!updatedOrder) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-      res.status(200).json({ status: "success", data: { order: updatedOrder } });
+      ).populate('stateHistory.changedBy', 'fullName userType email');
+
+      res.status(200).json({ 
+        success: true,
+        message: `Order status updated from ${currentState} to ${status}`,
+        data: { 
+          order: updatedOrder,
+          stateHistory: `${currentState} → ${status}`
+        }
+      });
     } catch (error) {
-      res.status(500).json({ message: "Server error while updating status" });
+      console.error("Update Order Status Error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "خطأ في الخادم أثناء تحديث الحالة",
+        error: error.message 
+      });
     }
+  };
+
+  // State change validation function
+  const validateStateChange = (userRole, currentState, newState) => {
+    const stateTransitionRules = {
+      admin: {
+        'Pending': ['Processing', 'On the Way', 'Delivered', 'Cancelled'],
+        'Processing': ['Pending', 'On the Way', 'Delivered', 'Cancelled'],
+        'On the Way': ['Pending', 'Processing', 'Delivered', 'Cancelled'],
+        'Delivered': ['Pending', 'Processing', 'On the Way', 'Cancelled'], // Admin can undo Delivered
+        'Cancelled': ['Pending', 'Processing', 'On the Way', 'Delivered']
+      },
+      employee: {
+        'Pending': ['Processing', 'Cancelled'],
+        'Processing': ['Pending', 'Cancelled'],
+        'On the Way': [],
+        'Delivered': [],
+        'Cancelled': []
+      },
+      merchant: {
+        'Pending': [], // Merchant is READ-ONLY, cannot change anything
+        'Processing': [],
+        'On the Way': [],
+        'Delivered': [],
+        'Cancelled': []
+      },
+      courier: {
+        'Pending': [],
+        'Processing': ['On the Way', 'Delivered'],
+        'On the Way': ['Processing', 'Delivered'],
+        'Delivered': [], // CRITICAL: Cannot revert delivered
+        'Cancelled': []
+      }
+    };
+
+    const allowedTransitions = stateTransitionRules[userRole]?.[currentState] || [];
+    
+    if (!allowedTransitions.includes(newState)) {
+      let errorMessage = "Unauthorized state transition.";
+      
+      switch (userRole) {
+        case 'employee':
+          if (currentState === 'Pending') {
+            errorMessage = "الموظف يمكنه فقط نقل الطلبات من قيد الانتظار إلى قيد المعالجة أو إلغائها";
+          } else if (currentState === 'Processing') {
+            errorMessage = "الموظف يمكنه إرجاع الطلب إلى قيد الانتظار أو إلغائه فقط";
+          } else if (currentState === 'Delivered') {
+            errorMessage = "الموظف لا يمكنه تعديل الطلبات المسلمة. اتصل بالمدير للتغييرات";
+          } else if (currentState === 'On the Way') {
+            errorMessage = "الموظف لا يمكنه تعديل الطلبات التي في الطريق";
+          } else {
+            errorMessage = "الموظف لا يمكنه التراجع عن الطلبات الملغاة";
+          }
+          break;
+          
+        case 'merchant':
+          errorMessage = "Merchant has read-only access. Cannot modify order status.";
+          break;
+          
+        case 'courier':
+          if (currentState === 'Delivered') {
+            errorMessage = "Delivery agent cannot revert delivered orders. Contact admin if there's an issue.";
+          } else if (currentState === 'Cancelled') {
+            errorMessage = "Cannot work on cancelled orders.";
+          } else if (currentState === 'Pending') {
+            errorMessage = "Delivery agent can only work on orders that are being processed.";
+          } else {
+            errorMessage = "Delivery agent can only move orders from Processing → On the Way → Delivered.";
+          }
+          break;
+      }
+      
+      return { success: false, message: errorMessage, error: "UNAUTHORIZED_TRANSITION" };
+    }
+
+    return { success: true, message: "State transition authorized." };
   };
   
   exports.deleteOrder = async (req, res) => {
@@ -232,11 +356,11 @@ exports.searchOrders = async (req, res) => {
       const { id } = req.params;
       const deletedOrder = await Order.findByIdAndDelete(id);
       if (!deletedOrder) {
-        return res.status(404).json({ message: "Order not found" });
+        return res.status(404).json({ message: "الطلب غير موجود" });
       }
-      res.status(200).json({ status: "success", message: "Order deleted successfully" });
+      res.status(200).json({ status: "success", message: "تم حذف الطلب بنجاح" });
     } catch (error) {
-      res.status(500).json({ message: "Server error while deleting order" });
+      res.status(500).json({ message: "خطأ في الخادم أثناء حذف الطلب" });
     }
   };
   
@@ -259,6 +383,6 @@ exports.searchOrders = async (req, res) => {
       });
       res.status(200).json({ status: "success", results: orders.length, meta, data: { orders } });
     } catch (error) {
-      res.status(500).json({ message: "Server error while fetching my orders" });
+      res.status(500).json({ message: "خطأ في الخادم أثناء جلب طلباتي" });
     }
   };

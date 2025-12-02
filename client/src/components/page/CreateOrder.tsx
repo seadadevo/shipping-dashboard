@@ -57,6 +57,7 @@ import {
 } from '../ui/select';
 import { Badge } from '../ui/badge';
 import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'sonner';
 
 const branches = ["القاهرة", "الجيزة", "الاسكندرية", "الشرقية", "اسوان"];
 const paymentTypes = ["واجبة التحصيل", "دفع مقدم", "طرد مقابل طرد"];
@@ -87,8 +88,7 @@ export function CreateOrder() {
   const [shippingTypesList, setShippingTypesList] = useState<ShippingTypeData[]>([]);
   const [availableCities, setAvailableCities] = useState<City[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(true);
-
- 
+  
   const [merchantSearchQuery, setMerchantSearchQuery] = useState("");
   const [merchantResults, setMerchantResults] = useState<MerchantResult[]>([]);
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantResult | null>(null);
@@ -108,7 +108,6 @@ export function CreateOrder() {
     villageDelivery: false,
     shippingType: '',
     paymentType: '',
-    branchName: '',
     totalWeight: '0',
     notes: ''
   });
@@ -173,6 +172,10 @@ export function CreateOrder() {
     } catch (err) { setError('فشل في تحميل المدن'); }
   };
 
+  const handleCityChange = async (cityName: string) => {
+    handleInputChange('cityName', cityName);
+  };
+
   const calculateTotalWeight = () => products.reduce((t, p) => t + (p.quantity * p.weight), 0);
 
   const handleAddProduct = () => {
@@ -202,15 +205,21 @@ export function CreateOrder() {
     setSuccess(null);
 
     if (['admin', 'employee'].includes(user?.userType || '') && !selectedMerchant) {
-        setError('يجب تحديد التاجر صاحب الطلب أولاً');
+        toast.error('يجب تحديد التاجر صاحب الطلب أولاً');
         return;
     }
 
-    const requiredFields = ['type', 'customerName', 'phone', 'governorateName', 'cityName', 'street', 'shippingType', 'paymentType', 'branchName'];
+    const requiredFields = ['type', 'customerName', 'phone', 'governorateName', 'cityName', 'street', 'shippingType', 'paymentType'];
     const missing = requiredFields.filter(f => !formData[f as keyof typeof formData]);
     
-    if (missing.length > 0) return setError(`يرجى ملء الحقول المطلوبة: ${missing.join(', ')}`);
-    if (products.length === 0) return setError('يجب إضافة منتج واحد على الأقل');
+    if (missing.length > 0) {
+      toast.error(`يرجى ملء الحقول المطلوبة: ${missing.join(', ')}`);
+      return;
+    }
+    if (products.length === 0) {
+      toast.error('يجب إضافة منتج واحد على الأقل');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -227,19 +236,20 @@ export function CreateOrder() {
         isVillageDelivery: formData.villageDelivery,
         shippingType: formData.shippingType,
         paymentType: formData.paymentType,
-        branch: formData.branchName,
         totalWeight: calculateTotalWeight(),
         notes: formData.notes,
         products: products.map(p => ({ productName: p.name, quantity: p.quantity, weight: p.weight })),
-        merchantId: selectedMerchant ? selectedMerchant._id : undefined
+        merchantId: selectedMerchant ? selectedMerchant._id : undefined,
+        // assignedDriver removed - will be assigned by employee when status changes to Processing
       };
       
       await api.post<AddOrderResponse>('/api/orders/add', payload);
-      setSuccess('تم إنشاء الطلب بنجاح!');
+      toast.success('تم إنشاء الطلب بنجاح!');
+      setTimeout(() => window.location.reload(), 2000);
       setLoading(false);
     } catch (err) {
       const error = err as ApiError;
-      setError(error.response?.data?.message || 'خطأ في إنشاء الطلب');
+      toast.error(error.response?.data?.message || 'خطأ في إنشاء الطلب');
       setLoading(false);
     }
   };
@@ -437,7 +447,7 @@ export function CreateOrder() {
                   </div>
                   <div className='space-y-2'>
                       <Label className="text-base">المدينة <span className="text-red-500">*</span></Label>
-                      <Select value={formData.cityName} onValueChange={(v) => handleInputChange('cityName', v)} disabled={availableCities.length===0} dir="rtl">
+                      <Select value={formData.cityName} onValueChange={handleCityChange} disabled={availableCities.length===0} dir="rtl">
                           <SelectTrigger className="h-11"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
                           <SelectContent className='bg-background'>
                               {availableCities.map(c => (
@@ -519,13 +529,6 @@ export function CreateOrder() {
                     <Select value={formData.paymentType} onValueChange={(v) => handleInputChange('paymentType', v)} dir="rtl">
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر الطريقة" /></SelectTrigger>
                         <SelectContent className='bg-background'>{paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                <div className='space-y-2'>
-                    <Label className="text-base">الفرع المختص <span className="text-red-500">*</span></Label>
-                    <Select value={formData.branchName} onValueChange={(v) => handleInputChange('branchName', v)} dir="rtl">
-                        <SelectTrigger className="h-11"><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
-                        <SelectContent className='bg-background'>{branches.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
             </div>

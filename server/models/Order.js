@@ -23,6 +23,10 @@ const productSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema(
   {
+    orderNumber: {
+      type: String,
+      unique: true,
+    },
     
     orderType: {
       type: String,
@@ -45,8 +49,13 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
       lowercase: true,
-      
-      validate: [validator.isEmail, "Invalid email format"],
+      validate: {
+        validator: function(v) {
+          // Allow empty string or valid email
+          return !v || validator.isEmail(v);
+        },
+        message: "Invalid email format"
+      }
     },
 
    
@@ -80,7 +89,6 @@ const orderSchema = new mongoose.Schema(
     },
     branch: {
       type: String,
-      required: [true, "Branch is required"],
       enum: ["القاهرة", "الجيزة", "الاسكندرية", "الشرقية", "اسوان"],
     },
     
@@ -109,10 +117,18 @@ const orderSchema = new mongoose.Schema(
   
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: ["Pending", "Processing", "On the Way", "Delivered", "Cancelled"],
       default: "Pending",
     },
     
+    // Order state history for tracking changes
+    stateHistory: [{
+      previousState: { type: String },
+      newState: { type: String },
+      changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      changeReason: { type: String },
+      changedAt: { type: Date, default: Date.now }
+    }],
     
     notes: String,
     createdBy: {
@@ -120,10 +136,30 @@ const orderSchema = new mongoose.Schema(
       ref: 'User',
       required: true
     },
+    
+    // Driver assignment
+    assignedDriver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    driverStatus: {
+      type: String,
+      enum: ['pending', 'picked-up', 'in-transit', 'delivered'],
+      default: 'pending'
+    }
   },
   {
     timestamps: true,
   }
 );
+
+// Generate unique order number before saving
+orderSchema.pre('save', async function(next) {
+  if (!this.orderNumber) {
+    const count = await mongoose.model('Order').countDocuments();
+    this.orderNumber = `ORD-${Date.now()}-${(count + 1).toString().padStart(4, '0')}`;
+  }
+  next();
+});
 
 module.exports = mongoose.model("Order", orderSchema);

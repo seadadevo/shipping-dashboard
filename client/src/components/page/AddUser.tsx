@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
 	Card,
@@ -28,62 +28,29 @@ import {
 	Phone,
 	MapPin,
 	Building,
+	Eye,
+	EyeOff,
 	Store,
 	DollarSign,
 	Percent,
+	Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import api from "../../lib/api";
+import type { Governorate, City } from "../../types";
 
 // ... (Interface and constant data remain unchanged)
 interface AddUserProps {
 	onSave?: (userData: any) => void;
 }
 
-const branches = [
-	{ id: "1", name: "الفرع الرئيسي - القاهرة" },
-	{ id: "2", name: "فرع الجيزة" },
-	{ id: "3", name: "فرع الإسكندرية" },
-	{ id: "4", name: "فرع الدلتا - طنطا" },
-	{ id: "5", name: "فرع الصعيد - أسيوط" },
-];
-
-const governorates = [
-	{
-		id: "1",
-		name: "القاهرة",
-		cities: ["القاهرة الجديدة", "المعادي", "حلوان", "مدينة نصر", "شبرا"],
-	},
-	{
-		id: "2",
-		name: "الجيزة",
-		cities: ["الجيزة", "الشيخ زايد", "السادس من أكتوبر", "فيصل", "الهرم"],
-	},
-	{
-		id: "3",
-		name: "الإسكندرية",
-		cities: ["الإسكندرية", "برج العرب", "العجمي", "المنتزه"],
-	},
-	{
-		id: "4",
-		name: "الدقهلية",
-		cities: ["المنصورة", "ميت غمر", "بلقاس", "طلخا"],
-	},
-	{
-		id: "5",
-		name: "البحيرة",
-		cities: ["دمنهور", "كفر الدوار", "إدكو", "أبو حمص"],
-	},
-	{
-		id: "6",
-		name: "الشرقية",
-		cities: ["الزقازيق", "العاشر من رمضان", "بلبيس", "فأقوس"],
-	},
-	{
-		id: "7",
-		name: "أسيوط",
-		cities: ["أسيوط", "ديروط", "منفلوط", "أبنوب"],
-	},
-];
+// const branches = [
+// 	{ id: "1", name: "الفرع الرئيسي - القاهرة" },
+// 	{ id: "2", name: "فرع الجيزة" },
+// 	{ id: "3", name: "فرع الإسكندرية" },
+// 	{ id: "4", name: "فرع الدلتا - طنطا" },
+// 	{ id: "5", name: "فرع الصعيد - أسيوط" },
+// ];
 
 export function AddUser({ onSave }: AddUserProps) {
 	const navigate = useNavigate();
@@ -91,6 +58,8 @@ export function AddUser({ onSave }: AddUserProps) {
 		"merchant" | "courier" | "employee"
 	>("employee");
 
+	const [showPassword, setShowPassword] = useState(false);
+	
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -105,8 +74,36 @@ export function AddUser({ onSave }: AddUserProps) {
 		rejectionFeePercentage: "",
 	});
 
-	const [selectedGovernorate, setSelectedGovernorate] = useState<any>(null);
-	const [availableCities, setAvailableCities] = useState<string[]>([]);
+	// Data from API
+	const [governorates, setGovernorates] = useState<Governorate[]>([]);
+	const [cities, setCities] = useState<City[]>([]);
+	const [availableCities, setAvailableCities] = useState<City[]>([]);
+	
+	// Loading states
+	const [isLoadingGovernorates, setIsLoadingGovernorates] = useState(true);
+	const [isLoadingCities, setIsLoadingCities] = useState(true);
+
+	// Fetch governorates and cities on mount
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				const [govResponse, citiesResponse] = await Promise.all([
+					api.get('/api/locations/governorates?limit=100'),
+					api.get('/api/locations/cities?limit=1000')
+				]);
+				
+				setGovernorates(govResponse.data.data || []);
+				setCities(citiesResponse.data.data || []);
+			} catch (error) {
+				console.error('Error fetching locations:', error);
+			} finally {
+				setIsLoadingGovernorates(false);
+				setIsLoadingCities(false);
+			}
+		};
+		
+		fetchData();
+	}, []);
 
 	const handleInputChange = (field: string, value: string) => {
 		setFormData((prev) => ({
@@ -116,31 +113,35 @@ export function AddUser({ onSave }: AddUserProps) {
 	};
 
 	const handleGovernorateChange = (governorateId: string) => {
-		const governorate = governorates.find((g) => g.id === governorateId);
-		setSelectedGovernorate(governorate);
-		setAvailableCities(governorate?.cities || []);
+		// Filter cities by selected governorate
+		const filteredCities = cities.filter(
+			(city) => city.governorate._id === governorateId && city.isActive !== false
+		);
+		setAvailableCities(filteredCities);
 		handleInputChange("governorateId", governorateId);
-		handleInputChange("cityId", ""); // إعادة تعيين المدينة عند تغيير المحافظة
+		handleInputChange("cityId", ""); // Reset city when governorate changes
 	};
 
 	const handleSubmit = async () => {
 		// ... (Submit logic remains unchanged)
 		const requiredFields = ["name", "email", "password", "phone"];
 
-		if (userType === "merchant" || userType === "courier") {
-			requiredFields.push(
-				"address",
-				"branchId",
-				"governorateId",
-				"cityId"
-			);
-		}
-
 		if (userType === "merchant") {
 			requiredFields.push(
+				"address",
+				"governorateId",
+				"cityId",
 				"storeName",
 				"pickupCost",
 				"rejectionFeePercentage"
+			);
+		}
+
+		if (userType === "courier") {
+			requiredFields.push(
+				"address",
+				"governorateId",
+				"cityId"
 			);
 		}
 
@@ -149,11 +150,15 @@ export function AddUser({ onSave }: AddUserProps) {
 		);
 
 		if (missingFields.length > 0) {
-			alert("يرجى ملء جميع الحقول المطلوبة");
+			toast.error("يرجى ملء جميع الحقول المطلوبة");
 			return;
 		}
 
 		try {
+			// Find selected governorate and city names
+			const selectedGov = governorates.find(g => g._id === formData.governorateId);
+			const selectedCity = cities.find(c => c._id === formData.cityId);
+			
 			const newUser = {
 				userType,
 				fullName: formData.name,
@@ -161,25 +166,32 @@ export function AddUser({ onSave }: AddUserProps) {
 				password: formData.password,
 				phone: formData.phone,
 				address: formData.address || undefined,
-				governorate: formData.governorateId || undefined,
-				city: formData.cityId || undefined,
+				governorate: selectedGov?.govName || undefined,
+				city: selectedCity?.cityName || undefined,
 				storeName: formData.storeName || undefined,
 				branchId: formData.branchId,
 				pickupCost: formData.pickupCost || undefined,
 				rejectionFeePercentage:
 					formData.rejectionFeePercentage || undefined,
+				// For courier: add assignedCities array
+				...(userType === "courier" && selectedGov && selectedCity ? {
+					assignedCities: [{
+						governorate: selectedGov.govName,
+						city: selectedCity.cityName
+					}]
+				} : {})
 			};
 
 			// إرسال الطلب إلى الخادم
 			const { data } = await api.post("/api/users/add", newUser);
 
-			alert(
-				`✅ تم إنشاء حساب ${
+			toast.success(
+				`تم إنشاء حساب ${
 					userType === "merchant"
 						? "التاجر"
 						: userType === "courier"
 						? "المندوب"
-						: "العامل"
+						: "الموظف"
 				} بنجاح!`
 			);
 			// console.log("User created:", data);
@@ -201,16 +213,15 @@ export function AddUser({ onSave }: AddUserProps) {
 				rejectionFeePercentage: "",
 			});
 
-			setSelectedGovernorate(null);
 			setAvailableCities([]);
 
 			navigate('/user-management');
 		} catch (error: any) {
 			console.error(error);
 			if (error.response) {
-				alert(error.response.data.message || "فشل في إضافة المستخدم");
+				toast.error(error.response.data.message || "فشل في إضافة المستخدم");
 			} else {
-				alert("حدث خطأ أثناء الاتصال بالخادم");
+				toast.error("حدث خطأ أثناء الاتصال بالخادم");
 			}
 		}
 	};
@@ -375,20 +386,33 @@ export function AddUser({ onSave }: AddUserProps) {
 								<Lock className="h-4 w-4 ml-1 text-primary" />
 								كلمة المرور *
 							</Label>
-							<Input
-								id="password"
-								type="password"
-								value={formData.password}
-								onChange={(e) =>
-									handleInputChange(
-										"password",
-										e.target.value
-									)
-								}
-								placeholder="أدخل كلمة مرور قوية"
-								className="text-right"
-								required
-							/>
+							<div className="relative">
+								<Input
+									id="password"
+									type={showPassword ? "text" : "password"}
+									value={formData.password}
+									onChange={(e) =>
+										handleInputChange(
+											"password",
+											e.target.value
+										)
+									}
+									placeholder="أدخل كلمة مرور قوية"
+									className="text-right pr-10"
+									required
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword(!showPassword)}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+								>
+									{showPassword ? (
+										<EyeOff className="h-4 w-4" />
+									) : (
+										<Eye className="h-4 w-4" />
+									)}
+								</button>
+							</div>
 						</div>
 
 						{/* رقم الهاتف */}
@@ -417,37 +441,6 @@ export function AddUser({ onSave }: AddUserProps) {
 					{/* فاصل مرئي */}
 					<div className="border-t pt-6" />
 
-					{(userType === "merchant" || userType === "courier") && (
-						<div className="space-y-2">
-							<Label
-								htmlFor="branch"
-								className="flex items-center"
-							>
-								<Building className="h-4 w-4 ml-1 text-primary" />
-								الفرع *
-							</Label>
-							<Select
-								value={formData.branchId}
-								onValueChange={(value) =>
-									handleInputChange("branchId", value)
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="اختر الفرع" />
-								</SelectTrigger>
-								<SelectContent>
-									{branches.map((branch) => (
-										<SelectItem
-											key={branch.id}
-											value={branch.id}
-										>
-											{branch.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					)}
 					{(userType === "merchant" || userType === "courier") && (
 						<div className="space-y-2">
 							<Label
@@ -587,24 +580,29 @@ export function AddUser({ onSave }: AddUserProps) {
 									<MapPin className="h-4 w-4 ml-1 text-primary" />
 									المحافظة *
 								</Label>
-								<Select
-									value={formData.governorateId}
-									onValueChange={handleGovernorateChange}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="اختر المحافظة" />
-									</SelectTrigger>
-									<SelectContent>
-										{governorates.map((governorate) => (
-											<SelectItem
-												key={governorate.id}
-												value={governorate.id}
-											>
-												{governorate.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+							<Select
+								value={formData.governorateId}
+								onValueChange={handleGovernorateChange}
+								disabled={isLoadingGovernorates}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder={isLoadingGovernorates ? "جاري التحميل..." : "اختر المحافظة"} />
+								</SelectTrigger>
+								<SelectContent>
+									{isLoadingGovernorates ? (
+										<div className="flex items-center justify-center p-2">
+											<Loader2 className="h-4 w-4 animate-spin" />
+										</div>
+									) : governorates.filter(g => g.isActive !== false).map((governorate) => (
+										<SelectItem
+											key={governorate._id}
+											value={governorate._id}
+										>
+											{governorate.govName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 							</div>
 
 							{/* المدينة */}
@@ -621,24 +619,32 @@ export function AddUser({ onSave }: AddUserProps) {
 									onValueChange={(value) =>
 										handleInputChange("cityId", value)
 									}
-									disabled={!selectedGovernorate}
+									disabled={!formData.governorateId || isLoadingCities}
 								>
 									<SelectTrigger>
 										<SelectValue
 											placeholder={
-												selectedGovernorate
-													? "اختر المدينة"
-													: "اختر المحافظة أولاً"
+												isLoadingCities
+													? "جاري التحميل..."
+													: !formData.governorateId
+													? "اختر المحافظة أولاً"
+													: availableCities.length === 0
+													? "لا توجد مدن متاحة"
+													: "اختر المدينة"
 											}
 										/>
 									</SelectTrigger>
 									<SelectContent>
-										{availableCities.map((city, index) => (
+										{isLoadingCities ? (
+											<div className="flex items-center justify-center p-2">
+												<Loader2 className="h-4 w-4 animate-spin" />
+											</div>
+										) : availableCities.map((city) => (
 											<SelectItem
-												key={index}
-												value={city}
+												key={city._id}
+												value={city._id}
 											>
-												{city}
+												{city.cityName}
 											</SelectItem>
 										))}
 									</SelectContent>

@@ -28,7 +28,7 @@ import type { Order, GetOrdersResponse, ApiError } from "../../types"; // (إض�
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
-  Shipped: "في الطريق",
+  "On the Way": "في الطريق",
   Delivered: "تم التسليم",
   Cancelled: "ملغي",
 };
@@ -72,7 +72,7 @@ export function MerchantDashboard() {
 
   const getActiveOrders = () => {
     return allOrders.filter((o) =>
-      ["Pending", "Processing", "Shipped"].includes(o.status)
+      ["Pending", "Processing", "On the Way"].includes(o.status)
     ).length;
   };
 
@@ -87,7 +87,7 @@ export function MerchantDashboard() {
   const statusCounts = {
     Pending: allOrders.filter((o) => o.status === "Pending").length,
     Processing: allOrders.filter((o) => o.status === "Processing").length,
-    Shipped: allOrders.filter((o) => o.status === "Shipped").length,
+    "On the Way": allOrders.filter((o) => o.status === "On the Way").length,
     Delivered: allOrders.filter((o) => o.status === "Delivered").length,
     Cancelled: allOrders.filter((o) => o.status === "Cancelled").length,
   };
@@ -96,7 +96,7 @@ export function MerchantDashboard() {
     switch (status) {
       case "Delivered":
         return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case "Shipped":
+      case "On the Way":
         return <Truck className="h-5 w-5 text-purple-600" />;
       case "Processing":
         return <Clock className="h-5 w-5 text-yellow-600" />;
@@ -113,7 +113,7 @@ export function MerchantDashboard() {
     switch (status) {
       case "Delivered":
         return "bg-green-100 text-green-800";
-      case "Shipped":
+      case "On the Way":
         return "bg-purple-100 text-purple-800";
       case "Processing":
         return "bg-yellow-100 text-yellow-800";
@@ -250,7 +250,7 @@ export function MerchantDashboard() {
             <StatusCard
               icon={Truck}
               title="في الطريق"
-              count={statusCounts.Shipped}
+              count={statusCounts["On the Way"]}
               color="bg-blue-100 text-blue-800"
               iconColor="text-blue-600"
             />

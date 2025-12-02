@@ -28,4 +28,36 @@ api.interceptors.response.use(
   }
 );
 
+// Order State Management API
+export const orderStateAPI = {
+  /**
+   * Update order status with role-based validation
+   */
+  updateOrderStatus: async (orderId: string, status: string, changeReason?: string) => {
+    const response = await api.put(`/api/orders/${orderId}/status`, {
+      status,
+      changeReason
+    });
+    return response.data;
+  },
+
+  /**
+   * Get order state history
+   */
+  getOrderStateHistory: async (orderId: string) => {
+    const response = await api.get(`/api/orders/${orderId}/state-history`);
+    return response.data;
+  },
+
+  /**
+   * Validate state change before attempting
+   */
+  validateStateChange: async (orderId: string, newState: string) => {
+    const response = await api.post(`/api/orders/${orderId}/validate-state-change`, {
+      newState
+    });
+    return response.data;
+  }
+};
+
 export default api;
