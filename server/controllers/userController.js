@@ -12,6 +12,9 @@ const allowedFields = [
 	"governorate",
 	"city",
 	"storeName",
+	"assignedCities",
+	"pickupCost",
+	"rejectionFeePercentage",
 ];
 //  Get user profile
 exports.getUserProfile = async (req, res) => {
@@ -140,11 +143,24 @@ exports.addUser = async (req, res) => {
 	}
 };
 
-// Get all users (paginated)
+// Get all users (paginated with optional search)
 exports.getUsers = async (req, res) => {
 	try {
-		const { page, limit } = req.query;
-		const { data: users, meta } = await paginate(User, {}, { page, limit, select: '-password', sort: { createdAt: -1 } });
+		const { page, limit, q } = req.query;
+		let filter = {};
+		
+		// If search query exists, add search filter
+		if (q && q.trim()) {
+			filter = {
+				$or: [
+					{ fullName: new RegExp(q, "i") },
+					{ email: new RegExp(q, "i") },
+					{ phone: new RegExp(q, "i") },
+				],
+			};
+		}
+		
+		const { data: users, meta } = await paginate(User, filter, { page, limit, select: '-password', sort: { createdAt: -1 } });
 		res.status(200).json({ status: 'success', results: users.length, meta, data: { users } });
 	} catch (error) {
 		res.status(500).json({ message: "Error fetching users" });

@@ -35,6 +35,7 @@ import {
 	Percent,
 	Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import api from "../../lib/api";
 import type { Governorate, City } from "../../types";
 
@@ -184,13 +185,13 @@ export function AddUser({ onSave }: AddUserProps) {
 			// إرسال الطلب إلى الخادم
 			const { data } = await api.post("/api/users/add", newUser);
 
-			alert(
-				`✅ تم إنشاء حساب ${
+			toast.success(
+				`تم إنشاء حساب ${
 					userType === "merchant"
 						? "التاجر"
 						: userType === "courier"
 						? "المندوب"
-						: "العامل"
+						: "الموظف"
 				} بنجاح!`
 			);
 			// console.log("User created:", data);
@@ -218,9 +219,9 @@ export function AddUser({ onSave }: AddUserProps) {
 		} catch (error: any) {
 			console.error(error);
 			if (error.response) {
-				alert(error.response.data.message || "فشل في إضافة المستخدم");
+				toast.error(error.response.data.message || "فشل في إضافة المستخدم");
 			} else {
-				alert("حدث خطأ أثناء الاتصال بالخادم");
+				toast.error("حدث خطأ أثناء الاتصال بالخادم");
 			}
 		}
 	};

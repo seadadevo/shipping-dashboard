@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Checkbox } from '../ui/checkbox';
 import { Switch } from '../ui/switch';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Truck, MapPin, Phone, Mail } from 'lucide-react';
+import { Truck, MapPin, Phone, Mail, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../../lib/api';
 import type { User, Governorate, City } from '../../types';
@@ -18,6 +19,8 @@ interface CitySelection {
 
 export default function DriverManagement() {
   const [drivers, setDrivers] = useState<User[]>([]);
+  const [filteredDrivers, setFilteredDrivers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,12 +39,31 @@ export default function DriverManagement() {
     try {
       const response = await api.get('/api/drivers/all');
       setDrivers(response.data.data);
+      setFilteredDrivers(response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch drivers');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredDrivers(drivers);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = drivers.filter(driver => 
+        driver.fullName.toLowerCase().includes(query) ||
+        driver.phone?.toLowerCase().includes(query) ||
+        driver.email?.toLowerCase().includes(query) ||
+        driver.assignedCities?.some(city => 
+          city.city.toLowerCase().includes(query) ||
+          city.governorate.toLowerCase().includes(query)
+        )
+      );
+      setFilteredDrivers(filtered);
+    }
+  }, [searchQuery, drivers]);
 
   const fetchLocations = async () => {
     try {
@@ -131,6 +153,18 @@ export default function DriverManagement() {
         </div>
       </div>
 
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="ابحث عن سائق بالاسم، الهاتف، أو المدينة..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-10"
+          />
+        </div>
+      </div>
+
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -144,7 +178,12 @@ export default function DriverManagement() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {drivers.map((driver) => (
+        {filteredDrivers.length === 0 ? (
+          <div className="col-span-full text-center py-8 text-muted-foreground">
+            {searchQuery ? 'لا توجد نتائج للبحث' : 'لا يوجد سائقين'}
+          </div>
+        ) : (
+          filteredDrivers.map((driver) => (
           <Card key={driver._id}>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -219,7 +258,8 @@ export default function DriverManagement() {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ))
+        )}
       </div>
 
       {drivers.length === 0 && (

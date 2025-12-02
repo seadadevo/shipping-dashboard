@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import {  Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Package, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
 import { useTheme } from '../ui/theme-provider';
+import { toast } from 'sonner';
 
 import {
 	Card,
@@ -41,6 +42,7 @@ const Login: React.FC = () => {
 			const { user } = response.data.data;
 			const { token } = response.data;
 
+			toast.success(`مرحباً ${user.fullName}! تم تسجيل الدخول بنجاح`);
 			login(user, token);
 		} catch (err) {
 			setLoading(false);
