@@ -38,7 +38,8 @@ exports.addGovernorate = async (req, res) => {
 exports.getAllGovernorates = async (req, res) => {
   try {
     const { page, limit } = req.query;
-    const { data: governorates, meta } = await paginate(Governorate, { isActive: true }, { page, limit, sort: { govName: 1 } });
+    // Show all governorates, not just active ones
+    const { data: governorates, meta } = await paginate(Governorate, {}, { page, limit, sort: { govName: 1 } });
     res.status(200).json({ status: "success", results: governorates.length, meta, data: governorates });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -186,7 +187,8 @@ exports.addCity = async (req, res) => {
 exports.getAllCities = async (req, res) => {
   try {
     const { page, limit } = req.query;
-    const { data: cities, meta } = await paginate(City, { isActive: true }, { page, limit, populate: { path: 'governorate', select: 'govName govCode' }, sort: { 'governorate.govName': 1, cityName: 1 } });
+    // Show all cities, not just active ones
+    const { data: cities, meta } = await paginate(City, {}, { page, limit, populate: { path: 'governorate', select: 'govName govCode' }, sort: { 'governorate.govName': 1, cityName: 1 } });
     res.status(200).json({ status: "success", results: cities.length, meta, data: cities });
   } catch (error) {
     res.status(500).json({ message: "Server error" });

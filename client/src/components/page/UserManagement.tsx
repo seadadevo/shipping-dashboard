@@ -54,6 +54,7 @@ export function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [users, setUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]); // Store all users for stats
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -84,19 +85,19 @@ export function UserManagement() {
       }
       const res = await api.get(url);
       // response shape: { status, results, meta, data: { users }}
-      let allUsers = res.data?.data?.users || [];
+      let fetchedUsers = res.data?.data?.users || [];
 
       // Apply role filter if not "all"
       if (role !== "all") {
-        allUsers = allUsers.filter((u: User) => u.userType === role);
+        fetchedUsers = fetchedUsers.filter((u: User) => u.userType === role);
       }
 
       // Apply client-side pagination
-      const total = allUsers.length;
+      const total = fetchedUsers.length;
       const totalPagesCalc = Math.ceil(total / limit);
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
-      const paginatedUsers = allUsers.slice(startIndex, endIndex);
+      const paginatedUsers = fetchedUsers.slice(startIndex, endIndex);
 
       setUsers(paginatedUsers);
       setCurrentPage(page);
@@ -110,8 +111,19 @@ export function UserManagement() {
     }
   };
 
+  // Fetch all users for statistics
+  const fetchAllUsersForStats = async () => {
+    try {
+      const res = await api.get('/api/users?page=1&limit=10000');
+      setAllUsers(res.data?.data?.users || []);
+    } catch (err) {
+      console.error("Failed to fetch all users for stats:", err);
+    }
+  };
+
   useEffect(() => {
     getUsers(currentPage, itemsPerPage, roleFilter).catch(console.error);
+    fetchAllUsersForStats();
   }, []);
 
   // Debounce search query
@@ -238,6 +250,7 @@ export function UserManagement() {
 
       // ✅ Refresh the user list immediately
       await getUsers(); // 🔹 Re-fetch updated users from the server
+      await fetchAllUsersForStats(); // Update stats
     } catch (error) {
       toast.error("حدث خطأ أثناء تحديث المستخدم");
     }
@@ -250,6 +263,7 @@ export function UserManagement() {
       await api.delete(`/api/users/${id}`);
       toast.success("تم حذف المستخدم بنجاح");
       setUsers((prev) => prev.filter((u) => u._id !== id));
+      await fetchAllUsersForStats(); // Update stats after deletion
     } catch {
       toast.error("فشل في حذف المستخدم");
     } finally {
@@ -287,7 +301,7 @@ export function UserManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">{allUsers.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -296,7 +310,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {users.filter((user) => user.userType === "admin").length}
+              {allUsers.filter((user) => user.userType === "admin").length}
             </div>
           </CardContent>
         </Card>
@@ -306,7 +320,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {users.filter((user) => user.userType === "employee").length}
+              {allUsers.filter((user) => user.userType === "employee").length}
             </div>
           </CardContent>
         </Card>
@@ -316,7 +330,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {users.filter((user) => user.userType === "merchant").length}
+              {allUsers.filter((user) => user.userType === "merchant").length}
             </div>
           </CardContent>
         </Card>
@@ -328,7 +342,7 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {users.filter((user) => user.userType === "courier").length}
+              {allUsers.filter((user) => user.userType === "courier").length}
             </div>
           </CardContent>
         </Card>

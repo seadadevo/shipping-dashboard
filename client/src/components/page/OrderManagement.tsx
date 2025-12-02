@@ -109,11 +109,41 @@ export function OrderManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [orderStats, setOrderStats] = useState({
+    total: 0,
+    pending: 0,
+    processing: 0,
+    delivered: 0,
+    cancelled: 0
+  });
 
   const { user } = useAuth();
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
+
+  // Fetch all orders stats (without filters)
+  const fetchOrderStats = async () => {
+    try {
+      const response = await api.get<GetOrdersResponse>("/api/orders", {
+        params: {
+          status: "all",
+          page: 1,
+          limit: 10000, // Get all orders for stats
+        },
+      });
+      const orders = response.data.data.orders;
+      setOrderStats({
+        total: orders.length,
+        pending: orders.filter((o) => o.status === "Pending").length,
+        processing: orders.filter((o) => o.status === "Processing").length,
+        delivered: orders.filter((o) => o.status === "Delivered").length,
+        cancelled: orders.filter((o) => o.status === "Cancelled").length,
+      });
+    } catch (err) {
+      console.error("Failed to fetch order stats:", err);
+    }
+  };
 
   // --- (🚀 تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
   const fetchOrders = async (page = currentPage, limit = itemsPerPage) => {
@@ -141,6 +171,11 @@ export function OrderManagement() {
       setLoading(false);
     }
   };
+
+  // Fetch stats once on mount
+  useEffect(() => {
+    fetchOrderStats();
+  }, []);
 
   // --- (🚀 تعديل: useEffect الآن يراقب الفلاتر) ---
   // (⭐ تعديل): هذا الـ useEffect سيقوم بإعادة جلب البيانات عند تغيير البحث أو الحالة
@@ -197,18 +232,7 @@ export function OrderManagement() {
 
   // (ملحوظة): سنستخدم allOrders مباشرة في الجدول
 
-  // --- (تعديل: إحصائيات الطلبات) ---
-  // (⭐ تعديل): هذه الإحصائيات يجب أن تُحسب من القائمة القادمة من الباك إند
-  // إذا أردت إحصائيات *للنظام كله*، ستحتاج لـ endpoint جديد
-  // هذا الكود سيحسب الإحصائيات من القائمة المفلترة (مثال: "يوجد 5 طلبات قيد الانتظار تطابق بحثك")
-  const statusCounts = {
-    Pending: allOrders.filter((o) => o.status === "Pending").length,
-    Processing: allOrders.filter((o) => o.status === "Processing").length,
-    Shipped: allOrders.filter((o) => o.status === "Shipped").length,
-    Delivered: allOrders.filter((o) => o.status === "Delivered").length,
-    Cancelled: allOrders.filter((o) => o.status === "Cancelled").length,
-  };
-  // (ملحوظة: لحساب إحصائيات *كل* الطلبات بغض النظر عن الفلتر، ستحتاج لجلبها بـ API call منفصل)
+
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -227,7 +251,8 @@ export function OrderManagement() {
     try {
       await api.delete(`/api/orders/${orderToDelete._id}`);
       setOrderToDelete(null);
-      fetchOrders(); // (⭐ تعديل): نستخدم fetchOrders المحدثة
+      fetchOrders();
+      fetchOrderStats(); // Update stats after deletion
     } catch (err) {
       const error = err as ApiError;
       setError(error.response?.data?.message || "فشل في حذف الطلب.");
@@ -272,7 +297,8 @@ export function OrderManagement() {
         });
       }
       
-      fetchOrders(); // (⭐ تعديل): نستخدم fetchOrders المحدثة
+      fetchOrders();
+      fetchOrderStats(); // Update stats after status change
     } catch (err) {
       console.error("Failed to update status", err);
       toast.error('فشل تحديث حالة الطلب', {
@@ -281,6 +307,11 @@ export function OrderManagement() {
     } finally {
       setIsUpdatingStatus(null);
     }
+  };
+
+  const handleRefresh = () => {
+    fetchOrders();
+    fetchOrderStats();
   };
 
   return (
@@ -297,8 +328,8 @@ export function OrderManagement() {
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          {/* (⭐ تعديل): زر التحديث الآن يستدعي fetchOrders المحدثة */}
-          <Button variant="outline" onClick={fetchOrders} disabled={loading}>
+          {/* زر التحديث يحدث الطلبات والإحصائيات */}
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -309,24 +340,23 @@ export function OrderManagement() {
         </div>
       </div>
 
-      {/* ... (الإحصائيات السريعة) ... */}
+      {/* الإحصائيات السريعة */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">إجمالي الطلبات (المطابقة)</CardTitle>
+            <CardTitle className="text-sm">إجمالي الطلبات</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{allOrders.length}</div>
+            <div className="text-2xl font-bold">{orderStats.total}</div>
           </CardContent>
         </Card>
-        {/* ... (باقي كروت الإحصائيات) ... */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">قيد الانتظار</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {statusCounts["Pending"]}
+              {orderStats.pending}
             </div>
           </CardContent>
         </Card>
@@ -336,7 +366,7 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {statusCounts["Processing"]}
+              {orderStats.processing}
             </div>
           </CardContent>
         </Card>
@@ -346,7 +376,7 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {statusCounts["Delivered"]}
+              {orderStats.delivered}
             </div>
           </CardContent>
         </Card>
@@ -356,7 +386,7 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {statusCounts["Cancelled"]}
+              {orderStats.cancelled}
             </div>
           </CardContent>
         </Card>
