@@ -100,6 +100,59 @@ router.patch(
   updateOrderStatus
 );
 
+// Assign driver to order and update status to Processing
+router.patch(
+  "/:id/assign-driver",
+  restrictTo("admin", "employee"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { driverId, status } = req.body;
+      const userId = req.user._id;
+
+      if (!driverId) {
+        return res.status(400).json({ message: "معرف السائق مطلوب" });
+      }
+
+      const order = await Order.findById(id);
+      if (!order) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      // Update order with driver and status
+      order.assignedDriver = driverId;
+      order.status = status || 'Processing';
+      
+      // Add to state history
+      order.stateHistory.push({
+        previousState: order.status,
+        newState: status || 'Processing',
+        changedBy: userId,
+        changeReason: `تعيين السائق وتحويل الطلب إلى قيد المعالجة`,
+        changedAt: new Date()
+      });
+
+      await order.save();
+
+      const populatedOrder = await Order.findById(id)
+        .populate('assignedDriver', 'fullName phoneNumber')
+        .populate('stateHistory.changedBy', 'fullName userType');
+
+      res.status(200).json({
+        success: true,
+        message: "تم تعيين السائق بنجاح",
+        data: { order: populatedOrder }
+      });
+    } catch (error) {
+      console.error('Assign driver error:', error);
+      res.status(500).json({
+        message: "خطأ في الخادم أثناء تعيين السائق",
+        error: error.message
+      });
+    }
+  }
+);
+
 // Get order state history
 router.get(
   "/:id/state-history",

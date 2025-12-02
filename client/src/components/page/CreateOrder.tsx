@@ -89,11 +89,6 @@ export function CreateOrder() {
   const [availableCities, setAvailableCities] = useState<City[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(true);
   
-  // Driver selection
-  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
-
-
- 
   const [merchantSearchQuery, setMerchantSearchQuery] = useState("");
   const [merchantResults, setMerchantResults] = useState<MerchantResult[]>([]);
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantResult | null>(null);
@@ -114,8 +109,7 @@ export function CreateOrder() {
     shippingType: '',
     paymentType: '',
     totalWeight: '0',
-    notes: '',
-    assignedDriver: ''
+    notes: ''
   });
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -169,7 +163,6 @@ export function CreateOrder() {
   const handleGovernorateChange = async (governorateName: string) => {
     handleInputChange('governorateName', governorateName);
     handleInputChange('cityName', '');
-    setAvailableDrivers([]);
     setAvailableCities([]);
     const selectedGov = governoratesList.find(g => g.govName === governorateName);
     if (!selectedGov) return;
@@ -181,17 +174,6 @@ export function CreateOrder() {
 
   const handleCityChange = async (cityName: string) => {
     handleInputChange('cityName', cityName);
-    
-    // Fetch available drivers for this city
-    if (formData.governorateName && cityName) {
-      try {
-        const res = await api.get(`/api/drivers/by-city?governorate=${formData.governorateName}&city=${cityName}`);
-        setAvailableDrivers(res.data.data);
-      } catch (err) {
-        console.error('Failed to fetch drivers:', err);
-        setAvailableDrivers([]);
-      }
-    }
   };
 
   const calculateTotalWeight = () => products.reduce((t, p) => t + (p.quantity * p.weight), 0);
@@ -258,7 +240,7 @@ export function CreateOrder() {
         notes: formData.notes,
         products: products.map(p => ({ productName: p.name, quantity: p.quantity, weight: p.weight })),
         merchantId: selectedMerchant ? selectedMerchant._id : undefined,
-        assignedDriver: (formData.assignedDriver && formData.assignedDriver !== 'none') ? formData.assignedDriver : undefined
+        // assignedDriver removed - will be assigned by employee when status changes to Processing
       };
       
       await api.post<AddOrderResponse>('/api/orders/add', payload);
@@ -548,36 +530,6 @@ export function CreateOrder() {
                         <SelectTrigger className="h-11"><SelectValue placeholder="اختر الطريقة" /></SelectTrigger>
                         <SelectContent className='bg-background'>{paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                     </Select>
-                </div>
-                <div className='space-y-2'>
-                    <Label className="text-base">السائق المختص (اختياري)</Label>
-                    <Select 
-                        value={formData.assignedDriver} 
-                        onValueChange={(v) => handleInputChange('assignedDriver', v)} 
-                        disabled={availableDrivers.length === 0}
-                        dir="rtl"
-                    >
-                        <SelectTrigger className="h-11">
-                            <SelectValue placeholder={
-                                availableDrivers.length === 0 
-                                    ? "لا يوجد سائقين متاحين لهذه المدينة"
-                                    : "اختر سائق"
-                            } />
-                        </SelectTrigger>
-                        <SelectContent className='bg-background'>
-                            <SelectItem value="none">لا يوجد</SelectItem>
-                            {availableDrivers.map(driver => (
-                                <SelectItem key={driver._id} value={driver._id}>
-                                    {driver.fullName} - {driver.phoneNumber}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {availableDrivers.length > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                            متاح {availableDrivers.length} سائق لهذه المدينة
-                        </p>
-                    )}
                 </div>
             </div>
             

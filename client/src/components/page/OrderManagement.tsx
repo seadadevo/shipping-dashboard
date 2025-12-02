@@ -10,6 +10,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
+import { Label } from "../ui/label";
 import {
   Table,
   TableBody,
@@ -121,6 +122,14 @@ export function OrderManagement() {
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
+  
+  // Driver assignment states
+  const [isDriverDialogOpen, setIsDriverDialogOpen] = useState(false);
+  const [selectedOrderForDriver, setSelectedOrderForDriver] = useState<Order | null>(null);
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<string>('');
+  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+  const [isAssigningDriver, setIsAssigningDriver] = useState(false);
 
   // Fetch all orders stats (without filters)
   const fetchOrderStats = async () => {
@@ -262,15 +271,24 @@ export function OrderManagement() {
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
+    const order = allOrders.find(o => o._id === orderId);
+    if (!order) {
+      toast.error('الطلب غير موجود');
+      return;
+    }
+
+    // If changing to Processing, show driver selection dialog
+    if (newStatus === 'Processing' && (user?.userType === 'admin' || user?.userType === 'employee')) {
+      setSelectedOrderForDriver(order);
+      setIsDriverDialogOpen(true);
+      // Fetch available drivers for this order's city
+      await fetchAvailableDrivers(order.governorate, order.city);
+      return;
+    }
+
+    // For other status changes, proceed normally
     setIsUpdatingStatus(orderId);
     try {
-      // Find the order to get its current status
-      const order = allOrders.find(o => o._id === orderId);
-      if (!order) {
-        toast.error('الطلب غير موجود');
-        return;
-      }
-
       const previousStatus = order.status;
       
       await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
@@ -312,6 +330,59 @@ export function OrderManagement() {
   const handleRefresh = () => {
     fetchOrders();
     fetchOrderStats();
+  };
+
+  // Fetch available drivers for a specific city
+  const fetchAvailableDrivers = async (governorate: string, city: string) => {
+    setIsLoadingDrivers(true);
+    try {
+      const response = await api.get(`/api/drivers/by-city?governorate=${governorate}&city=${city}`);
+      setAvailableDrivers(response.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch drivers:', err);
+      toast.error('فشل في جلب السائقين المتاحين');
+      setAvailableDrivers([]);
+    } finally {
+      setIsLoadingDrivers(false);
+    }
+  };
+
+  // Assign driver and update status to Processing
+  const handleAssignDriver = async () => {
+    if (!selectedOrderForDriver || !selectedDriver) {
+      toast.error('يرجى اختيار سائق');
+      return;
+    }
+
+    setIsAssigningDriver(true);
+    try {
+      const previousStatus = selectedOrderForDriver.status;
+      
+      // Update order with driver and status
+      await api.patch(`/api/orders/${selectedOrderForDriver._id}/assign-driver`, {
+        driverId: selectedDriver,
+        status: 'Processing'
+      });
+      
+      toast.success('تم تعيين السائق بنجاح', {
+        description: `تم تحويل الطلب إلى قيد المعالجة وتعيين السائق`
+      });
+      
+      // Close dialog and refresh
+      setIsDriverDialogOpen(false);
+      setSelectedOrderForDriver(null);
+      setSelectedDriver('');
+      setAvailableDrivers([]);
+      
+      fetchOrders();
+      fetchOrderStats();
+    } catch (err: any) {
+      console.error('Failed to assign driver:', err);
+      const errorMsg = err.response?.data?.message || 'فشل تعيين السائق';
+      toast.error(errorMsg);
+    } finally {
+      setIsAssigningDriver(false);
+    }
   };
 
   return (
@@ -879,6 +950,107 @@ export function OrderManagement() {
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
               تأكيد الحذف
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- Driver Assignment Dialog --- */}
+      <Dialog open={isDriverDialogOpen} onOpenChange={setIsDriverDialogOpen}>
+        <DialogContent className="bg-blue-50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" />
+              تعيين سائق للطلب
+            </DialogTitle>
+            <DialogDescription>
+              اختر السائق المناسب للطلب #{selectedOrderForDriver?._id.slice(-8)}
+              <br />
+              <span className="text-sm font-medium">
+                {selectedOrderForDriver?.governorate} - {selectedOrderForDriver?.city}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {isLoadingDrivers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="mr-2">جاري تحميل السائقين...</span>
+              </div>
+            ) : availableDrivers.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="h-12 w-12 mx-auto text-yellow-500 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  لا يوجد سائقين متاحين لهذه المدينة
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  يرجى إضافة مدينة {selectedOrderForDriver?.city} إلى أحد السائقين
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-base">اختر السائق</Label>
+                  <Select value={selectedDriver} onValueChange={setSelectedDriver} dir="rtl">
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="اختر سائق من القائمة" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      {availableDrivers.map((driver) => (
+                        <SelectItem key={driver._id} value={driver._id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-medium">{driver.fullName}</span>
+                            <span className="text-sm text-muted-foreground mr-2">
+                              {driver.phoneNumber}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    متاح {availableDrivers.length} سائق لهذه المدينة
+                  </p>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                  <p className="text-sm text-yellow-800">
+                    <strong>ملاحظة:</strong> عند تعيين السائق، سيتم تحويل حالة الطلب إلى "قيد المعالجة" تلقائياً
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDriverDialogOpen(false);
+                setSelectedOrderForDriver(null);
+                setSelectedDriver('');
+                setAvailableDrivers([]);
+              }}
+              disabled={isAssigningDriver}
+            >
+              إلغاء
+            </Button>
+            <Button
+              onClick={handleAssignDriver}
+              disabled={isAssigningDriver || !selectedDriver || availableDrivers.length === 0}
+            >
+              {isAssigningDriver ? (
+                <>
+                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                  جاري التعيين...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="ml-2 h-4 w-4" />
+                  تعيين وتحويل للمعالجة
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
