@@ -57,6 +57,7 @@ import {
 } from '../ui/select';
 import { Badge } from '../ui/badge';
 import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'sonner';
 
 const branches = ["القاهرة", "الجيزة", "الاسكندرية", "الشرقية", "اسوان"];
 const paymentTypes = ["واجبة التحصيل", "دفع مقدم", "طرد مقابل طرد"];
@@ -222,15 +223,21 @@ export function CreateOrder() {
     setSuccess(null);
 
     if (['admin', 'employee'].includes(user?.userType || '') && !selectedMerchant) {
-        setError('يجب تحديد التاجر صاحب الطلب أولاً');
+        toast.error('يجب تحديد التاجر صاحب الطلب أولاً');
         return;
     }
 
     const requiredFields = ['type', 'customerName', 'phone', 'governorateName', 'cityName', 'street', 'shippingType', 'paymentType'];
     const missing = requiredFields.filter(f => !formData[f as keyof typeof formData]);
     
-    if (missing.length > 0) return setError(`يرجى ملء الحقول المطلوبة: ${missing.join(', ')}`);
-    if (products.length === 0) return setError('يجب إضافة منتج واحد على الأقل');
+    if (missing.length > 0) {
+      toast.error(`يرجى ملء الحقول المطلوبة: ${missing.join(', ')}`);
+      return;
+    }
+    if (products.length === 0) {
+      toast.error('يجب إضافة منتج واحد على الأقل');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -255,11 +262,12 @@ export function CreateOrder() {
       };
       
       await api.post<AddOrderResponse>('/api/orders/add', payload);
-      setSuccess('تم إنشاء الطلب بنجاح!');
+      toast.success('تم إنشاء الطلب بنجاح!');
+      setTimeout(() => window.location.reload(), 2000);
       setLoading(false);
     } catch (err) {
       const error = err as ApiError;
-      setError(error.response?.data?.message || 'خطأ في إنشاء الطلب');
+      toast.error(error.response?.data?.message || 'خطأ في إنشاء الطلب');
       setLoading(false);
     }
   };

@@ -70,6 +70,7 @@ import {
 } from "../ui/select";
 import api from "../../lib/api";
 import { Pagination } from "../ui/pagination";
+import { toast } from "sonner";
 import type {
   Governorate,
   City,
@@ -264,6 +265,7 @@ export function RegionsManagement() {
             g._id === currentGov._id ? (response.data.data as Governorate) : g
           )
         );
+        toast.success('تم تحديث المحافظة بنجاح');
       } else {
         // --- ADD LOGIC ---
         const response = await api.post<AddLocationResponse>(
@@ -274,6 +276,7 @@ export function RegionsManagement() {
           }
         );
         setGovernorates([...governorates, response.data.data as Governorate]);
+        toast.success('تم إضافة المحافظة بنجاح');
       }
 
       setIsGovDialogOpen(false);
@@ -315,6 +318,7 @@ export function RegionsManagement() {
             c._id === currentCity._id ? (response.data.data as City) : c
           )
         );
+        toast.success('تم تحديث المدينة بنجاح');
       } else {
         // --- ADD LOGIC ---
         const response = await api.post<AddLocationResponse>(
@@ -322,6 +326,7 @@ export function RegionsManagement() {
           cityData
         );
         setCities([...cities, response.data.data as City]);
+        toast.success('تم إضافة المدينة بنجاح');
       }
 
       setIsCityDialogOpen(false);
@@ -391,19 +396,19 @@ export function RegionsManagement() {
 
       if (type === "governorate") {
         setGovernorates(governorates.filter((g) => g._id !== id));
+        toast.success('تم حذف المحافظة بنجاح');
       } else {
         setCities(cities.filter((c) => c._id !== id));
+        toast.success('تم حذف المدينة بنجاح');
       }
 
       setIsDeleteAlertOpen(false);
       setItemToDelete(null);
     } catch (err) {
       const apiError = err as ApiError;
-      // Display error in the alert dialog itself
-      setError(
-        apiError.response?.data?.message ||
-          "فشل الحذف. قد تكون المنطقة مستخدمة."
-      );
+      const errorMsg = apiError.response?.data?.message || "فشل الحذف. قد تكون المنطقة مستخدمة.";
+      toast.error(errorMsg);
+      setError(errorMsg);
       console.error(apiError.response?.data?.message);
     } finally {
       setIsSubmitting(false);

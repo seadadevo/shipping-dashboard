@@ -58,14 +58,14 @@ exports.addOrder = async (req, res) => {
       if (!value) {
         return res
           .status(400)
-          .json({ message:`Missing required field: ${key} ` });
+          .json({ message:`حقل مطلوب مفقود: ${key} ` });
       }
     } 
 
     if (totalWeight === null || totalWeight === undefined) {
       return res
         .status(400)
-        .json({ message: "Missing required field: totalWeight" });
+        .json({ message: "حقل مطلوب مفقود: totalWeight" });
     }
 
     // =============================================
@@ -79,11 +79,11 @@ exports.addOrder = async (req, res) => {
     const shippingTypeDoc = await ShippingType.findOne({ name: shippingType });
 
     // التحقق من صحة البيانات
-    if (!weightSettings) return res.status(500).json({ message: "Weight settings are not configured." });
-    if (!govDoc || !cityDoc) return res.status(400).json({ message: `Invalid governorate or city name` });
-    if (!cityDoc.isActive) return res.status(400).json({ message: `The selected city is disabled.` });
-    if (!shippingTypeDoc) return res.status(400).json({ message: `Invalid shipping type` });
-    if (!shippingTypeDoc.isActive) return res.status(400).json({ message: `The selected shipping type is disabled.` });
+    if (!weightSettings) return res.status(500).json({ message: "إعدادات الوزن غير مضبوطة" });
+    if (!govDoc || !cityDoc) return res.status(400).json({ message: `اسم المحافظة أو المدينة غير صحيح` });
+    if (!cityDoc.isActive) return res.status(400).json({ message: `المدينة المحددة غير مفعلة` });
+    if (!shippingTypeDoc) return res.status(400).json({ message: `نوع الشحن غير صحيح` });
+    if (!shippingTypeDoc.isActive) return res.status(400).json({ message: `نوع الشحن المحدد غير مفعل` });
     
     // استخراج القيم
     const baseCityCostPerKg = cityDoc.shippingCost; 

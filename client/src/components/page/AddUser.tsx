@@ -150,7 +150,7 @@ export function AddUser({ onSave }: AddUserProps) {
 		);
 
 		if (missingFields.length > 0) {
-			alert("يرجى ملء جميع الحقول المطلوبة");
+			toast.error("يرجى ملء جميع الحقول المطلوبة");
 			return;
 		}
 
