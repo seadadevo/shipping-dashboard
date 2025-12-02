@@ -90,7 +90,7 @@ export function EmployeeDashboard() {
         let delivered = 0;
         let processing = 0;
         let pending = 0;
-        let shipped = 0;
+        let onTheWay = 0;
         let cancelled = 0;
         let unreachable = 0;
         let postponed = 0;
@@ -103,7 +103,7 @@ export function EmployeeDashboard() {
             if (status === "delivered") delivered++;
             else if (status === "processing") processing++;
             else if (status === "pending") pending++;
-            else if (status === "shipped") shipped++;
+            else if (status === "on the way") onTheWay++;
             else if (status === "cancelled") cancelled++;
             else if (status === "unreachable") unreachable++;
             else if (status === "postponed") postponed++;
@@ -144,9 +144,9 @@ export function EmployeeDashboard() {
                 iconColor: 'text-blue-600'
             },
             {
-                id: 'delivered_to_courier',
-                name: 'تم التسليم للمندوب',
-                count: shipped,
+                id: 'on_the_way',
+                name: 'في الطريق',
+                count: onTheWay,
                 icon: Truck,
                 color: 'bg-purple-100 text-purple-800',
                 iconColor: 'text-purple-600'
@@ -369,8 +369,8 @@ export function EmployeeDashboard() {
                             ? getOrderStatusColor("تم التسليم")
                             : order.status.toLowerCase() === "pending"
                                 ? getOrderStatusColor("قيد الانتظار")
-                                : order.status.toLowerCase() === "shipped"
-                                    ?getOrderStatusColor("تم التسليم للمندوب")
+                                : order.status.toLowerCase() === "on the way"
+                                    ?getOrderStatusColor("في الطريق")
                                     :getOrderStatusColor("طلب جديد")
                     }>
                         {
@@ -378,8 +378,8 @@ export function EmployeeDashboard() {
                                 ? "تم التسليم"
                                 : order.status.toLowerCase() === "pending"
                                     ? "قيد الانتظار"
-                                    : order.status.toLowerCase() === "shipped"
-                                        ?"تم التسليم للمندوب"
+                                    : order.status.toLowerCase() === "on the way"
+                                        ?"في الطريق"
                                         :"طلب جديد"
                         }
                     </Badge>

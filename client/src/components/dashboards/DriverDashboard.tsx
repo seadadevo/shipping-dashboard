@@ -122,21 +122,19 @@ export const DriverDashboard: React.FC = () => {
   const handleUpdateStatus = async () => {
     if (!selectedOrder || !newStatus) return;
 
-    const previousStatus = selectedOrder.driverStatus;
+    const previousStatus = selectedOrder.status;
 
     try {
-      const res = await api.patch(`/api/drivers/deliveries/${selectedOrder._id}/status`, {
-        driverStatus: newStatus,
+      const res = await api.patch(`/api/orders/${selectedOrder._id}/status`, {
+        status: newStatus,
       });
 
       if (res.data.success) {
         // Show success notification
         const statusLabels: Record<string, string> = {
-          'pending': 'قيد الانتظار',
-          'picked-up': 'تم الاستلام',
-          'on-the-way': 'في الطريق',
-          'delivered': 'تم التسليم',
-          'failed': 'فشل التسليم'
+          'Processing': 'قيد المعالجة',
+          'On the Way': 'في الطريق',
+          'Delivered': 'تم التسليم'
         };
         
         toast.success('تم تحديث حالة التوصيل', {
@@ -147,7 +145,7 @@ export const DriverDashboard: React.FC = () => {
         fetchStats();
         fetchDeliveries();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating status:', error);
       toast.error('فشل تحديث حالة التوصيل', {
         description: 'حدث خطأ أثناء تحديث حالة التوصيل'
@@ -157,7 +155,7 @@ export const DriverDashboard: React.FC = () => {
 
   const openStatusDialog = (order: Order) => {
     setSelectedOrder(order);
-    setNewStatus(order.driverStatus || 'pending');
+    setNewStatus(order.status);
     setIsDialogOpen(true);
   };
 
@@ -168,12 +166,13 @@ export const DriverDashboard: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      pending: { label: 'قيد الانتظار', variant: 'secondary' },
-      'picked-up': { label: 'تم الاستلام', variant: 'default' },
-      'in-transit': { label: 'في الطريق', variant: 'default' },
-      delivered: { label: 'تم التوصيل', variant: 'outline' },
+      'Pending': { label: 'قيد الانتظار', variant: 'secondary' },
+      'Processing': { label: 'قيد المعالجة', variant: 'default' },
+      'On the Way': { label: 'في الطريق', variant: 'default' },
+      'Delivered': { label: 'تم التسليم', variant: 'outline' },
+      'Cancelled': { label: 'ملغي', variant: 'destructive' }
     };
-    const config = statusMap[status] || statusMap.pending;
+    const config = statusMap[status] || statusMap['Processing'];
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
@@ -294,7 +293,7 @@ export const DriverDashboard: React.FC = () => {
                         <br />
                         <span className="text-sm text-muted-foreground">{order.street}</span>
                       </TableCell>
-                      <TableCell>{getStatusBadge(order.driverStatus || 'pending')}</TableCell>
+                      <TableCell>{getStatusBadge(order.status)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button
@@ -390,7 +389,7 @@ export const DriverDashboard: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-muted-foreground">الحالة:</span>{' '}
-                      {getStatusBadge(selectedOrder.driverStatus || 'pending')}
+                      {getStatusBadge(selectedOrder.status)}
                     </div>
                   </div>
                 </div>
@@ -488,12 +487,26 @@ export const DriverDashboard: React.FC = () => {
                 <SelectValue placeholder="اختر الحالة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-                <SelectItem value="picked-up">تم الاستلام</SelectItem>
-                <SelectItem value="in-transit">في الطريق</SelectItem>
-                <SelectItem value="delivered">تم التوصيل</SelectItem>
+                {selectedOrder?.status === 'Processing' && (
+                  <SelectItem value="On the Way">في الطريق</SelectItem>
+                )}
+                {selectedOrder?.status === 'On the Way' && (
+                  <>
+                    <SelectItem value="Processing">قيد المعالجة</SelectItem>
+                    <SelectItem value="Delivered">تم التسليم</SelectItem>
+                  </>
+                )}
+                {selectedOrder?.status === 'Processing' && (
+                  <SelectItem value="Delivered">تم التسليم</SelectItem>
+                )}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              {selectedOrder?.status === 'Processing' && 'يمكنك نقل الطلب إلى "في الطريق" أو "تم التسليم"'}
+              {selectedOrder?.status === 'On the Way' && 'يمكنك إرجاع الطلب إلى "قيد المعالجة" أو إتمام "التسليم"'}
+              {selectedOrder?.status === 'Delivered' && 'الطلب تم تسليمه بالفعل'}
+            </p>
+          
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>

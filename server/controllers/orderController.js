@@ -241,12 +241,19 @@ exports.searchOrders = async (req, res) => {
         changedAt: new Date()
       };
 
+      // If reverting to Pending, remove assigned driver
+      const updateData = { 
+        status: status,
+        $push: { stateHistory: stateHistoryEntry }
+      };
+      
+      if (status === 'Pending' && currentState === 'Processing') {
+        updateData.assignedDriver = null; // Remove driver assignment
+      }
+
       const updatedOrder = await Order.findByIdAndUpdate(
         id,
-        { 
-          status: status,
-          $push: { stateHistory: stateHistoryEntry }
-        }, 
+        updateData, 
         { new: true, runValidators: true }
       ).populate('stateHistory.changedBy', 'fullName userType email');
 
@@ -280,7 +287,7 @@ exports.searchOrders = async (req, res) => {
       },
       employee: {
         'Pending': ['Processing', 'Cancelled'],
-        'Processing': ['Cancelled'],
+        'Processing': ['Pending', 'Cancelled'],
         'On the Way': [],
         'Delivered': [],
         'Cancelled': []
@@ -294,8 +301,8 @@ exports.searchOrders = async (req, res) => {
       },
       courier: {
         'Pending': [],
-        'Processing': ['On the Way'],
-        'On the Way': ['Delivered'],
+        'Processing': ['On the Way', 'Delivered'],
+        'On the Way': ['Processing', 'Delivered'],
         'Delivered': [], // CRITICAL: Cannot revert delivered
         'Cancelled': []
       }
@@ -309,15 +316,15 @@ exports.searchOrders = async (req, res) => {
       switch (userRole) {
         case 'employee':
           if (currentState === 'Pending') {
-            errorMessage = "Employee can only move orders from Pending to Processing or cancel them.";
+            errorMessage = "الموظف يمكنه فقط نقل الطلبات من قيد الانتظار إلى قيد المعالجة أو إلغائها";
           } else if (currentState === 'Processing') {
-            errorMessage = "Employee can only cancel orders that haven't been shipped yet.";
+            errorMessage = "الموظف يمكنه إرجاع الطلب إلى قيد الانتظار أو إلغائه فقط";
           } else if (currentState === 'Delivered') {
-            errorMessage = "Employee cannot modify delivered orders. Contact admin for changes.";
+            errorMessage = "الموظف لا يمكنه تعديل الطلبات المسلمة. اتصل بالمدير للتغييرات";
           } else if (currentState === 'On the Way') {
-            errorMessage = "Employee cannot modify orders that are out for delivery.";
+            errorMessage = "الموظف لا يمكنه تعديل الطلبات التي في الطريق";
           } else {
-            errorMessage = "Employee cannot undo cancelled orders.";
+            errorMessage = "الموظف لا يمكنه التراجع عن الطلبات الملغاة";
           }
           break;
           

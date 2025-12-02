@@ -61,7 +61,7 @@ const STATE_TRANSITION_RULES: Record<UserRole, Record<OrderState, OrderState[]>>
   },
   employee: {
     'Pending': ['Processing', 'Cancelled'], // Can start processing or cancel
-    'Processing': ['Cancelled'], // Can cancel if not shipped yet
+    'Processing': ['Pending', 'Cancelled'], // Can revert to pending or cancel if not shipped yet
     'On the Way': [], // Cannot modify once with delivery agent
     'Delivered': [], // Cannot modify delivered orders
     'Cancelled': [] // Cannot undo cancelled
@@ -75,8 +75,8 @@ const STATE_TRANSITION_RULES: Record<UserRole, Record<OrderState, OrderState[]>>
   },
   courier: {
     'Pending': [], // Cannot touch pending orders
-    'Processing': ['On the Way'], // Can pick up for delivery
-    'On the Way': ['Delivered'], // Can complete delivery
+    'Processing': ['On the Way', 'Delivered'], // Can pick up for delivery or mark as delivered directly
+    'On the Way': ['Processing', 'Delivered'], // Can revert to processing or complete delivery
     'Delivered': [], // CRITICAL: Cannot revert delivered
     'Cancelled': [] // Cannot work on cancelled orders
   }

@@ -26,7 +26,7 @@ const validateStateChange = (userRole, currentState, newState) => {
     },
     employee: {
       'Pending': ['Processing', 'Cancelled'],
-      'Processing': ['Cancelled'],
+      'Processing': ['Pending', 'Cancelled'],
       'On the Way': [],
       'Delivered': [],
       'Cancelled': []
@@ -40,8 +40,8 @@ const validateStateChange = (userRole, currentState, newState) => {
     },
     courier: {
       'Pending': [],
-      'Processing': ['On the Way'],
-      'On the Way': ['Delivered'],
+      'Processing': ['On the Way', 'Delivered'],
+      'On the Way': ['Processing', 'Delivered'],
       'Delivered': [],
       'Cancelled': []
     }
@@ -55,11 +55,11 @@ const validateStateChange = (userRole, currentState, newState) => {
     switch (userRole) {
       case 'employee':
         if (currentState === 'Pending') {
-          errorMessage = "Employee can only move orders from Pending to Processing or cancel them.";
+          errorMessage = "الموظف يمكنه فقط نقل الطلبات من قيد الانتظار إلى قيد المعالجة أو إلغائها";
         } else if (currentState === 'Processing') {
-          errorMessage = "Employee can only cancel orders that haven't been shipped yet.";
+          errorMessage = "الموظف يمكنه إرجاع الطلب إلى قيد الانتظار أو إلغائه فقط";
         } else {
-          errorMessage = "Employee cannot modify orders in this state.";
+          errorMessage = "الموظف لا يمكنه تعديل الطلبات في هذه الحالة";
         }
         break;
         
@@ -219,7 +219,7 @@ router.post(
 
 router.delete(
   "/:id",
-  restrictTo("employee"), 
+  restrictTo("admin"), 
   deleteOrder
 );
 
