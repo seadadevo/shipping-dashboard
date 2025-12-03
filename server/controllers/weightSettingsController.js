@@ -15,7 +15,7 @@ exports.getWeightSettings = async (req, res) => {
         res.status(200).json(settings);
     } catch (error) {
         console.error("Internal Server Error in GET:", error); 
-        res.status(500).json({ message: 'Error retrieving weight settings.', error: error.message });
+        res.status(500).json({ message: 'خطأ في جلب إعدادات الوزن', error: error.message });
     }
 };
 
@@ -40,7 +40,7 @@ exports.updateWeightSettings = async (req, res) => {
     } catch (error) {
         console.error("Validation Error in PUT:", error);
         res.status(400).json({ 
-            message: 'Validation failed or data is invalid.', 
+            message: 'فشل التحقق من البيانات أو البيانات غير صحيحة', 
             error: error.message 
         });
     }

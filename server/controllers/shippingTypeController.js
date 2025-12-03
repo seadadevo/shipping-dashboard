@@ -14,9 +14,9 @@ exports.addShippingType = async (req, res) => {
         
     } catch (error) {
         if (error.code === 11000) {
-            return res.status(400).json({ message: 'Shipping type with this name already exists' });
+            return res.status(400).json({ message: 'نوع الشحن بهذا الاسم موجود بالفعل' });
         }
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'خطأ في الخادم', error: error.message });
     }
 };
 
@@ -38,7 +38,7 @@ exports.updateShippingType = async (req, res) => {
         const { name, adjustmentAmount, description } = req.body;
         
         if (!name || adjustmentAmount === undefined) {
-            return res.status(400).json({ message: 'Name and adjustment amount are required' });
+            return res.status(400).json({ message: 'الاسم وقيمة التعديل مطلوبان' });
         }
 
         const updatedType = await ShippingType.findByIdAndUpdate(
@@ -48,15 +48,15 @@ exports.updateShippingType = async (req, res) => {
         );
         
         if (!updatedType) {
-            return res.status(404).json({ message: 'Shipping type not found' });
+            return res.status(404).json({ message: 'نوع الشحن غير موجود' });
         }
         res.status(200).json({ status: 'success', data: updatedType });
         
     } catch (error) {
         if (error.code === 11000) {
-            return res.status(400).json({ message: 'Another shipping type with this name already exists' });
+            return res.status(400).json({ message: 'نوع شحن آخر بهذا الاسم موجود بالفعل' });
         }
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({ message: 'خطأ في الخادم', error: error.message });
     }
 };
 
@@ -67,7 +67,7 @@ exports.toggleShippingTypeStatus = async (req, res) => {
         const type = await ShippingType.findById(id);
 
         if (!type) {
-            return res.status(404).json({ message: "Shipping type not found" });
+            return res.status(404).json({ message: "نوع الشحن غير موجود" });
         }
 
         type.isActive = !type.isActive;
@@ -75,11 +75,11 @@ exports.toggleShippingTypeStatus = async (req, res) => {
 
         res.status(200).json({
             status: "success",
-            message: `Shipping type status set to ${type.isActive ? 'active' : 'inactive'}`,
+            message: `تم ${type.isActive ? 'تفعيل' : 'إلغاء تفعيل'} نوع الشحن`,
             data: type,
         });
     } catch (error) {
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ message: "خطأ في الخادم" });
     }
 };
 
@@ -90,10 +90,10 @@ exports.deleteShippingType = async (req, res) => {
         const deletedType = await ShippingType.findByIdAndDelete(id);
 
         if (!deletedType) {
-            return res.status(404).json({ message: "Shipping type not found" });
+            return res.status(404).json({ message: "نوع الشحن غير موجود" });
         }
-        res.status(200).json({ status: "success", message: "Shipping type deleted successfully" });
+        res.status(200).json({ status: "success", message: "تم حذف نوع الشحن بنجاح" });
     } catch (error) {
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ message: "خطأ في الخادم" });
     }
 };

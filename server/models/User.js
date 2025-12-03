@@ -39,6 +39,21 @@ const userSchema = new mongoose.Schema({
 			return this.userType === "merchant";
 		},
 	},
+	// Driver-specific fields
+	assignedCities: {
+		type: [{
+			governorate: String,
+			city: String
+		}],
+		default: [],
+		required: function() {
+			return this.userType === "courier";
+		}
+	},
+	isAvailable: {
+		type: Boolean,
+		default: true
+	}
 });
 
 // Hash password before saving

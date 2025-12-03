@@ -18,10 +18,13 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import {useEffect, useMemo, useState} from "react";
+import { useNavigate } from 'react-router-dom';
 import type {Order, User} from "../../types";
 import api from "../../lib/api.ts";
 
 export function EmployeeDashboard() {
+    const navigate = useNavigate();
+    
     // get day of last 7 days
     function getDayOfLast7Days(dateString: string): boolean {
         const date = new Date(dateString);
@@ -87,7 +90,7 @@ export function EmployeeDashboard() {
         let delivered = 0;
         let processing = 0;
         let pending = 0;
-        let shipped = 0;
+        let onTheWay = 0;
         let cancelled = 0;
         let unreachable = 0;
         let postponed = 0;
@@ -100,7 +103,7 @@ export function EmployeeDashboard() {
             if (status === "delivered") delivered++;
             else if (status === "processing") processing++;
             else if (status === "pending") pending++;
-            else if (status === "shipped") shipped++;
+            else if (status === "on the way") onTheWay++;
             else if (status === "cancelled") cancelled++;
             else if (status === "unreachable") unreachable++;
             else if (status === "postponed") postponed++;
@@ -133,9 +136,17 @@ export function EmployeeDashboard() {
                 iconColor: 'text-yellow-600'
             },
             {
-                id: 'delivered_to_courier',
-                name: 'تم التسليم للمندوب',
-                count: shipped,
+                id: 'processing',
+                name: 'قيد المعالجة',
+                count: processing,
+                icon: Package,
+                color: 'bg-blue-100 text-blue-800',
+                iconColor: 'text-blue-600'
+            },
+            {
+                id: 'on_the_way',
+                name: 'في الطريق',
+                count: onTheWay,
                 icon: Truck,
                 color: 'bg-purple-100 text-purple-800',
                 iconColor: 'text-purple-600'
@@ -358,8 +369,8 @@ export function EmployeeDashboard() {
                             ? getOrderStatusColor("تم التسليم")
                             : order.status.toLowerCase() === "pending"
                                 ? getOrderStatusColor("قيد الانتظار")
-                                : order.status.toLowerCase() === "shipped"
-                                    ?getOrderStatusColor("تم التسليم للمندوب")
+                                : order.status.toLowerCase() === "on the way"
+                                    ?getOrderStatusColor("في الطريق")
                                     :getOrderStatusColor("طلب جديد")
                     }>
                         {
@@ -367,8 +378,8 @@ export function EmployeeDashboard() {
                                 ? "تم التسليم"
                                 : order.status.toLowerCase() === "pending"
                                     ? "قيد الانتظار"
-                                    : order.status.toLowerCase() === "shipped"
-                                        ?"تم التسليم للمندوب"
+                                    : order.status.toLowerCase() === "on the way"
+                                        ?"في الطريق"
                                         :"طلب جديد"
                         }
                     </Badge>
@@ -394,32 +405,38 @@ export function EmployeeDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
-            <CardTitle className="text-blue-800">معالجة الطلبات الجديدة</CardTitle>
+            <CardTitle className="text-blue-800">معالجة الطلبات قيد المعالجة</CardTitle>
             <CardDescription className="text-blue-700">
-              ابدأ بمعالجة الطلبات الجديدة التي تحتاج تأكيد
+              متابعة الطلبات التي قيد المعالجة حالياً
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700">
+            <Button 
+              size="lg" 
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              onClick={() => navigate('/order-management?status=Processing')}
+            >
               <Package className="h-5 w-5 mr-2" />
-              معالجة {orderStatuses.find(s => s.id === 'new')?.count} طلب جديد
+              معالجة {orderStatuses.find(s => s.id === 'processing')?.count || 0} طلب
             </Button>
           </CardContent>
         </Card>
 
         <Card className="border-orange-200 bg-orange-50">
           <CardHeader>
-            <CardTitle className="text-orange-800">متابعة الطلبات المعلقة</CardTitle>
+            <CardTitle className="text-orange-800">الطلبات قيد الانتظار</CardTitle>
             <CardDescription className="text-orange-700">
-              مراجعة الطلبات التي تحتاج متابعة خاصة
+              مراجعة الطلبات التي في انتظار المعالجة
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button size="lg" className="w-full bg-orange-600 hover:bg-orange-700">
-              <AlertTriangle className="h-5 w-5 mr-2" />
-              متابعة {orderStatuses.filter(s => 
-                ['unreachable', 'postponed', 'partial_delivered'].includes(s.id)
-              ).reduce((total, status) => total + status.count, 0)} طلب
+            <Button 
+              size="lg" 
+              className="w-full bg-orange-600 hover:bg-orange-700"
+              onClick={() => navigate('/order-management?status=Pending')}
+            >
+              <Clock className="h-5 w-5 mr-2" />
+              متابعة {orderStatuses.find(s => s.id === 'pending')?.count || 0} طلب
             </Button>
           </CardContent>
         </Card>
