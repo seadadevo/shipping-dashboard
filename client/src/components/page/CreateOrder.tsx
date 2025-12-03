@@ -115,6 +115,8 @@ export function CreateOrder() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', quantity: 1, weight: 0 });
+  const [calculatedCost, setCalculatedCost] = useState<number | null>(null);
+  const [isCalculatingCost, setIsCalculatingCost] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -178,6 +180,31 @@ export function CreateOrder() {
 
   const calculateTotalWeight = () => products.reduce((t, p) => t + (p.quantity * p.weight), 0);
 
+  const calculateOrderCost = async () => {
+    const totalWeight = calculateTotalWeight();
+    if (!formData.governorateName || !formData.cityName || !formData.shippingType || totalWeight <= 0) {
+      setCalculatedCost(null);
+      return;
+    }
+
+    setIsCalculatingCost(true);
+    try {
+      const response = await api.post('/api/orders/calculate-cost', {
+        governorate: formData.governorateName,
+        city: formData.cityName,
+        shippingType: formData.shippingType,
+        totalWeight,
+        isVillageDelivery: formData.villageDelivery
+      });
+      setCalculatedCost(response.data.data.calculatedCost);
+    } catch (error) {
+      console.error('Failed to calculate cost:', error);
+      setCalculatedCost(null);
+    } finally {
+      setIsCalculatingCost(false);
+    }
+  };
+
   const handleAddProduct = () => {
     if (newProduct.name && newProduct.quantity > 0 && newProduct.weight > 0) {
       const product: Product = {
@@ -199,6 +226,13 @@ export function CreateOrder() {
     const newWeight = updated.reduce((t, p) => t + (p.quantity * p.weight), 0);
     handleInputChange('totalWeight', newWeight.toString());
   };
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      calculateOrderCost();
+    }, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.governorateName, formData.cityName, formData.shippingType, formData.villageDelivery, products]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -505,7 +539,7 @@ export function CreateOrder() {
             <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mx-2 text-green-600'/> 4. تفاصيل الشحن والدفع</CardTitle>
         </CardHeader>
         <CardContent className='space-y-5'>
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2">
                 <div className='space-y-2'>
                     <Label className="text-base">نوع الشحن <span className="text-red-500">*</span></Label>
                     <Select value={formData.shippingType} onValueChange={(v) => handleInputChange('shippingType', v)} dir="rtl">
@@ -533,25 +567,14 @@ export function CreateOrder() {
                 </div>
             </div>
             
-            <div className="grid gap-6 md:grid-cols-2">
-                <div className='space-y-2'>
-                    <Label className="flex items-center text-base"><Weight className="h-4 w-4 mr-1"/> إجمالي الوزن (كجم)</Label>
-                    <Input 
-                        value={formData.totalWeight} 
-                        readOnly 
-                        className='bg-gray-100 text-right font-bold text-lg border-gray-300 h-12' 
-                    />
-                    <p className="text-xs text-muted-foreground">يتم حسابه تلقائياً بناءً على المنتجات المضافة.</p>
-                </div>
-                <div className='space-y-2'>
-                    <Label className="text-base">ملاحظات إضافية</Label>
-                    <Textarea 
-                        value={formData.notes} 
-                        onChange={(e)=>handleInputChange('notes', e.target.value)} 
-                        className='text-right min-h-[50px]'
-                        placeholder="أي تعليمات خاصة للتوصيل، مثال: الاتصال قبل الوصول بساعة..."
-                    />
-                </div>
+            <div className='space-y-2'>
+                <Label className="text-base">ملاحظات إضافية</Label>
+                <Textarea 
+                    value={formData.notes} 
+                    onChange={(e)=>handleInputChange('notes', e.target.value)} 
+                    className='text-right min-h-[80px]'
+                    placeholder="أي تعليمات خاصة للتوصيل، مثال: الاتصال قبل الوصول بساعة..."
+                />
             </div>
         </CardContent>
       </Card>
@@ -645,6 +668,156 @@ export function CreateOrder() {
                     </div>
                     <p className="font-medium">لا يوجد منتجات مضافة بعد</p>
                     <p className="text-sm mt-1 text-gray-500">اضغط على زر "إضافة منتج" بالأعلى للبدء</p>
+                </div>
+            )}
+        </CardContent>
+      </Card>
+
+      {/* 6. ملخص التكلفة والوزن */}
+      <Card className="shadow-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white pb-5">
+            <CardTitle className='flex items-center text-2xl font-bold justify-center'>
+                <Weight className='h-7 w-7 mx-2 animate-pulse'/> ملخص الشحنة والتكلفة
+            </CardTitle>
+            <CardDescription className="text-purple-100 text-center text-base">الحساب التلقائي المباشر</CardDescription>
+        </CardHeader>
+        <CardContent className='space-y-6 pt-6'>
+            <div className="grid gap-6 md:grid-cols-2">
+                {/* إجمالي الوزن */}
+                <div className="relative bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-2xl shadow-xl border-2 border-orange-300 hover:scale-105 hover:shadow-2xl transition-all duration-300">
+                    <div className="absolute top-2 left-2">
+                        <div className="bg-orange-200 rounded-full p-1.5">
+                            <Package className="h-4 w-4 text-orange-700" />
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-center justify-center space-y-3 mt-2">
+                        <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-4 rounded-2xl shadow-lg">
+                            <Weight className="h-8 w-8 text-white" />
+                        </div>
+                        <span className="text-sm font-bold text-orange-800 uppercase tracking-wide">إجمالي الوزن</span>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-5xl font-black text-orange-600 drop-shadow-md">
+                                {formData.totalWeight || '0'}
+                            </span>
+                            <span className="text-2xl font-bold text-orange-500">كجم</span>
+                        </div>
+                        <div className="bg-orange-100 px-3 py-1 rounded-full">
+                            <p className="text-xs text-orange-700 font-medium">✓ محسوب تلقائياً</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* التكلفة المحسوبة */}
+                <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl shadow-xl border-2 border-green-300 hover:scale-105 hover:shadow-2xl transition-all duration-300">
+                    <div className="absolute top-2 left-2">
+                        <div className="bg-green-200 rounded-full p-1.5">
+                            <CheckCircle className="h-4 w-4 text-green-700" />
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-center justify-center space-y-3 mt-2">
+                        <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-2xl shadow-lg">
+                            <DollarSign className="h-8 w-8 text-white" />
+                        </div>
+                        <span className="text-sm font-bold text-green-800 uppercase tracking-wide">التكلفة الإجمالية</span>
+                        {isCalculatingCost ? (
+                            <div className="flex flex-col items-center gap-2">
+                                <Loader2 className="h-10 w-10 animate-spin text-green-600" />
+                                <span className="text-sm text-green-600 font-medium">جاري الحساب...</span>
+                            </div>
+                        ) : calculatedCost !== null ? (
+                            <>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-5xl font-black text-green-600 drop-shadow-md">
+                                        {calculatedCost.toFixed(2)}
+                                    </span>
+                                    <span className="text-2xl font-bold text-green-500">ج.م</span>
+                                </div>
+                                <div className="bg-green-100 px-3 py-1 rounded-full">
+                                    <p className="text-xs text-green-700 font-medium">✓ تم الحساب</p>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-black text-gray-400">---</span>
+                                </div>
+                                <div className="bg-gray-100 px-3 py-1 rounded-full">
+                                    <p className="text-xs text-gray-600 font-medium">أكمل البيانات</p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* شريط التقدم البصري */}
+            <div className="bg-white rounded-xl p-5 shadow-md border border-indigo-100">
+                <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-bold text-gray-700">اكتمال البيانات</span>
+                    <span className="text-xs font-semibold text-indigo-600">
+                        {calculatedCost !== null ? '100%' : formData.governorateName && formData.cityName && formData.shippingType ? '75%' : products.length > 0 ? '50%' : '25%'}
+                    </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                        className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 h-3 rounded-full transition-all duration-500 ease-out"
+                        style={{ 
+                            width: calculatedCost !== null ? '100%' : formData.governorateName && formData.cityName && formData.shippingType ? '75%' : products.length > 0 ? '50%' : '25%'
+                        }}
+                    />
+                </div>
+            </div>
+
+            {/* تفاصيل الحساب */}
+            {calculatedCost !== null && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-5">
+                    <div className="flex items-start gap-3">
+                        <div className="bg-indigo-100 p-2 rounded-lg">
+                            <CheckCircleIcon className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="font-bold text-indigo-900 mb-2 text-lg">التكلفة محسوبة بناءً على:</p>
+                            <ul className="text-sm text-indigo-800 space-y-1.5">
+                                <li className="flex items-center gap-2">
+                                    <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
+                                    <span>📍 المحافظة: <strong>{formData.governorateName}</strong></span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
+                                    <span>🏙️ المدينة: <strong>{formData.cityName}</strong></span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
+                                    <span>📦 نوع الشحن: <strong>{formData.shippingType}</strong></span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
+                                    <span>⚖️ الوزن الإجمالي: <strong>{formData.totalWeight} كجم</strong></span>
+                                </li>
+                                {formData.villageDelivery && (
+                                    <li className="flex items-center gap-2">
+                                        <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
+                                        <span>🏘️ توصيل قرية: <strong>نعم (رسوم إضافية)</strong></span>
+                                    </li>
+                                )}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ملاحظة تنبيهية */}
+            {!calculatedCost && (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-start gap-3 shadow-md">
+                    <AlertCircle className="h-6 w-6 text-amber-600 mt-0.5 flex-shrink-0 animate-pulse" />
+                    <div className="text-sm text-amber-900">
+                        <p className="font-bold mb-1.5 text-base">💡 لحساب التكلفة تلقائياً:</p>
+                        <ul className="space-y-1 list-disc list-inside">
+                            <li>أضف منتج واحد على الأقل</li>
+                            <li>اختر المحافظة والمدينة</li>
+                            <li>حدد نوع الشحن</li>
+                        </ul>
+                    </div>
                 </div>
             )}
         </CardContent>
