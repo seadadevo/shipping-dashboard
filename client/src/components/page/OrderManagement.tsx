@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -9,6 +10,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
+import { Label } from "../ui/label";
 import {
   Table,
   TableBody,
@@ -48,6 +50,8 @@ import {
   MoreHorizontal,
   Eye,
   Trash2,
+  Store,
+  DollarSign,
 } from "lucide-react";
 import api from "../../lib/api";
 import { Pagination } from "../ui/pagination";
@@ -68,11 +72,15 @@ import {
 } from "../ui/dropdown-menu";
 
 import { useAuth } from "../../hooks/useAuth";
+import { toast } from "sonner";
+import { orderStateService } from "../../lib/orderStateService";
+import { getStatusDropdownOptions, isStatusSelectDisabled, getDisabledSelectTooltip } from "../../lib/orderStateManager";
+import type { OrderState, UserRole } from "../../types";
 
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
-  Shipped: "في الطريق",
+  "On the Way": "في الطريق",
   Delivered: "تم التسليم",
   Cancelled: "ملغي",
   all: "جميع الحالات",
@@ -82,14 +90,19 @@ const statusOptions = [
   { value: "all", label: "جميع الحالات" },
   { value: "Pending", label: statusLabels.Pending },
   { value: "Processing", label: statusLabels.Processing },
-  { value: "Shipped", label: statusLabels.Shipped },
+  { value: "On the Way", label: statusLabels["On the Way"] },
   { value: "Delivered", label: statusLabels.Delivered },
   { value: "Cancelled", label: statusLabels.Cancelled },
 ];
 
 export function OrderManagement() {
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(() => {
+    // Read initial status from URL query parameter
+    const statusParam = searchParams.get('status');
+    return statusParam || "all";
+  });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -99,19 +112,62 @@ export function OrderManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [orderStats, setOrderStats] = useState({
+    total: 0,
+    pending: 0,
+    processing: 0,
+    delivered: 0,
+    cancelled: 0
+  });
 
   const { user } = useAuth();
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
+  
+  // Driver assignment states
+  const [isDriverDialogOpen, setIsDriverDialogOpen] = useState(false);
+  const [selectedOrderForDriver, setSelectedOrderForDriver] = useState<Order | null>(null);
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<string>('');
+  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+  const [isAssigningDriver, setIsAssigningDriver] = useState(false);
+
+  // Fetch all orders stats (without filters)
+  const fetchOrderStats = async () => {
+    try {
+      // Use different endpoint based on user role
+      const endpoint = user?.userType === 'merchant' ? '/api/orders/my-orders' : '/api/orders';
+      
+      const response = await api.get<GetOrdersResponse>(endpoint, {
+        params: {
+          status: "all",
+          page: 1,
+          limit: 10000, // Get all orders for stats
+        },
+      });
+      const orders = response.data.data.orders;
+      setOrderStats({
+        total: orders.length,
+        pending: orders.filter((o) => o.status === "Pending").length,
+        processing: orders.filter((o) => o.status === "Processing").length,
+        delivered: orders.filter((o) => o.status === "Delivered").length,
+        cancelled: orders.filter((o) => o.status === "Cancelled").length,
+      });
+    } catch (err) {
+      console.error("Failed to fetch order stats:", err);
+    }
+  };
 
   // --- (🚀 تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
   const fetchOrders = async (page = currentPage, limit = itemsPerPage) => {
     setLoading(true);
     setError(null);
     try {
-      // (⭐ تعديل): قمنا بإضافة params لإرسال الفلاتر للباك إند
-      const response = await api.get<GetOrdersResponse>("/api/orders", {
+      // Use different endpoint based on user role
+      const endpoint = user?.userType === 'merchant' ? '/api/orders/my-orders' : '/api/orders';
+      
+      const response = await api.get<GetOrdersResponse>(endpoint, {
         params: {
           status: statusFilter,
           q: searchQuery,
@@ -131,6 +187,11 @@ export function OrderManagement() {
       setLoading(false);
     }
   };
+
+  // Fetch stats once on mount
+  useEffect(() => {
+    fetchOrderStats();
+  }, []);
 
   // --- (🚀 تعديل: useEffect الآن يراقب الفلاتر) ---
   // (⭐ تعديل): هذا الـ useEffect سيقوم بإعادة جلب البيانات عند تغيير البحث أو الحالة
@@ -187,18 +248,7 @@ export function OrderManagement() {
 
   // (ملحوظة): سنستخدم allOrders مباشرة في الجدول
 
-  // --- (تعديل: إحصائيات الطلبات) ---
-  // (⭐ تعديل): هذه الإحصائيات يجب أن تُحسب من القائمة القادمة من الباك إند
-  // إذا أردت إحصائيات *للنظام كله*، ستحتاج لـ endpoint جديد
-  // هذا الكود سيحسب الإحصائيات من القائمة المفلترة (مثال: "يوجد 5 طلبات قيد الانتظار تطابق بحثك")
-  const statusCounts = {
-    Pending: allOrders.filter((o) => o.status === "Pending").length,
-    Processing: allOrders.filter((o) => o.status === "Processing").length,
-    Shipped: allOrders.filter((o) => o.status === "Shipped").length,
-    Delivered: allOrders.filter((o) => o.status === "Delivered").length,
-    Cancelled: allOrders.filter((o) => o.status === "Cancelled").length,
-  };
-  // (ملحوظة: لحساب إحصائيات *كل* الطلبات بغض النظر عن الفلتر، ستحتاج لجلبها بـ API call منفصل)
+
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -217,7 +267,8 @@ export function OrderManagement() {
     try {
       await api.delete(`/api/orders/${orderToDelete._id}`);
       setOrderToDelete(null);
-      fetchOrders(); // (⭐ تعديل): نستخدم fetchOrders المحدثة
+      fetchOrders();
+      fetchOrderStats(); // Update stats after deletion
     } catch (err) {
       const error = err as ApiError;
       setError(error.response?.data?.message || "فشل في حذف الطلب.");
@@ -227,14 +278,117 @@ export function OrderManagement() {
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
+    const order = allOrders.find(o => o._id === orderId);
+    if (!order) {
+      toast.error('الطلب غير موجود');
+      return;
+    }
+
+    // If changing to Processing, show driver selection dialog
+    if (newStatus === 'Processing' && (user?.userType === 'admin' || user?.userType === 'employee')) {
+      setSelectedOrderForDriver(order);
+      setIsDriverDialogOpen(true);
+      // Fetch available drivers for this order's city
+      await fetchAvailableDrivers(order.governorate, order.city);
+      return;
+    }
+
+    // For other status changes, proceed normally
     setIsUpdatingStatus(orderId);
     try {
+      const previousStatus = order.status;
+      
       await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
-      fetchOrders(); // (⭐ تعديل): نستخدم fetchOrders المحدثة
+      
+      // Generate and show notification
+      const notification = orderStateService.generateNotificationMessage(
+        order,
+        previousStatus as OrderState,
+        newStatus as OrderState,
+        user?.userType as UserRole
+      );
+      
+      if (notification.type === 'success') {
+        toast.success(notification.title, {
+          description: notification.description
+        });
+      } else if (notification.type === 'warning') {
+        toast.warning(notification.title, {
+          description: notification.description
+        });
+      } else {
+        toast.error(notification.title, {
+          description: notification.description
+        });
+      }
+      
+      fetchOrders();
+      fetchOrderStats(); // Update stats after status change
     } catch (err) {
       console.error("Failed to update status", err);
+      toast.error('فشل تحديث حالة الطلب', {
+        description: 'حدث خطأ أثناء تحديث حالة الطلب'
+      });
     } finally {
       setIsUpdatingStatus(null);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchOrders();
+    fetchOrderStats();
+  };
+
+  // Fetch available drivers for a specific city
+  const fetchAvailableDrivers = async (governorate: string, city: string) => {
+    setIsLoadingDrivers(true);
+    try {
+      const response = await api.get(`/api/drivers/by-city?governorate=${governorate}&city=${city}`);
+      setAvailableDrivers(response.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch drivers:', err);
+      toast.error('فشل في جلب السائقين المتاحين');
+      setAvailableDrivers([]);
+    } finally {
+      setIsLoadingDrivers(false);
+    }
+  };
+
+  // Assign driver and update status to Processing
+  const handleAssignDriver = async () => {
+    if (!selectedOrderForDriver || !selectedDriver) {
+      toast.error('يرجى اختيار سائق');
+      return;
+    }
+
+    setIsAssigningDriver(true);
+    try {
+      const previousStatus = selectedOrderForDriver.status;
+      
+      // Update order with driver and status
+      await api.patch(`/api/orders/${selectedOrderForDriver._id}/assign-driver`, {
+        driverId: selectedDriver,
+        status: 'Processing'
+      });
+      
+      toast.success('تم تعيين السائق بنجاح', {
+        description: `تم تحويل الطلب إلى قيد المعالجة وتعيين السائق`
+      });
+      
+      // Close dialog and refresh
+      setIsDriverDialogOpen(false);
+      setSelectedOrderForDriver(null);
+      setSelectedDriver('');
+      setAvailableDrivers([]);
+      
+      fetchOrders();
+      fetchOrderStats();
+    } catch (err: any) {
+      console.error('Failed to assign driver:', err);
+      const errorMsg = err.response?.data?.message || 'فشل تعيين السائق';
+      toast.error(errorMsg);
+    } finally {
+      setIsAssigningDriver(false);
     }
   };
 
@@ -252,8 +406,8 @@ export function OrderManagement() {
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          {/* (⭐ تعديل): زر التحديث الآن يستدعي fetchOrders المحدثة */}
-          <Button variant="outline" onClick={fetchOrders} disabled={loading}>
+          {/* زر التحديث يحدث الطلبات والإحصائيات */}
+          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -264,24 +418,23 @@ export function OrderManagement() {
         </div>
       </div>
 
-      {/* ... (الإحصائيات السريعة) ... */}
+      {/* الإحصائيات السريعة */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">إجمالي الطلبات (المطابقة)</CardTitle>
+            <CardTitle className="text-sm">إجمالي الطلبات</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{allOrders.length}</div>
+            <div className="text-2xl font-bold">{orderStats.total}</div>
           </CardContent>
         </Card>
-        {/* ... (باقي كروت الإحصائيات) ... */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">قيد الانتظار</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {statusCounts["Pending"]}
+              {orderStats.pending}
             </div>
           </CardContent>
         </Card>
@@ -291,7 +444,7 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {statusCounts["Processing"]}
+              {orderStats.processing}
             </div>
           </CardContent>
         </Card>
@@ -301,7 +454,7 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {statusCounts["Delivered"]}
+              {orderStats.delivered}
             </div>
           </CardContent>
         </Card>
@@ -311,7 +464,7 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {statusCounts["Cancelled"]}
+              {orderStats.cancelled}
             </div>
           </CardContent>
         </Card>
@@ -461,43 +614,80 @@ export function OrderManagement() {
                               عرض التفاصيل
                             </DropdownMenuItem>
 
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger
+                            {/* إلغاء الطلب للتاجر */}
+                            {(() => {
+                              console.log('Debug:', {
+                                userType: user?.userType,
+                                orderStatus: order.status,
+                                showCancel: user?.userType === "merchant" && (order.status === "Pending" || order.status === "Processing")
+                              });
+                              return user?.userType === "merchant" && 
+                                     (order.status === "Pending" || order.status === "Processing");
+                            })() && (
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => handleStatusChange(order._id, "Cancelled")}
                                 disabled={isUpdatingStatus === order._id}
                               >
                                 {isUpdatingStatus === order._id ? (
                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 ) : (
-                                  <RefreshCw className="mr-2 h-4 w-4" />
+                                  <XCircle className="mr-2 h-4 w-4" />
                                 )}
-                                تغيير الحالة
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuPortal>
-                                <DropdownMenuSubContent className="bg-background" dir="rtl">
-                                  {statusOptions
-                                    .filter((s) => s.value !== "all")
-                                    .map((status) => (
-                                      <DropdownMenuItem
-                                        key={status.value}
-                                        onClick={() =>
-                                          handleStatusChange(
-                                            order._id,
-                                            status.value
-                                          )
-                                        }
-                                        disabled={
-                                          order.status === status.value ||
-                                          !!isUpdatingStatus
-                                        }
-                                      >
-                                        {status.label}
-                                      </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuSubContent>
-                              </DropdownMenuPortal>
-                            </DropdownMenuSub>
+                                إلغاء الطلب
+                              </DropdownMenuItem>
+                            )}
 
-                            {user?.userType === "employee" && (
+                            {/* تغيير الحالة للأدمن والموظف */}
+                            {user?.userType !== "merchant" && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger
+                                  disabled={
+                                    isUpdatingStatus === order._id ||
+                                    isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
+                                  }
+                                  title={
+                                    isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
+                                      ? getDisabledSelectTooltip(user?.userType as UserRole, order.status as OrderState)
+                                      : undefined
+                                  }
+                                >
+                                  {isUpdatingStatus === order._id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                  )}
+                                  تغيير الحالة
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                  <DropdownMenuSubContent className="bg-background" dir="rtl">
+                                    {getStatusDropdownOptions(
+                                      user?.userType as UserRole,
+                                      order.status as OrderState
+                                    ).map((status) => (
+                                        <DropdownMenuItem
+                                          key={status.value}
+                                          onClick={() =>
+                                            !status.disabled && handleStatusChange(
+                                              order._id,
+                                              status.value
+                                            )
+                                          }
+                                          disabled={
+                                            status.disabled ||
+                                            !!isUpdatingStatus
+                                          }
+                                          title={status.reason}
+                                        >
+                                          {status.label}
+                                        </DropdownMenuItem>
+                                      ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                              </DropdownMenuSub>
+                            )}
+
+                            {user?.userType === "admin" && (
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -560,197 +750,225 @@ export function OrderManagement() {
           </DialogHeader>
           
           {selectedOrder && (
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto p-2">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
               {/* معلومات أساسية */}
               <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center">
-                      <User className="h-5 w-5 mr-2" /> معلومات العميل
+                <Card className="border-blue-200">
+                  <CardHeader className="pb-3 bg-blue-50">
+                    <CardTitle className="text-sm flex items-center text-blue-800">
+                      <User className="h-4 w-4 ml-2" /> معلومات العميل
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>الاسم:</strong> {selectedOrder.customerName}
-                    </p>
-                    <p>
-                      <strong>الهاتف 1:</strong> {selectedOrder.customerPhone1}
-                    </p>
+                  <CardContent className="space-y-2 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الاسم</span>
+                      <span className="font-medium">{selectedOrder.customerName}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الهاتف 1</span>
+                      <span className="font-medium">{selectedOrder.customerPhone1}</span>
+                    </div>
                     {selectedOrder.customerPhone2 && (
-                      <p>
-                        <strong>الهاتف 2:</strong>{" "}
-                        {selectedOrder.customerPhone2}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">الهاتف 2</span>
+                        <span className="font-medium">{selectedOrder.customerPhone2}</span>
+                      </div>
                     )}
                     {selectedOrder.customerEmail && (
-                      <p>
-                        <strong>الإيميل:</strong> {selectedOrder.customerEmail}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">البريد الإلكتروني</span>
+                        <span className="font-medium text-sm">{selectedOrder.customerEmail}</span>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center">
-                      <MapPin className="h-5 w-5 mr-2" /> معلومات العنوان
+                <Card className="border-green-200">
+                  <CardHeader className="pb-3 bg-green-50">
+                    <CardTitle className="text-sm flex items-center text-green-800">
+                      <MapPin className="h-4 w-4 ml-2" /> معلومات العنوان
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>المحافظة:</strong> {selectedOrder.governorate}
-                    </p>
-                    <p>
-                      <strong>المدينة:</strong> {selectedOrder.city}
-                    </p>
-                    <p>
-                      <strong>الشارع:</strong> {selectedOrder.street}
-                    </p>
+                  <CardContent className="space-y-2 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">المحافظة</span>
+                      <span className="font-medium">{selectedOrder.governorate}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">المدينة</span>
+                      <span className="font-medium">{selectedOrder.city}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الشارع</span>
+                      <span className="font-medium">{selectedOrder.street}</span>
+                    </div>
                     {selectedOrder.village && (
-                      <p>
-                        <strong>القرية:</strong> {selectedOrder.village}
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">القرية</span>
+                        <span className="font-medium">{selectedOrder.village}</span>
+                      </div>
                     )}
                     {selectedOrder.isVillageDelivery && (
-                      <Badge variant="outline">توصيل لقرية</Badge>
+                      <Badge variant="outline" className="w-fit">توصيل لقرية</Badge>
                     )}
                   </CardContent>
                 </Card>
 
-                <Card className="border-blue-200">
-        <CardHeader className="pb-3 bg-blue-100/50 rounded-t-lg">
-          <CardTitle className="text-base flex items-center text-blue-800">
-             <User className="h-5 w-5 mr-2" /> 
+                <Card className="border-purple-200">
+        <CardHeader className="pb-3 bg-purple-50">
+          <CardTitle className="text-sm flex items-center text-purple-800">
+             <Store className="h-4 w-4 ml-2" /> 
              بيانات التاجر (المرسل)
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3 pt-4">
-          <div>
-             <p className="text-sm text-muted-foreground">اسم التاجر/الموظف</p>
-             <p className="font-medium">{selectedOrder.createdBy.fullName}</p>
-             <Badge variant="secondary" className="mt-1">{selectedOrder.createdBy.userType}</Badge>
-          </div>
-          
-          <div>
-             <p className="text-sm text-muted-foreground">البريد الإلكتروني</p>
-             <p className="font-medium">{selectedOrder.createdBy.email}</p>
-          </div>
-
-          <div>
-             <p className="text-sm text-muted-foreground">رقم الهاتف</p>
-             <p className="font-medium">{selectedOrder.createdBy.phone || "غير متوفر"}</p>
-          </div>
-
-          {/* عرض اسم المتجر لو كان تاجر */}
-          {selectedOrder.createdBy.storeName && (
-            <div>
-               <p className="text-sm text-muted-foreground">اسم المتجر</p>
-               <p className="font-medium">{selectedOrder.createdBy.storeName}</p>
+        <CardContent className="pt-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-1">
+               <span className="text-xs text-muted-foreground">اسم التاجر/الموظف</span>
+               <span className="font-medium">{selectedOrder.createdBy.fullName}</span>
+               <Badge variant="secondary" className="mt-1 w-fit">{selectedOrder.createdBy.userType}</Badge>
             </div>
-          )}
+            
+            <div className="flex flex-col gap-1">
+               <span className="text-xs text-muted-foreground">البريد الإلكتروني</span>
+               <span className="font-medium text-sm break-all">{selectedOrder.createdBy.email}</span>
+            </div>
+
+            <div className="flex flex-col gap-1">
+               <span className="text-xs text-muted-foreground">رقم الهاتف</span>
+               <span className="font-medium">{selectedOrder.createdBy.phone || "غير متوفر"}</span>
+            </div>
+
+            {/* عرض اسم المتجر لو كان تاجر */}
+            {selectedOrder.createdBy.storeName && (
+              <div className="flex flex-col gap-1">
+                 <span className="text-xs text-muted-foreground">اسم المتجر</span>
+                 <span className="font-medium">{selectedOrder.createdBy.storeName}</span>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
               </div>
 
               {/* تفاصيل الطلب */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">تفاصيل الشحن</CardTitle>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="border-orange-200">
+                  <CardHeader className="pb-3 bg-orange-50">
+                    <CardTitle className="text-sm flex items-center text-orange-800">
+                      <Package className="h-4 w-4 ml-2" />
+                      تفاصيل الشحن
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>نوع الطلب:</strong> {selectedOrder.orderType}
-                    </p>
-                    <p>
-                      <strong>نوع الشحن:</strong> {selectedOrder.shippingType}
-                    </p>
-                    <p>
-                      <strong>الفرع:</strong> {selectedOrder.branch}
-                    </p>
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">نوع الطلب</span>
+                      <span className="font-medium">{selectedOrder.orderType}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">نوع الشحن</span>
+                      <span className="font-medium">{selectedOrder.shippingType}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">الفرع</span>
+                      <span className="font-medium">{selectedOrder.branch}</span>
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">الدفع والوزن</CardTitle>
+                <Card className="border-teal-200">
+                  <CardHeader className="pb-3 bg-teal-50">
+                    <CardTitle className="text-sm flex items-center text-teal-800">
+                      <DollarSign className="h-4 w-4 ml-2" />
+                      الدفع والوزن
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p>
-                      <strong>نوع الدفع:</strong> {selectedOrder.paymentType}
-                    </p>
-                    <p>
-                      <strong>تكلفة الطلب:</strong>{" "}
-                      {selectedOrder.orderCost.toFixed(2)} جنيه
-                    </p>
-                    <p>
-                      <strong>إجمالي الوزن:</strong> {selectedOrder.totalWeight}{" "}
-                      كجم
-                    </p>
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">نوع الدفع</span>
+                      <span className="font-medium">{selectedOrder.paymentType}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">تكلفة الطلب</span>
+                      <span className="font-medium text-lg">{selectedOrder.orderCost.toFixed(2)} جنيه</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">إجمالي الوزن</span>
+                      <span className="font-medium">{selectedOrder.totalWeight} كجم</span>
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">الحالة</CardTitle>
+                <Card className="border-indigo-200">
+                  <CardHeader className="pb-3 bg-indigo-50">
+                    <CardTitle className="text-sm flex items-center text-indigo-800">
+                      <Clock className="h-4 w-4 ml-2" />
+                      الحالة والتتبع
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Badge
-                      className={`${getStatusColor(
-                        selectedOrder.status
-                      )} text-base p-2`}
-                    >
-                      {statusLabels[selectedOrder.status] ||
-                        selectedOrder.status}
-                    </Badge>
-                    <p>
-                      <strong>أنشئ بواسطة:</strong>{" "}
-                      {selectedOrder.createdBy.fullName}
-                    </p>
-                    <p>
-                      <strong>تاريخ الإنشاء:</strong>{" "}
-                      {new Date(selectedOrder.createdAt).toLocaleString(
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">حالة الطلب</span>
+                      <Badge
+                        className={`${getStatusColor(
+                          selectedOrder.status
+                        )} w-fit text-sm px-3 py-1`}
+                      >
+                        {statusLabels[selectedOrder.status] ||
+                          selectedOrder.status}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">أنشئ بواسطة</span>
+                      <span className="font-medium">{selectedOrder.createdBy.fullName}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">تاريخ الإنشاء</span>
+                      <span className="font-medium text-sm">{new Date(selectedOrder.createdAt).toLocaleString(
                         "ar-EG"
-                      )}
-                    </p>
+                      )}</span>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
 
               {/* المنتجات */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>
+              <Card className="border-slate-200">
+                <CardHeader className="bg-slate-50">
+                  <CardTitle className="text-sm flex items-center text-slate-800">
+                    <Package className="h-4 w-4 ml-2" />
                     المنتجات ({selectedOrder.products.length})
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">اسم المنتج</TableHead>
-                        <TableHead className="text-center">الكمية</TableHead>
-                        <TableHead className="text-center">
-                          الوزن (كجم)
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder.products.map((product) => (
-                        <TableRow key={product._id}>
-                          <TableCell className="font-medium">
-                            {product.productName}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {product.quantity}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {product.weight}
-                          </TableCell>
+                <CardContent className="pt-4">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="text-right font-semibold">اسم المنتج</TableHead>
+                          <TableHead className="text-center font-semibold">الكمية</TableHead>
+                          <TableHead className="text-center font-semibold">
+                            الوزن (كجم)
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedOrder.products.map((product) => (
+                          <TableRow key={product._id}>
+                            <TableCell className="font-medium">
+                              {product.productName}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {product.quantity}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {product.weight}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -794,6 +1012,107 @@ export function OrderManagement() {
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
               تأكيد الحذف
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- Driver Assignment Dialog --- */}
+      <Dialog open={isDriverDialogOpen} onOpenChange={setIsDriverDialogOpen}>
+        <DialogContent className="bg-blue-50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" />
+              تعيين سائق للطلب
+            </DialogTitle>
+            <DialogDescription>
+              اختر السائق المناسب للطلب #{selectedOrderForDriver?._id.slice(-8)}
+              <br />
+              <span className="text-sm font-medium">
+                {selectedOrderForDriver?.governorate} - {selectedOrderForDriver?.city}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {isLoadingDrivers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="mr-2">جاري تحميل السائقين...</span>
+              </div>
+            ) : availableDrivers.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="h-12 w-12 mx-auto text-yellow-500 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  لا يوجد سائقين متاحين لهذه المدينة
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  يرجى إضافة مدينة {selectedOrderForDriver?.city} إلى أحد السائقين
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-base">اختر السائق</Label>
+                  <Select value={selectedDriver} onValueChange={setSelectedDriver} dir="rtl">
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="اختر سائق من القائمة" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      {availableDrivers.map((driver) => (
+                        <SelectItem key={driver._id} value={driver._id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-medium">{driver.fullName}</span>
+                            <span className="text-sm text-muted-foreground mr-2">
+                              {driver.phoneNumber}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    متاح {availableDrivers.length} سائق لهذه المدينة
+                  </p>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                  <p className="text-sm text-yellow-800">
+                    <strong>ملاحظة:</strong> عند تعيين السائق، سيتم تحويل حالة الطلب إلى "قيد المعالجة" تلقائياً
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDriverDialogOpen(false);
+                setSelectedOrderForDriver(null);
+                setSelectedDriver('');
+                setAvailableDrivers([]);
+              }}
+              disabled={isAssigningDriver}
+            >
+              إلغاء
+            </Button>
+            <Button
+              onClick={handleAssignDriver}
+              disabled={isAssigningDriver || !selectedDriver || availableDrivers.length === 0}
+            >
+              {isAssigningDriver ? (
+                <>
+                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                  جاري التعيين...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="ml-2 h-4 w-4" />
+                  تعيين وتحويل للمعالجة
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

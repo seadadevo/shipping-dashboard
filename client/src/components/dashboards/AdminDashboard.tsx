@@ -298,7 +298,7 @@ const AdminDashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{users.length}</div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">+createdAt(db)</span> مستخدمين جدد
+              <span className="text-green-600"></span> مستخدمين جدد
             </p>
           </CardContent>
         </Card>
@@ -344,7 +344,7 @@ const AdminDashboard: React.FC = () => {
                       <button
                           key={item.id}
                           onClick={() => navigate(item.path)}
-                          className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-primary hover:bg-gray-200 hover:text-black"
+                          className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-gray-700 hover:bg-gray-50"
                       >
                           <Icon className="h-5 w-5 ml-3 text-gray-400" />
                           <span>{item.label}</span>

@@ -65,7 +65,7 @@ import {
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
-  Shipped: "في الطريق",
+  "On the Way": "في الطريق",
   Delivered: "تم التسليم",
   Cancelled: "ملغي",
   all: "جميع الحالات",
@@ -75,7 +75,7 @@ const statusOptions = [
   { value: "all", label: "جميع الحالات" },
   { value: "Pending", label: statusLabels.Pending },
   { value: "Processing", label: statusLabels.Processing },
-  { value: "Shipped", label: statusLabels.Shipped },
+  { value: "On the Way", label: statusLabels["On the Way"] },
   { value: "Delivered", label: statusLabels.Delivered },
   { value: "Cancelled", label: statusLabels.Cancelled },
 ];

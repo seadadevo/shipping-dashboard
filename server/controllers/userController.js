@@ -12,6 +12,9 @@ const allowedFields = [
 	"governorate",
 	"city",
 	"storeName",
+	"assignedCities",
+	"pickupCost",
+	"rejectionFeePercentage",
 ];
 //  Get user profile
 exports.getUserProfile = async (req, res) => {
@@ -26,10 +29,10 @@ exports.getUserProfile = async (req, res) => {
                 userType: user.userType,
             });
         } else {
-            res.status(404).json({ message: 'User not found' });
+            res.status(404).json({ message: 'المستخدم غير موجود' });
         }
     } catch (error) {
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'خطأ في الخادم' });
     }
 };
 //     update password
@@ -75,7 +78,7 @@ exports.updatePassword = async (req, res) => {
     } catch (error) {
         // إذا كان الخطأ هنا، فهو خطأ تشفير أو خطأ في الاتصال بالـ DB
         console.error("PUT /api/users/password failed:", error); 
-        res.status(500).json({ message: 'Error processing password update.' });
+        res.status(500).json({ message: 'خطأ في معالجة تحديث كلمة المرور' });
     }
 };
 // Add new user
@@ -105,7 +108,7 @@ exports.addUser = async (req, res) => {
 		)
 			return res
 				.status(400)
-				.json({ message: "Required fields are missing" });
+				.json({ message: "الحقول المطلوبة ناقصة" });
 
 		const isStrongPassword = (password) => {
 			const regex =
@@ -116,7 +119,7 @@ exports.addUser = async (req, res) => {
 		if (!isStrongPassword(userData.password)) {
 			return res.status(400).json({
 				message:
-					"Weak password. Must contain 8+ chars, uppercase, lowercase, number, and special character.",
+					"كلمة المرور ضعيفة. يجب أن تحتوي على 8 أحرف على الأقل، أحرف كبيرة وصغيرة، أرقام، ورموز خاصة",
 			});
 		}
 
@@ -126,28 +129,41 @@ exports.addUser = async (req, res) => {
 		if (existingUser)
 			return res
 				.status(400)
-				.json({ message: "FullName or email already exists" });
+				.json({ message: "الاسم الكامل أو البريد الإلكتروني موجود بالفعل" });
 
 		const newUser = new User(userData);
 
 		await newUser.save();
 		res.status(201).json({
-			message: "User added successfully",
+			message: "تم إضافة المستخدم بنجاح",
 			user: newUser,
 		});
 	} catch (error) {
-		res.status(500).json({ message: "Server error" });
+		res.status(500).json({ message: "خطأ في الخادم" });
 	}
 };
 
-// Get all users (paginated)
+// Get all users (paginated with optional search)
 exports.getUsers = async (req, res) => {
 	try {
-		const { page, limit } = req.query;
-		const { data: users, meta } = await paginate(User, {}, { page, limit, select: '-password', sort: { createdAt: -1 } });
+		const { page, limit, q } = req.query;
+		let filter = {};
+		
+		// If search query exists, add search filter
+		if (q && q.trim()) {
+			filter = {
+				$or: [
+					{ fullName: new RegExp(q, "i") },
+					{ email: new RegExp(q, "i") },
+					{ phone: new RegExp(q, "i") },
+				],
+			};
+		}
+		
+		const { data: users, meta } = await paginate(User, filter, { page, limit, select: '-password', sort: { createdAt: -1 } });
 		res.status(200).json({ status: 'success', results: users.length, meta, data: { users } });
 	} catch (error) {
-		res.status(500).json({ message: "Error fetching users" });
+		res.status(500).json({ message: "خطأ في جلب المستخدمين" });
 	}
 };
 
@@ -164,7 +180,7 @@ exports.getUsersWithSearch = async (req, res) => {
 		const { data: users, meta } = await paginate(User, filter, { page, limit, select: '-password', sort: { createdAt: -1 } });
 		res.status(200).json({ status: 'success', results: users.length, meta, data: { users } });
 	} catch (error) {
-		res.status(500).json({ message: "User not found" });
+		res.status(500).json({ message: "المستخدم غير موجود" });
 	}
 };
 
@@ -194,7 +210,7 @@ exports.updateUser = async (req, res) => {
 			if (existingName)
 				return res
 					.status(400)
-					.json({ message: "FullName already in use" });
+					.json({ message: "الاسم الكامل مستخدم بالفعل" });
 		}
 
 		const updatedUser = await User.findByIdAndUpdate(id, updates, {
@@ -203,14 +219,14 @@ exports.updateUser = async (req, res) => {
 		}).select("-password");
 
 		if (!updatedUser)
-			return res.status(404).json({ message: "User not found" });
+			return res.status(404).json({ message: "المستخدم غير موجود" });
 
 		res.status(200).json({
-			message: "User updated successfully",
+			message: "تم تحديث المستخدم بنجاح",
 			updatedUser,
 		});
 	} catch (error) {
-		res.status(500).json({ message: "Error updating user" });
+		res.status(500).json({ message: "خطأ في تحديث المستخدم" });
 	}
 };
 
@@ -221,11 +237,11 @@ exports.deleteUser = async (req, res) => {
 		const deletedUser = await User.findByIdAndDelete(id);
 
 		if (!deletedUser)
-			return res.status(404).json({ message: "User not found" });
+			return res.status(404).json({ message: "المستخدم غير موجود" });
 
-		res.status(200).json({ message: "User deleted successfully" });
+		res.status(200).json({ message: "تم حذف المستخدم بنجاح" });
 	} catch (error) {
-		res.status(500).json({ message: "Error deleting user" });
+		res.status(500).json({ message: "خطأ في حذف المستخدم" });
 	}
 };
 
@@ -253,6 +269,6 @@ exports.searchMerchants = async (req, res) => {
     });
   } catch (error) {
     console.error("Search Merchant Error:", error);
-    res.status(500).json({ message: "Error searching merchants" });
+    res.status(500).json({ message: "خطأ في البحث عن التجار" });
   }
 };
