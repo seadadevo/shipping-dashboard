@@ -305,10 +305,10 @@ export function MerchantDashboard() {
               allOrders.slice(0, 5).map((order) => (
                 <div
                   key={order._id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between p-4 border rounded-lg text-primary hover:bg-gray-200 hover:text-black transition-colors"
                 >
                   <div className="flex items-center space-x-4 space-x-reverse">
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gray-50">
+                    <div className="h-10 w-10 ml-2 rounded-full flex items-center justify-center bg-white shadow">
                       {getOrderStatusIcon(order.status)}
                     </div>
                     <div>
@@ -335,7 +335,7 @@ export function MerchantDashboard() {
                       </p>
                     </div>
 
-                    <Button variant="ghost" size="sm">
+                    <Button className="mr-2" variant="ghost" size="sm">
                       <Eye className="h-4 w-4" />
                     </Button>
                   </div>
