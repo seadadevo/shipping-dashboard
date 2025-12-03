@@ -344,7 +344,7 @@ const AdminDashboard: React.FC = () => {
                       <button
                           key={item.id}
                           onClick={() => navigate(item.path)}
-                          className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-gray-700 hover:bg-gray-50"
+                          className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-primary hover:bg-gray-200 hover:text-black "
                       >
                           <Icon className="h-5 w-5 ml-3 text-gray-400" />
                           <span>{item.label}</span>
