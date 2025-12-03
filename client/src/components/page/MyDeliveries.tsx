@@ -312,7 +312,7 @@ export const MyDeliveries: React.FC = () => {
 
       {/* Period Stats */}
       <div className="grid gap-4 md:grid-cols-5">
-        <Card className="border-green-200 bg-linear-to-br from-green-50 to-white">
+        <Card className="border-green-200 bg-secondary">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -327,7 +327,7 @@ export const MyDeliveries: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-blue-200 bg-linear-to-br from-blue-50 to-white">
+        <Card className="border-blue-200 bg-secondary">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -342,7 +342,7 @@ export const MyDeliveries: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-purple-200 bg-linear-to-br from-purple-50 to-white">
+        <Card className="border-purple-200 bg-secondary">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -357,7 +357,7 @@ export const MyDeliveries: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-orange-200 bg-linear-to-br from-orange-50 to-white">
+        <Card className="border-orange-200 bg-secondary">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -372,7 +372,7 @@ export const MyDeliveries: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-indigo-200 bg-linear-to-br from-indigo-50 to-white">
+        <Card className="border-indigo-200 bg-secondary">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -406,7 +406,7 @@ export const MyDeliveries: React.FC = () => {
                 className="pr-10"
               />
             </div>
-            <Select value={dateFilter} onValueChange={setDateFilter}>
+            <Select value={dateFilter} onValueChange={setDateFilter} dir="rtl">
               <SelectTrigger className="w-full md:w-48">
                 <Filter className="h-4 w-4 ml-2" />
                 <SelectValue placeholder="تصفية حسب التاريخ" />
@@ -520,10 +520,10 @@ export const MyDeliveries: React.FC = () => {
 
       {/* View Order Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-background" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-xl text-right">تفاصيل التوصيل #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
-            <DialogDescription className="text-right">
+            <DialogTitle className="text-xl text-right text-blue-600">تفاصيل التوصيل #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
+            <DialogDescription className="text-right text-primary">
               معلومات كاملة عن التوصيل المكتمل
             </DialogDescription>
           </DialogHeader>
@@ -531,9 +531,9 @@ export const MyDeliveries: React.FC = () => {
           {selectedOrder && (
             <div className="space-y-4 text-right">
               {/* Delivery Timeline */}
-              <Card className="border-green-200 bg-green-50">
+              <Card className="border-green-200 ">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2 text-green-800">
+                  <CardTitle className="text-sm flex items-center gap-2 text-green-500 ">
                     <CheckCircle2 className="h-4 w-4" />
                     تم التسليم بنجاح
                   </CardTitle>

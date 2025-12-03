@@ -283,7 +283,7 @@ export function ShippingTypeManagement() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center">
-              <Truck className="h-5 w-5 mr-2" />
+              <Truck className="h-5 w-5 ml-2" />
               أنواع الشحن الحالية
             </CardTitle>
             <CardDescription>
@@ -317,7 +317,7 @@ export function ShippingTypeManagement() {
                 ) : types.length > 0 ? (
                   types.map((type) => (
                     <TableRow key={type._id}>
-                      <TableCell className="font-medium text-black">{type.name}</TableCell>
+                      <TableCell className="font-medium text-primary">{type.name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {type.description || "لا يوجد وصف"}
                       </TableCell>
@@ -342,6 +342,7 @@ export function ShippingTypeManagement() {
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
+                        className="mr-2"
                           variant="destructive"
                           size="sm"
                           onClick={() => openDeleteConfirm(type._id)}
@@ -383,18 +384,18 @@ export function ShippingTypeManagement() {
 
       {/* --- Dialog للإضافة والتعديل --- */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-white">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="bg-background"  dir="rtl">
+          <DialogHeader className="text-center">
+            <DialogTitle className='text-primary text-center text-blue-600'>
               {editingType ? "تعديل نوع الشحن" : "إضافة نوع شحن جديد"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className='text-center text-primary'>
               {editingType
                 ? "قم بتحديث بيانات نوع الشحن."
                 : "أدخل بيانات نوع الشحن الجديد."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4" dir="rtl">
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center">
                 <Truck className="h-4 w-4 mr-2" />
@@ -468,10 +469,10 @@ export function ShippingTypeManagement() {
 
       {/* --- AlertDialog لتأكيد الحذف --- */}
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent  className="bg-background"  dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-primary text-right text-blue-600">هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogDescription className='text-right text-primary'>
               هل تريد بالتأكيد حذف نوع الشحن هذا؟ لا يمكن التراجع عن هذا
               الإجراء.
             </AlertDialogDescription>

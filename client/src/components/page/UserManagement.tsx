@@ -47,7 +47,7 @@ import api from "../../lib/api";
 import { toast } from "sonner";
 import type { User } from "../../types";
 import { Pagination } from "../ui/pagination";
-import validator from "validator";
+// import validator from "validator";
 
 export function UserManagement() {
   const navigate = useNavigate();
@@ -368,7 +368,7 @@ export function UserManagement() {
             </div>
 
             <Select value={roleFilter} onValueChange={setRoleFilter} dir="rtl">
-              <SelectTrigger className="w-48 me-1">
+              <SelectTrigger className="w-48 mr-2">
                 <SelectValue placeholder="تصفية حسب الدور" />
               </SelectTrigger>
               <SelectContent>
