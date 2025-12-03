@@ -525,7 +525,7 @@ export function CreateOrder() {
                     onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} 
                 />
                 <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
-                    هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)
+                    هل تريد التوصيل الي قرية؟ (تطبق رسوم توصيل إضافية وقدرها ... )
                 </Label>
             </div>
 
@@ -541,18 +541,33 @@ export function CreateOrder() {
             <div className="grid gap-6 md:grid-cols-2">
                 <div className='space-y-2'>
                     <Label className="text-base">نوع الشحن <span className="text-red-500">*</span></Label>
-                    <Select value={formData.shippingType} onValueChange={(v) => handleInputChange('shippingType', v)} dir="rtl">
-                        <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                    <Select
+                        value={formData.shippingType}
+                        onValueChange={(v) => handleInputChange('shippingType', v)}
+                        dir="rtl"
+                        >
+                        <SelectTrigger className="h-11">
+                            <SelectValue>
+                            {formData.shippingType && (() => {
+                                const selected = shippingTypesList.find(t => t.name === formData.shippingType);
+                                return selected ? `${selected.name}` : "";
+                            })()}
+                            </SelectValue>
+                        </SelectTrigger>
+
                         <SelectContent className='bg-background'>
                             {shippingTypesList.map(t => (
-                                <SelectItem key={t._id} value={t.name}>
-                                    <div className="flex justify-between w-full gap-2">
-                                        <span>{t.name}</span>
-                                        <Badge variant={t.adjustmentAmount > 0 ? "destructive" : "secondary"}>
-                                            {t.adjustmentAmount > 0 ? `+${t.adjustmentAmount}` : t.adjustmentAmount} ج
-                                        </Badge>
-                                    </div>
-                                </SelectItem>
+                            <SelectItem key={t._id} value={t.name}>
+                                <div className="flex flex-col gap-1">
+                                <div className="flex justify-between w-full">
+                                    <span className="font-medium text-blue-600">{t.name}</span>
+                                    <Badge variant={t.adjustmentAmount > 0 ? "destructive" : "secondary"}>
+                                    {t.adjustmentAmount > 0 ? `+${t.adjustmentAmount}` : t.adjustmentAmount} ج
+                                    </Badge>
+                                </div>
+                                <p className="text-xs text-gray-500">{t.description}</p>
+                                </div>
+                            </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -598,7 +613,7 @@ export function CreateOrder() {
                                     value={newProduct.name} 
                                     onChange={(e)=>setNewProduct({...newProduct, name:e.target.value})} 
                                     className='text-right'
-                                    placeholder="مثال: قميص قطني، حذاء رياضي..."
+                                    placeholder="مثال: قميص ، حذاء ..."
                                 />
                             </div>
                             <div className='grid gap-4 grid-cols-2'>
@@ -631,6 +646,8 @@ export function CreateOrder() {
                     </DialogContent>
                 </Dialog>
             </div>
+            {/* معلومات الوزن الاساسي والاضافي */}
+            <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p>
         </CardHeader>
         <CardContent>
             {products.length > 0 ? (
