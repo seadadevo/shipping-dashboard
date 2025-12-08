@@ -502,7 +502,7 @@ export const DriverDashboard: React.FC = () => {
                 العميل: {selectedOrder?.customerName}
               </p>
             </div>
-            <Select value={newStatus} onValueChange={setNewStatus}>
+            <Select value={newStatus} onValueChange={setNewStatus} dir='rtl'>
               <SelectTrigger>
                 <SelectValue placeholder="اختر الحالة" />
               </SelectTrigger>
