@@ -56,6 +56,7 @@ import {
   Truck,
   DollarSign,
   FileText,
+  Clock,
 } from "lucide-react";
 
 // --- تعريف نوع البيانات ---
@@ -63,6 +64,8 @@ interface ShippingType {
   _id: string;
   name: string;
   adjustmentAmount: number;
+  minDeliveryDays: number;
+  maxDeliveryDays: number;
   description?: string;
   isActive: boolean;
 }
@@ -71,6 +74,8 @@ interface ShippingType {
 const initialState = {
   name: "",
   adjustmentAmount: 0,
+  minDeliveryDays: 2,
+  maxDeliveryDays: 5,
   description: "",
 };
 
@@ -125,6 +130,8 @@ export function ShippingTypeManagement() {
       setFormData({
         name: type.name,
         adjustmentAmount: type.adjustmentAmount,
+        minDeliveryDays: type.minDeliveryDays || 2,
+        maxDeliveryDays: type.maxDeliveryDays || 5,
         description: type.description || "",
       });
     } else {
@@ -147,11 +154,33 @@ export function ShippingTypeManagement() {
     setSuccess(null);
 
     try {
+      // تحويل القيم إلى أرقام قبل الإرسال
+      const minDays = Number(formData.minDeliveryDays);
+      const maxDays = Number(formData.maxDeliveryDays);
+      
+      // التحقق من صحة القيم قبل الإرسال
+      if (maxDays < minDays) {
+        setError("الحد الأقصى للأيام يجب أن يكون أكبر من أو يساوي الحد الأدنى");
+        setLoading(false);
+        return;
+      }
+      
+      const dataToSend = {
+        name: formData.name,
+        adjustmentAmount: Number(formData.adjustmentAmount),
+        minDeliveryDays: minDays,
+        maxDeliveryDays: maxDays,
+        description: formData.description,
+      };
+      
+      console.log("📤 Sending data:", dataToSend);
+      console.log("📤 Form data before conversion:", formData);
+      
       if (editingType) {
         // --- تحديث (PUT) ---
         const res = await api.put(
           `/api/shipping-types/${editingType._id}`,
-          formData
+          dataToSend
         );
         // تحديث العنصر في القائمة محلياً
         setTypes(
@@ -160,7 +189,7 @@ export function ShippingTypeManagement() {
         setSuccess("تم تحديث النوع بنجاح");
       } else {
         // --- إضافة (POST) ---
-        const res = await api.post("/api/shipping-types", formData);
+        const res = await api.post("/api/shipping-types", dataToSend);
         // إضافة العنصر الجديد للقائمة محلياً
         setTypes([...types, res.data.data]);
         setSuccess("تم إضافة النوع بنجاح");
@@ -168,6 +197,8 @@ export function ShippingTypeManagement() {
       handleCloseDialog();
     } catch (err) {
       const apiError = err as ApiError;
+      console.error("❌ Save error:", err);
+      console.error("❌ Response data:", apiError.response?.data);
       setError(apiError.response?.data?.message || "حدث خطأ أثناء الحفظ");
     } finally {
       setLoading(false);
@@ -303,6 +334,7 @@ export function ShippingTypeManagement() {
                   <TableHead className="text-right">الاسم</TableHead>
                   <TableHead className="text-right">الوصف</TableHead>
                   <TableHead className="text-center">قيمة التعديل</TableHead>
+                  <TableHead className="text-center">مدة التوصيل</TableHead>
                   <TableHead className="text-center">مفعل</TableHead>
                   <TableHead className="text-center">الإجراءات</TableHead>
                 </TableRow>
@@ -310,7 +342,7 @@ export function ShippingTypeManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       جاري تحميل البيانات...
                     </TableCell>
                   </TableRow>
@@ -323,6 +355,11 @@ export function ShippingTypeManagement() {
                       </TableCell>
                       <TableCell className="text-center">
                         {formatAdjustment(type.adjustmentAmount)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-xs">
+                          {type.minDeliveryDays} - {type.maxDeliveryDays} يوم
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-center">
                         <Switch
@@ -353,7 +390,7 @@ export function ShippingTypeManagement() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       لم يتم العثور على أي أنواع شحن.
                     </TableCell>
                   </TableRow>
@@ -434,6 +471,53 @@ export function ShippingTypeManagement() {
                 للنوع العادي.
               </p>
             </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="minDeliveryDays" className="flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  الحد الأدنى (أيام)
+                </Label>
+                <Input
+                  id="minDeliveryDays"
+                  type="number"
+                  min="1"
+                  value={formData.minDeliveryDays}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      minDeliveryDays: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  placeholder="2"
+                  className="text-right"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxDeliveryDays" className="flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  الحد الأقصى (أيام)
+                </Label>
+                <Input
+                  id="maxDeliveryDays"
+                  type="number"
+                  min="1"
+                  value={formData.maxDeliveryDays}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxDeliveryDays: parseInt(e.target.value) || 5,
+                    })
+                  }
+                  placeholder="5"
+                  className="text-right"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              مدة التوصيل المتوقعة لهذا النوع من الشحن (مثال: من 2 إلى 5 أيام)
+            </p>
+            
             <div className="space-y-2">
               <Label htmlFor="description" className="flex items-center">
                 <FileText className="h-4 w-4 mr-2" />

@@ -253,3 +253,17 @@ export interface AddLocationResponse {
   message: string;
   data: Governorate | City;
 }
+
+/**
+ * نوع بيانات أنواع الشحن (من الباك إند)
+ */
+export interface ShippingType {
+  _id: string;
+  name: string;
+  adjustmentAmount: number;
+  minDeliveryDays: number;
+  maxDeliveryDays: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
