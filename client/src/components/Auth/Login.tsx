@@ -61,7 +61,7 @@ const Login: React.FC = () => {
 
 	return (
 		<div
-			className="flex items-center justify-center min-h-screen bg-linear-to-br from-blue-50/60 via-purple-50/40 to-pink-50/60 dark:from-blue-950/40 dark:via-purple-950/30 dark:to-pink-950/40 relative overflow-hidden"
+			className="flex items-center justify-center min-h-screen bg-background"
 			dir="rtl"
 		>
 			<div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDMiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40"></div>
@@ -155,7 +155,7 @@ const Login: React.FC = () => {
 
 						<Button
 							type="submit"
-							className="w-full h-12 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all"
+							className="w-full bg-accent-foreground h-12 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all"
 							disabled={loading}
 						>
 							{loading ? (

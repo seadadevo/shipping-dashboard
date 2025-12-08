@@ -274,7 +274,7 @@ export const DriverDashboard: React.FC = () => {
                 className="pr-8 text-right"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={setStatusFilter} dir="rtl"  >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
@@ -298,12 +298,12 @@ export const DriverDashboard: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>رقم الطلب</TableHead>
-                    <TableHead>اسم العميل</TableHead>
-                    <TableHead>رقم الهاتف</TableHead>
-                    <TableHead>العنوان</TableHead>
-                    <TableHead>الحالة</TableHead>
-                    <TableHead>إجراءات</TableHead>
+                    <TableHead className='text-right'>رقم الطلب</TableHead>
+                    <TableHead className='text-right'>اسم العميل</TableHead>
+                    <TableHead className='text-right'>رقم الهاتف</TableHead>
+                    <TableHead className='text-right'>العنوان</TableHead>
+                    <TableHead className='text-right'>الحالة</TableHead>
+                    <TableHead className='text-right'>إجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -360,7 +360,7 @@ export const DriverDashboard: React.FC = () => {
 
       {/* View Order Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-secondary" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right">تفاصيل الطلب #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
             <DialogDescription className="text-right">
@@ -498,7 +498,7 @@ export const DriverDashboard: React.FC = () => {
 
       {/* Update Status Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-secondary" dir="rtl">
           <DialogHeader>
             <DialogTitle>تحديث حالة التوصيل</DialogTitle>
             <DialogDescription>

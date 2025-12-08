@@ -944,7 +944,7 @@ export function OrderManagement() {
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-slate-50">
+                        <TableRow className="bg-secondary">
                           <TableHead className="text-right font-semibold">اسم المنتج</TableHead>
                           <TableHead className="text-center font-semibold">الكمية</TableHead>
                           <TableHead className="text-center font-semibold">
@@ -1019,13 +1019,13 @@ export function OrderManagement() {
 
       {/* --- Driver Assignment Dialog --- */}
       <Dialog open={isDriverDialogOpen} onOpenChange={setIsDriverDialogOpen}>
-        <DialogContent className="bg-blue-50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="bg-secondary" dir="rtl">
+          <DialogHeader dir="rtl">
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
               <Truck className="h-5 w-5" />
               تعيين سائق للطلب
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-right text-primary">
               اختر السائق المناسب للطلب #{selectedOrderForDriver?._id.slice(-8)}
               <br />
               <span className="text-sm font-medium">
