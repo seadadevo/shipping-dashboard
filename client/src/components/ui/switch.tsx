@@ -26,7 +26,7 @@ function Switch({
       </SwitchPrimitive.Root>
 
       {/* CSS مباشر جوه الملف */}
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{__html: `
   [data-slot="switch"] {
     background-color: #755c5cff;
   }
@@ -56,7 +56,7 @@ function Switch({
   .dark [data-slot="switch-thumb"] {
     background-color: #1e293b;
   }
-`}</style>
+`}} />
     </>
   )
 }

@@ -30,22 +30,26 @@ const calculateShippingCost = async (
   if (!shippingTypeDoc) throw new Error("نوع الشحن غير صحيح");
   if (!shippingTypeDoc.isActive) throw new Error("نوع الشحن المحدد غير مفعل");
 
-  const baseCityCostPerKg = cityDoc.shippingCost;
+  const baseCityPrice = cityDoc.shippingCost; // سعر المدينة (ثابت)
   const { defaultWeightLimit, extraKgCost, villageDeliveryCost } =
     weightSettings;
   const shippingAdjustment = shippingTypeDoc.adjustmentAmount;
 
-  let weightCost = 0;
-  if (totalWeight <= defaultWeightLimit) {
-    weightCost = totalWeight * baseCityCostPerKg;
-  } else {
-    const defaultWeightCost = defaultWeightLimit * baseCityCostPerKg;
+  // اللوجيك الجديد:
+  // 1. سعر المدينة (ثابت للـ default weight)
+  let weightCost = baseCityPrice;
+
+  // 2. إذا كان الوزن أكبر من الـ default، نضيف تكلفة الكيلوات الزيادة
+  if (totalWeight > defaultWeightLimit) {
     const extraWeight = totalWeight - defaultWeightLimit;
     const extraWeightCost = extraWeight * extraKgCost;
-    weightCost = defaultWeightCost + extraWeightCost;
+    weightCost += extraWeightCost;
   }
 
+  // 3. رسوم القرية (إن وجدت)
   const villageCost = isVillageDelivery === true ? villageDeliveryCost : 0;
+
+  // 4. التكلفة النهائية = سعر المدينة + الوزن الزيادة + نوع الشحن + القرية
   const calculatedOrderCost = weightCost + shippingAdjustment + villageCost;
 
   return calculatedOrderCost;
@@ -222,14 +226,12 @@ exports.getAllOrders = async (req, res) => {
       sort: { createdAt: -1 },
     });
 
-    res
-      .status(200)
-      .json({
-        status: "success",
-        results: orders.length,
-        meta,
-        data: { orders },
-      });
+    res.status(200).json({
+      status: "success",
+      results: orders.length,
+      meta,
+      data: { orders },
+    });
   } catch (error) {
     console.error("!!! GET ALL ORDERS CRASHED !!!", error);
     res.status(500).json({ message: "خطأ في الخادم أثناء جلب الطلبات" });
@@ -265,14 +267,12 @@ exports.searchOrders = async (req, res) => {
       sort: { createdAt: -1 },
     });
 
-    res
-      .status(200)
-      .json({
-        status: "success",
-        results: orders.length,
-        meta,
-        data: { orders },
-      });
+    res.status(200).json({
+      status: "success",
+      results: orders.length,
+      meta,
+      data: { orders },
+    });
   } catch (error) {
     res.status(500).json({ message: "خطأ في البحث", error: error.message });
   }
@@ -385,8 +385,8 @@ const validateStateChange = (userRole, currentState, newState) => {
     },
     courier: {
       Pending: [],
-      Processing: ["On the Way", "Delivered"],
-      "On the Way": ["Processing", "Delivered"],
+      Processing: ["On the Way", "Delivered", "Cancelled"],
+      "On the Way": ["Processing", "Delivered", "Cancelled"],
       Delivered: [], // CRITICAL: Cannot revert delivered
       Cancelled: [],
     },
@@ -480,14 +480,12 @@ exports.getMyOrders = async (req, res) => {
       populate: { path: "createdBy", select: "fullName userType" },
       sort: { createdAt: -1 },
     });
-    res
-      .status(200)
-      .json({
-        status: "success",
-        results: orders.length,
-        meta,
-        data: { orders },
-      });
+    res.status(200).json({
+      status: "success",
+      results: orders.length,
+      meta,
+      data: { orders },
+    });
   } catch (error) {
     res.status(500).json({ message: "خطأ في الخادم أثناء جلب طلباتي" });
   }
