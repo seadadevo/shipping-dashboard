@@ -362,7 +362,7 @@ export const DriverDashboard: React.FC = () => {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-secondary" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-right">تفاصيل الطلب #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
+            <DialogTitle className="text-right text-blue-600">تفاصيل الطلب #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
             <DialogDescription className="text-right">
               عرض كامل تفاصيل الطلب ومعلومات العميل
             </DialogDescription>
@@ -499,9 +499,9 @@ export const DriverDashboard: React.FC = () => {
       {/* Update Status Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-secondary" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>تحديث حالة التوصيل</DialogTitle>
-            <DialogDescription>
+          <DialogHeader >
+            <DialogTitle className="text-right text-blue-600">تحديث حالة التوصيل</DialogTitle>
+            <DialogDescription className="text-right text-primary">
               اختر الحالة الجديدة للطلب
             </DialogDescription>
           </DialogHeader>

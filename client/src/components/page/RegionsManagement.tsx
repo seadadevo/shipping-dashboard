@@ -1059,10 +1059,10 @@ export function RegionsManagement() {
 
       {/* --- ADDED: Delete Confirmation Dialog --- */}
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-background" dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-right text-blue-600">هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogDescription className="text-right text-primary">
               هذا الإجراء لا يمكن التراجع عنه. سيؤدي هذا إلى حذف العنصر نهائياً.
               {itemToDelete?.type === "governorate" &&
                 " (ملاحظة: لا يمكن حذف المحافظة إذا كانت تحتوي على مدن)."}
