@@ -19,7 +19,9 @@ import {
   Edit2,
   DollarSign,
   Weight,
-  Loader2
+  Loader2,
+  Clock,
+  Info
 } from 'lucide-react';
 import api from '../../lib/api';
 import type { 
@@ -88,6 +90,7 @@ export function CreateOrder() {
   const [shippingTypesList, setShippingTypesList] = useState<ShippingTypeData[]>([]);
   const [availableCities, setAvailableCities] = useState<City[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(true);
+  const [weightSettings, setWeightSettings] = useState<any>(null);
   
   const [merchantSearchQuery, setMerchantSearchQuery] = useState("");
   const [merchantResults, setMerchantResults] = useState<MerchantResult[]>([]);
@@ -122,12 +125,14 @@ export function CreateOrder() {
     const fetchInitialData = async () => {
       setIsLoadingLists(true);
       try {
-        const [govRes, shipRes] = await Promise.all([
+        const [govRes, shipRes, weightRes] = await Promise.all([
           api.get('/api/locations/governorates'),
-          api.get('/api/shipping-types')
+          api.get('/api/shipping-types'),
+          api.get('/api/weight-settings')
         ]);
         setGovernoratesList(govRes.data.data.filter((g: Governorate) => g.isActive));
         setShippingTypesList(shipRes.data.data.filter((s: ShippingTypeData) => s.isActive));
+        setWeightSettings(weightRes.data.data);
       } catch (err) {
         setError('فشل في تحميل البيانات الأساسية.');
       } finally {
@@ -571,6 +576,29 @@ export function CreateOrder() {
                             ))}
                         </SelectContent>
                     </Select>
+                    
+                    {/* معلومات نوع الشحن المحدد */}
+                    {formData.shippingType && (() => {
+                        const selectedShipping = shippingTypesList.find(t => t.name === formData.shippingType);
+                        return selectedShipping && selectedShipping.minDeliveryDays && selectedShipping.maxDeliveryDays ? (
+                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 mt-2">
+                                <div className="flex items-start gap-2">
+                                    <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <div className="text-sm text-blue-900">
+                                        <p className="font-bold mb-1">مدة التوصيل المتوقعة:</p>
+                                        <p className="text-blue-800">
+                                            من <strong>{selectedShipping.minDeliveryDays}</strong> إلى <strong>{selectedShipping.maxDeliveryDays}</strong> يوم
+                                        </p>
+                                        {selectedShipping.adjustmentAmount > 0 && (
+                                            <p className="text-xs text-blue-700 mt-1">
+                                                رسوم إضافية: <strong>+{selectedShipping.adjustmentAmount} جنيه</strong>
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null;
+                    })()}
                 </div>
                 <div className='space-y-2'>
                     <Label className="text-base">نوع الدفع <span className="text-red-500">*</span></Label>
@@ -580,6 +608,43 @@ export function CreateOrder() {
                     </Select>
                 </div>
             </div>
+
+            {/* معلومات الأسعار والإعدادات */}
+            {weightSettings && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                        <div className="bg-amber-100 p-2 rounded-lg">
+                            <Info className="h-5 w-5 text-amber-700" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="font-bold text-amber-900 mb-2 text-base">📋 إعدادات التسعير:</p>
+                            <div className="grid gap-2 text-sm text-amber-900">
+                                <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
+                                    <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
+                                    <span>
+                                        <strong>الوزن الافتراضي:</strong> حتى {weightSettings.defaultWeightLimit} كجم = سعر المدينة
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
+                                    <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
+                                    <span>
+                                        <strong>الوزن الزائد:</strong> كل كيلو إضافي = <strong className="text-amber-700">{weightSettings.extraKgCost} جنيه</strong>
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
+                                    <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
+                                    <span>
+                                        <strong>توصيل القرية:</strong> رسوم إضافية = <strong className="text-amber-700">{weightSettings.villageDeliveryCost} جنيه</strong>
+                                    </span>
+                                </div>
+                            </div>
+                            <p className="text-xs text-amber-700 mt-2 italic">
+                                💡 التكلفة النهائية = سعر المدينة + الوزن الزائد + نوع الشحن + رسوم القرية (إن وجدت)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             <div className='space-y-2'>
                 <Label className="text-base">ملاحظات إضافية</Label>

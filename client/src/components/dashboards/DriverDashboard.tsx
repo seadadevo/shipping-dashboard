@@ -24,6 +24,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 import { Package, TrendingUp, CheckCircle, Truck, Search, Eye, History } from 'lucide-react';
@@ -136,13 +137,18 @@ export const DriverDashboard: React.FC = () => {
         const statusLabels: Record<string, string> = {
           'Processing': 'قيد المعالجة',
           'On the Way': 'في الطريق',
-          'Delivered': 'تم التسليم'
+          'Delivered': 'تم التسليم',
+          'Cancelled': 'ملغي'
         };
         
         // رسالة خاصة عند التسليم
         if (newStatus === 'Delivered') {
           toast.success('🎉 تم التسليم بنجاح!', {
             description: 'تم نقل الطلب إلى صفحة "توصيلاتي"'
+          });
+        } else if (newStatus === 'Cancelled') {
+          toast.success('تم إلغاء الطلب', {
+            description: 'تم تحديث حالة الطلب إلى: ملغي'
           });
         } else {
           toast.success('تم تحديث حالة التوصيل', {
@@ -356,7 +362,10 @@ export const DriverDashboard: React.FC = () => {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-secondary" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-right text-blue-600">تفاصيل الطلب #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
+            <DialogTitle className="text-right">تفاصيل الطلب #{selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}</DialogTitle>
+            <DialogDescription className="text-right">
+              عرض كامل تفاصيل الطلب ومعلومات العميل
+            </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 text-right">
@@ -491,7 +500,10 @@ export const DriverDashboard: React.FC = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-secondary" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-right text-blue-600">تحديث حالة التوصيل</DialogTitle>
+            <DialogTitle>تحديث حالة التوصيل</DialogTitle>
+            <DialogDescription>
+              اختر الحالة الجديدة للطلب
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -508,22 +520,24 @@ export const DriverDashboard: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 {selectedOrder?.status === 'Processing' && (
-                  <SelectItem value="On the Way">في الطريق</SelectItem>
+                  <>
+                    <SelectItem value="On the Way">في الطريق</SelectItem>
+                    <SelectItem value="Delivered">تم التسليم</SelectItem>
+                    <SelectItem value="Cancelled">ملغي</SelectItem>
+                  </>
                 )}
                 {selectedOrder?.status === 'On the Way' && (
                   <>
                     <SelectItem value="Processing">قيد المعالجة</SelectItem>
                     <SelectItem value="Delivered">تم التسليم</SelectItem>
+                    <SelectItem value="Cancelled">ملغي</SelectItem>
                   </>
-                )}
-                {selectedOrder?.status === 'Processing' && (
-                  <SelectItem value="Delivered">تم التسليم</SelectItem>
                 )}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {selectedOrder?.status === 'Processing' && 'يمكنك نقل الطلب إلى "في الطريق" أو "تم التسليم"'}
-              {selectedOrder?.status === 'On the Way' && 'يمكنك إرجاع الطلب إلى "قيد المعالجة" أو إتمام "التسليم"'}
+              {selectedOrder?.status === 'Processing' && 'يمكنك نقل الطلب إلى "في الطريق"، "تم التسليم" أو "ملغي"'}
+              {selectedOrder?.status === 'On the Way' && 'يمكنك إرجاع الطلب إلى "قيد المعالجة"، إتمام "التسليم" أو "إلغاء" الطلب'}
               {selectedOrder?.status === 'Delivered' && 'الطلب تم تسليمه بالفعل'}
             </p>
           
