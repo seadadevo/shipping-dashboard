@@ -530,7 +530,7 @@ export function CreateOrder() {
                     onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} 
                 />
                 <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
-                    هل تريد التوصيل الي قرية؟ (تطبق رسوم توصيل إضافية وقدرها ... )
+                    هل تريد التوصيل الي قرية؟ (تطبق رسوم توصيل إضافية )
                 </Label>
             </div>
 
@@ -712,7 +712,7 @@ export function CreateOrder() {
                 </Dialog>
             </div>
             {/* معلومات الوزن الاساسي والاضافي */}
-            <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p>
+            {/* <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p> */}
         </CardHeader>
         <CardContent>
             {products.length > 0 ? (
