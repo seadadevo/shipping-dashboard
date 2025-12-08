@@ -272,10 +272,10 @@ export default function DriverManagement() {
       )}
 
       {/* Assignment Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} >
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-background" dir='rtl'>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-right text-lg font-bold text-blue-600">
               تعيين المدن للسائق: {selectedDriver?.fullName}
             </DialogTitle>
           </DialogHeader>
@@ -291,7 +291,7 @@ export default function DriverManagement() {
               if (govCities.length === 0) return null;
 
               return (
-                <div key={gov._id} className="border rounded-lg p-4">
+                <div key={gov._id} className="border border-ring rounded-lg p-4 bg-secondary">
                   <h3 className="font-semibold text-lg mb-3">{gov.govName}</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {govCities.map((city) => (
@@ -300,10 +300,11 @@ export default function DriverManagement() {
                           id={`city-${city._id}`}
                           checked={isCitySelected(gov.govName, city.cityName)}
                           onCheckedChange={() => handleCityToggle(gov.govName, city.cityName)}
+                          className='border border-ring'
                         />
                         <label
                           htmlFor={`city-${city._id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          className="text-sm mr-2 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                         >
                           {city.cityName}
                         </label>
@@ -326,7 +327,7 @@ export default function DriverManagement() {
               </Button>
               <Button
                 onClick={handleSaveAssignment}
-                className="flex-1"
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
                 حفظ ({selectedCities.length} مدينة)
               </Button>

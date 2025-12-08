@@ -428,12 +428,12 @@ export function MyOrders() {
 
       {/* ... (نافذة عرض تفاصيل الطلب زي ما هي) ... */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className=" bg-background max-w-4xl" dir="rtl">
+        <DialogContent className="bg-background max-w-4xl" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-blue-600">
+            <DialogTitle className="text-blue-600  text-right">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription  className="text-primary  text-right">
               عرض جميع تفاصيل الطلب والحالة الحالية
             </DialogDescription>
           </DialogHeader>

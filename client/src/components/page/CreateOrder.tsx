@@ -336,8 +336,7 @@ export function CreateOrder() {
           <Card className={`border-2 shadow-sm transition-all ${selectedMerchant ? 'border-green-500 bg-green-50/30' : 'border-secondary'}`}>
             <CardHeader className='pb-4 border-b mb-4 bg-secondary'>
                 <CardTitle className="text-lg flex items-center ">
-                    <Store className="h-5 w-5 mx-2 text-blue-800" />
-                    1. تحديد التاجر (المرسل) <span className="text-red-500 mr-1 text-sm">*</span>
+                    <Store className="h-5 w-5 mx-2 text-blue-800" /> تحديد التاجر (المرسل)<span className="text-red-500 mr-1 text-sm">*</span>
                 </CardTitle>
                 <CardDescription>ابحث واختر التاجر الذي سيتم تسجيل الطلب باسمه.</CardDescription>
             </CardHeader>
@@ -345,7 +344,7 @@ export function CreateOrder() {
                 {selectedMerchant ? (
                     <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-green-200 shadow-sm">
                         <div className="flex items-center space-x-3 space-x-reverse">
-                            <div className="bg-green-100 p-3 rounded-full">
+                            <div className="bg-green-100 p-3 m-2 rounded-full">
                                 <Store className="h-6 w-6 text-green-600" />
                             </div>
                             <div>
@@ -376,7 +375,7 @@ export function CreateOrder() {
                         </div>
 
                         {showMerchantList && (
-                            <div className="absolute w-full z-50 mt-2 bg-white border rounded-md shadow-xl max-h-60 overflow-auto">
+                            <div className="absolute w-full z-50 mt-2 bg-secondary border rounded-md shadow-xl max-h-60 overflow-auto">
                                 {merchantResults.length > 0 ? (
                                     merchantResults.map((merchant) => (
                                         <div 
@@ -412,7 +411,7 @@ export function CreateOrder() {
      
       <Card className="shadow-sm">
           <CardHeader className="bg-secondary border-b pb-4 mb-4">
-              <CardTitle className='flex items-center text-lg'><UserIcon className='h-5 w-5 mx-2 text-blue-600'/> 2. معلومات العميل (المستلم)</CardTitle>
+              <CardTitle className='flex items-center text-lg'><UserIcon className='h-5 w-5 mx-2 text-blue-600'/>  معلومات العميل (المستلم)</CardTitle>
           </CardHeader>
           <CardContent className='space-y-5'>
               <div className='grid gap-6 md:grid-cols-2'>
@@ -468,7 +467,7 @@ export function CreateOrder() {
      
       <Card className="shadow-sm">
           <CardHeader className="bg-secondary border-b pb-4 mb-4">
-              <CardTitle className='flex items-center text-lg'><MapPin className='h-5 w-5 mx-2 text-orange-600'/> 3. عنوان التوصيل</CardTitle>
+              <CardTitle className='flex items-center text-lg'><MapPin className='h-5 w-5 mx-2 text-orange-600'/> عنوان التوصيل</CardTitle>
           </CardHeader>
           <CardContent className='space-y-5'>
               <div className='grid gap-6 md:grid-cols-2'>
@@ -526,7 +525,7 @@ export function CreateOrder() {
                     onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} 
                 />
                 <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
-                    هل هذا العنوان يقع في قرية؟ (تطبق رسوم توصيل إضافية)
+                    هل تريد التوصيل الي قرية؟ (تطبق رسوم توصيل إضافية وقدرها ... )
                 </Label>
             </div>
 
@@ -536,24 +535,39 @@ export function CreateOrder() {
       
       <Card className="shadow-sm">
         <CardHeader className="bg-secondary border-b pb-4 mb-4">
-            <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mx-2 text-green-600'/> 4. تفاصيل الشحن والدفع</CardTitle>
+            <CardTitle className='flex items-center text-lg'><DollarSign className='h-5 w-5 mx-2 text-green-600'/> تفاصيل الشحن والدفع</CardTitle>
         </CardHeader>
         <CardContent className='space-y-5'>
             <div className="grid gap-6 md:grid-cols-2">
                 <div className='space-y-2'>
                     <Label className="text-base">نوع الشحن <span className="text-red-500">*</span></Label>
-                    <Select value={formData.shippingType} onValueChange={(v) => handleInputChange('shippingType', v)} dir="rtl">
-                        <SelectTrigger className="h-11"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                    <Select
+                        value={formData.shippingType}
+                        onValueChange={(v) => handleInputChange('shippingType', v)}
+                        dir="rtl"
+                        >
+                        <SelectTrigger className="h-11">
+                            <SelectValue>
+                            {formData.shippingType && (() => {
+                                const selected = shippingTypesList.find(t => t.name === formData.shippingType);
+                                return selected ? `${selected.name}` : "";
+                            })()}
+                            </SelectValue>
+                        </SelectTrigger>
+
                         <SelectContent className='bg-background'>
                             {shippingTypesList.map(t => (
-                                <SelectItem key={t._id} value={t.name}>
-                                    <div className="flex justify-between w-full gap-2">
-                                        <span>{t.name}</span>
-                                        <Badge variant={t.adjustmentAmount > 0 ? "destructive" : "secondary"}>
-                                            {t.adjustmentAmount > 0 ? `+${t.adjustmentAmount}` : t.adjustmentAmount} ج
-                                        </Badge>
-                                    </div>
-                                </SelectItem>
+                            <SelectItem key={t._id} value={t.name}>
+                                <div className="flex flex-col gap-1">
+                                <div className="flex justify-between w-full">
+                                    <span className="font-medium text-blue-600">{t.name}</span>
+                                    <Badge variant={t.adjustmentAmount > 0 ? "destructive" : "secondary"}>
+                                    {t.adjustmentAmount > 0 ? `+${t.adjustmentAmount}` : t.adjustmentAmount} ج
+                                    </Badge>
+                                </div>
+                                <p className="text-xs text-gray-500">{t.description}</p>
+                                </div>
+                            </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -583,7 +597,7 @@ export function CreateOrder() {
       <Card className="shadow-sm">
         <CardHeader className="bg-secondary border-b pb-4 mb-4">
             <div className="flex items-center justify-between">
-                <CardTitle className='flex items-center text-lg'><Package className='h-5 w-5 mx-2 text-purple-600'/> 5. محتويات الشحنة</CardTitle>
+                <CardTitle className='flex items-center text-lg'><Package className='h-5 w-5 mx-2 text-purple-600'/> محتويات الشحنة</CardTitle>
                 <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
                     <DialogTrigger asChild>
                         <Button className='bg-blue-600 hover:bg-blue-700'> 
@@ -599,7 +613,7 @@ export function CreateOrder() {
                                     value={newProduct.name} 
                                     onChange={(e)=>setNewProduct({...newProduct, name:e.target.value})} 
                                     className='text-right'
-                                    placeholder="مثال: قميص قطني، حذاء رياضي..."
+                                    placeholder="مثال: قميص ، حذاء ..."
                                 />
                             </div>
                             <div className='grid gap-4 grid-cols-2'>
@@ -632,6 +646,8 @@ export function CreateOrder() {
                     </DialogContent>
                 </Dialog>
             </div>
+            {/* معلومات الوزن الاساسي والاضافي */}
+            <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p>
         </CardHeader>
         <CardContent>
             {products.length > 0 ? (
@@ -674,7 +690,7 @@ export function CreateOrder() {
       </Card>
 
       {/* 6. ملخص التكلفة والوزن */}
-      <Card className="shadow-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 overflow-hidden">
+      <Card className="shadow-2xl border-2 border-purple-200 bg-background from-purple-50 via-blue-50 to-indigo-50 overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white pb-5">
             <CardTitle className='flex items-center text-2xl font-bold justify-center'>
                 <Weight className='h-7 w-7 mx-2 animate-pulse'/> ملخص الشحنة والتكلفة
@@ -684,7 +700,7 @@ export function CreateOrder() {
         <CardContent className='space-y-6 pt-6'>
             <div className="grid gap-6 md:grid-cols-2">
                 {/* إجمالي الوزن */}
-                <div className="relative bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-2xl shadow-xl border-2 border-orange-300 hover:scale-105 hover:shadow-2xl transition-all duration-300">
+                <div className="relative bg-secondary from-orange-50 to-amber-50 p-6 rounded-2xl shadow-xl border-2 border-orange-300 hover:scale-105 hover:shadow-2xl transition-all duration-300">
                     <div className="absolute top-2 left-2">
                         <div className="bg-orange-200 rounded-full p-1.5">
                             <Package className="h-4 w-4 text-orange-700" />
@@ -708,7 +724,7 @@ export function CreateOrder() {
                 </div>
 
                 {/* التكلفة المحسوبة */}
-                <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl shadow-xl border-2 border-green-300 hover:scale-105 hover:shadow-2xl transition-all duration-300">
+                <div className="relative bg-secondary from-green-50 to-emerald-50 p-6 rounded-2xl shadow-xl border-2 border-green-300 hover:scale-105 hover:shadow-2xl transition-all duration-300">
                     <div className="absolute top-2 left-2">
                         <div className="bg-green-200 rounded-full p-1.5">
                             <CheckCircle className="h-4 w-4 text-green-700" />
@@ -751,9 +767,9 @@ export function CreateOrder() {
             </div>
 
             {/* شريط التقدم البصري */}
-            <div className="bg-white rounded-xl p-5 shadow-md border border-indigo-100">
+            <div className="bg-secondary rounded-xl p-5 shadow-md border border-indigo-100">
                 <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-gray-700">اكتمال البيانات</span>
+                    <span className="text-sm font-bold text-primary">اكتمال البيانات</span>
                     <span className="text-xs font-semibold text-indigo-600">
                         {calculatedCost !== null ? '100%' : formData.governorateName && formData.cityName && formData.shippingType ? '75%' : products.length > 0 ? '50%' : '25%'}
                     </span>
@@ -780,24 +796,24 @@ export function CreateOrder() {
                             <ul className="text-sm text-indigo-800 space-y-1.5">
                                 <li className="flex items-center gap-2">
                                     <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
-                                    <span>📍 المحافظة: <strong>{formData.governorateName}</strong></span>
+                                    <span> المحافظة: <strong>{formData.governorateName}</strong></span>
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
-                                    <span>🏙️ المدينة: <strong>{formData.cityName}</strong></span>
+                                    <span> المدينة: <strong>{formData.cityName}</strong></span>
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
-                                    <span>📦 نوع الشحن: <strong>{formData.shippingType}</strong></span>
+                                    <span> نوع الشحن: <strong>{formData.shippingType}</strong></span>
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
-                                    <span>⚖️ الوزن الإجمالي: <strong>{formData.totalWeight} كجم</strong></span>
+                                    <span> الوزن الإجمالي: <strong>{formData.totalWeight} كجم</strong></span>
                                 </li>
                                 {formData.villageDelivery && (
                                     <li className="flex items-center gap-2">
                                         <span className="bg-indigo-200 rounded-full w-1.5 h-1.5"></span>
-                                        <span>🏘️ توصيل قرية: <strong>نعم (رسوم إضافية)</strong></span>
+                                        <span> توصيل قرية: <strong>نعم (رسوم إضافية)</strong></span>
                                     </li>
                                 )}
                             </ul>
@@ -811,7 +827,7 @@ export function CreateOrder() {
                 <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-start gap-3 shadow-md">
                     <AlertCircle className="h-6 w-6 text-amber-600 mt-0.5 flex-shrink-0 animate-pulse" />
                     <div className="text-sm text-amber-900">
-                        <p className="font-bold mb-1.5 text-base">💡 لحساب التكلفة تلقائياً:</p>
+                        <p className="font-bold mb-1.5 text-base"> لحساب التكلفة تلقائياً:</p>
                         <ul className="space-y-1 list-disc list-inside">
                             <li>أضف منتج واحد على الأقل</li>
                             <li>اختر المحافظة والمدينة</li>
