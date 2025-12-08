@@ -1,47 +1,35 @@
-const WeightSetting = require('../models/WeightSetting');
+/**
+ * Weight Settings Controller (Refactored - Clean Code)
+ * Thin controller that delegates to service layer
+ */
 
-// 1. جلب الإعدادات
-exports.getWeightSettings = async (req, res) => {
-    try {
-        let settings = await WeightSetting.findOne();
-        
-        if (!settings) {
-            settings = await WeightSetting.create({
-                defaultWeightLimit: 10,
-                extraKgCost: 0,
-                villageDeliveryCost: 0 // <-- إضافة السعر الافتراضي هنا
-            });
-        }
-        res.status(200).json(settings);
-    } catch (error) {
-        console.error("Internal Server Error in GET:", error); 
-        res.status(500).json({ message: 'خطأ في جلب إعدادات الوزن', error: error.message });
-    }
-};
+const weightSettingsService = require('../services/weightSettingsService');
+const asyncHandler = require('../utils/asyncHandler');
+const { sendSuccess } = require('../utils/responseHandler');
 
-// 2. تحديث الإعدادات
-exports.updateWeightSettings = async (req, res) => {
-    try {
-        // --- إضافة villageDeliveryCost ---
-        const { defaultWeightLimit, extraKgCost, villageDeliveryCost } = req.body; 
-        
-        const updatedSettings = await WeightSetting.findOneAndUpdate(
-            {}, 
-            // --- إضافته هنا ---
-            { defaultWeightLimit, extraKgCost, villageDeliveryCost, updatedAt: Date.now() },
-            { 
-                new: true,    
-                upsert: true, 
-                runValidators: true
-            }
-        );
+/**
+ * @route   GET /api/weight-settings
+ * @desc    Get weight settings
+ * @access  Private
+ */
+exports.getWeightSettings = asyncHandler(async (req, res) => {
+  const settings = await weightSettingsService.getWeightSettings();
+  sendSuccess(res, settings);
+});
 
-        res.status(200).json(updatedSettings);
-    } catch (error) {
-        console.error("Validation Error in PUT:", error);
-        res.status(400).json({ 
-            message: 'فشل التحقق من البيانات أو البيانات غير صحيحة', 
-            error: error.message 
-        });
-    }
-};
+/**
+ * @route   PUT /api/weight-settings
+ * @desc    Update weight settings
+ * @access  Private (Admin)
+ */
+exports.updateWeightSettings = asyncHandler(async (req, res) => {
+  const { defaultWeightLimit, extraKgCost, villageDeliveryCost } = req.body;
+  
+  const updatedSettings = await weightSettingsService.updateWeightSettings(
+    defaultWeightLimit,
+    extraKgCost,
+    villageDeliveryCost
+  );
+  
+  sendSuccess(res, updatedSettings, 'تم تحديث إعدادات الوزن بنجاح');
+});
