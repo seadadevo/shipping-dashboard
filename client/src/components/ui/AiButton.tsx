@@ -5,35 +5,37 @@ const AiButton = () => {
   return (
     <NavLink
       to="/ai-mode"
-      className="group relative flex items-center justify-center rounded-full p-[2px] transition-all duration-300 ease-in-out hover:scale-105 active:scale-95"
-      style={
-        {
-          // Default: Transparent or subtle border
-          // We use the p-[2px] as the 'border width' container
-        }
-      }
+      className="group relative flex items-center justify-center rounded-full transition-all duration-300 ease-out hover:scale-[1.02] active:scale-95"
     >
-      {/* 1. Spinning Gradient Background (Visible on Hover) */}
-      <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
-        <div
-          className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_340deg,white_360deg)] group-hover:bg-[conic-gradient(from_0deg,#ea4335_0deg,#fbbc04_72deg,#34a853_144deg,#4285f4_216deg,#ea4335_360deg)] animate-spin-slow origin-center"
-          style={{ animationDuration: "3s" }}
-        />
+      {/* 1. The Glowing Comet Beam (Spinning) - ALWAYS VISIBLE */}
+      {/* Removed 'opacity-0 group-hover:opacity-100' so it's always on. */}
+      <div className="absolute -inset-[1px] rounded-full opacity-100 overflow-hidden">
+        {/* The spinning gradient */}
+        <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_310deg,#34A853_325deg,#FBBC04_340deg,#EA4335_360deg)] animate-[spin_4s_linear_infinite]" />
       </div>
 
-      {/* 2. Static Border (Visible when NOT hovering, optional) */}
-      <div className="absolute inset-0 rounded-full border border-border group-hover:border-transparent transition-colors duration-300" />
+      {/* 2. Glow Blur Layer (Adds the 'Professional' Pulse) - ALWAYS VISIBLE */}
+      {/* Reduced opacity slightly to 0.5 for always-on to be subtle but visible */}
+      <div className="absolute -inset-[1px] rounded-full opacity-50 blur-sm overflow-hidden">
+        <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_310deg,#34A853_325deg,#FBBC04_340deg,#EA4335_360deg)] animate-[spin_4s_linear_infinite]" />
+      </div>
 
-      {/* 3. Button Content (Overlay) */}
-      <div className="relative flex items-center gap-2 rounded-full bg-card px-5 py-2 transition-all duration-300 backface-hidden z-10 group-hover:bg-background">
-        {/* Icon */}
+      {/* 3. Static Track (The 'Uncovered' part) */}
+      {/* Always visible to define the border where the beam is not present */}
+      <div className="absolute inset-0 rounded-full border border-border/50 transition-colors duration-300" />
+
+      {/* 4. Button Content (Masking the Center) */}
+      <div className="relative flex items-center gap-2.5 rounded-full bg-card px-5 py-2.5 m-[1.5px] tracking-wide transition-all duration-300 backface-hidden z-10 hover:bg-background/95">
+        {/* Icon Group */}
         <div className="relative flex items-center justify-center">
-          <Sparkles className="h-4 w-4 text-primary" />
-          {/* Red Dot Notification (as seen in image) */}
-          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+          <Sparkles className="h-4 w-4 text-primary bg-clip-text" />
+          {/* Notification Dot */}
+          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-[1.5px] border-card animate-pulse shadow-sm" />
         </div>
 
-        <span className="text-sm font-medium text-foreground">AI Mode</span>
+        <span className="text-sm font-semibold text-foreground/90 group-hover:text-foreground">
+          AI Mode
+        </span>
       </div>
     </NavLink>
   );
