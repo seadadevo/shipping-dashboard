@@ -1,8 +1,8 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, Menu } from 'lucide-react';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { LogOut, Menu } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
-import { Button } from '../ui/button';
+import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,31 +10,37 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import type { HeaderProps, User } from '../../types';
-import { useTheme } from '../ui/theme-provider';
+} from "../ui/dropdown-menu";
+import type { HeaderProps, User } from "../../types";
+import { useTheme } from "../ui/theme-provider";
+
+import AiButton from "../ui/AiButton";
 
 interface HeaderWithSidebarProps extends HeaderProps {
   onToggleSidebar: () => void;
 }
 
-const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSidebar }) => {
+const Header: React.FC<HeaderWithSidebarProps> = ({
+  user,
+  onLogout,
+  onToggleSidebar,
+}) => {
   const navigate = useNavigate();
 
-  const getRoleName = (role: User['userType'] | undefined): string => {
-    if (!role) return 'مستخدم';
-    const roleNames: Record<User['userType'], string> = {
-      admin: 'مدير',
-      employee: 'موظف', 
-      merchant: 'تاجر',
-      driver: 'سائق',
+  const getRoleName = (role: User["userType"] | undefined): string => {
+    if (!role) return "مستخدم";
+    const roleNames: Record<User["userType"], string> = {
+      admin: "مدير",
+      employee: "موظف",
+      merchant: "تاجر",
+      driver: "سائق",
     };
     return roleNames[role];
   };
 
   const getInitials = (name: string | undefined): string => {
-    if (!name) return 'م';
-    const parts = name.split(' ');
+    if (!name) return "م";
+    const parts = name.split(" ");
     if (parts.length > 1) {
       return parts[0].charAt(0) + parts[1].charAt(0);
     }
@@ -46,21 +52,24 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
   return (
     <header className="bg-background shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 z-20">
       <div className="flex items-center justify-between">
-
-
         <div className="flex items-center flex-1 max-w-lg">
-          <img src={theme === 'dark' ? '/dark-logo.png' : '/light-logo.png'} className='w-20' alt="flash line logo" />
+          <img
+            src={theme === "dark" ? "/dark-logo.png" : "/light-logo.png"}
+            className="w-20"
+            alt="flash line logo"
+          />
         </div>
 
         <div className="flex items-center space-x-4 space-x-reverse">
+          <AiButton />
 
           {/* dark mode toggle */}
           <ThemeToggle />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="flex items-center space-x-2 space-x-reverse h-auto py-1 px-2 m-0"
               >
                 {/* initials circle */}
@@ -72,8 +81,12 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
 
                 {/* name & role in L-screen */}
                 <div className="text-right hidden sm:flex flex-col">
-                  <p className="text-sm font-medium">{user?.fullName || 'المستخدم'}</p>
-                  <p className="text-xs text-gray-500">{getRoleName(user?.userType)}</p>
+                  <p className="text-sm font-medium">
+                    {user?.fullName || "المستخدم"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {getRoleName(user?.userType)}
+                  </p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
@@ -81,11 +94,13 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>حسابي</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/account-settings')}>إعدادات الحساب</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/account-settings")}>
+                إعدادات الحساب
+              </DropdownMenuItem>
               <DropdownMenuItem>المساعدة والدعم</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={onLogout} 
+              <DropdownMenuItem
+                onClick={onLogout}
                 className="text-red-600 focus:text-red-600 focus:bg-red-50"
               >
                 <LogOut className="h-4 w-4 ml-2" />
@@ -94,14 +109,13 @@ const Header: React.FC<HeaderWithSidebarProps> = ({ user, onLogout, onToggleSide
             </DropdownMenuContent>
           </DropdownMenu>
 
-        {/* menu button for small screens */}
-        <button 
-          className="lg:hidden p-2 rounded-md hover:bg-muted-foreground"
-          onClick={onToggleSidebar}
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-        
+          {/* menu button for small screens */}
+          <button
+            className="lg:hidden p-2 rounded-md hover:bg-muted-foreground"
+            onClick={onToggleSidebar}
+          >
+            <Menu className="w-6 h-6" />
+          </button>
         </div>
       </div>
     </header>
