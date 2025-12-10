@@ -11,6 +11,8 @@ import {
   Clock,
   X,
   MessageSquare,
+  StopCircle,
+  Globe,
 } from "lucide-react";
 
 const API_URL = "http://localhost:5000/api/ai";
@@ -50,6 +52,11 @@ const InputBox = ({
   handleUpload,
   fileInputRef,
   centered = false,
+  startListening,
+  stopListening,
+  isListening,
+  language,
+  toggleLanguage,
 }: {
   question: string;
   setQuestion: (val: string) => void;
@@ -57,6 +64,11 @@ const InputBox = ({
   handleUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   centered?: boolean;
+  startListening: () => void;
+  stopListening: () => void;
+  isListening: boolean;
+  language: "en-US" | "ar-EG";
+  toggleLanguage: () => void;
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -77,6 +89,7 @@ const InputBox = ({
         relative flex flex-col gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm transition-all
         focus-within:border-ring focus-within:ring-1 focus-within:ring-ring
         ${centered ? "min-h-[120px]" : "min-h-[60px]"}
+        ${isListening ? "ring-2 ring-red-500/50 border-red-500/50" : ""}
       `}
       >
         <textarea
@@ -91,7 +104,16 @@ const InputBox = ({
               }
             }
           }}
-          placeholder="Ask anything..."
+          placeholder={
+            isListening
+              ? language === "ar-EG"
+                ? "جاري الاستماع..."
+                : "Listening..."
+              : language === "ar-EG"
+              ? "اسأل أي شيء..."
+              : "Ask anything..."
+          }
+          dir={language === "ar-EG" && isListening ? "rtl" : "auto"}
           className="w-full resize-none bg-transparent p-3 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none"
           style={{ minHeight: centered ? "80px" : "40px" }}
         />
@@ -115,9 +137,33 @@ const InputBox = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
-              <Mic className="h-5 w-5" />
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold bg-accent/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              title="Switch Language"
+            >
+              <Globe className="h-3 w-3" />
+              {language === "en-US" ? "EN" : "عربي"}
             </button>
+
+            {/* Voice Input Button */}
+            <button
+              onClick={isListening ? stopListening : startListening}
+              className={`rounded-full p-2 transition-all duration-200 ${
+                isListening
+                  ? "bg-red-500 text-white animate-pulse"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              }`}
+              title={isListening ? "Stop Listening" : "Start Voice Input"}
+            >
+              {isListening ? (
+                <StopCircle className="h-5 w-5" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </button>
+
             <button
               onClick={() => handleSend()}
               disabled={!question.trim()}
@@ -141,12 +187,25 @@ const AiMode = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
+  // Ref to track the current session ID without stale closures issues
+  const currentSessionIdRef = useRef<string | null>(null);
+
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Voice Input State
+  const [isListening, setIsListening] = useState(false);
+  const [language, setLanguage] = useState<"en-US" | "ar-EG">("en-US");
+  const recognitionRef = useRef<any>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync ref with state
+  useEffect(() => {
+    currentSessionIdRef.current = currentSessionId;
+  }, [currentSessionId]);
 
   // Load sessions
   useEffect(() => {
@@ -169,30 +228,17 @@ const AiMode = () => {
     }
   }, [sessions]);
 
+  // Update session list when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+    // Use the ref to ensure we have the latest ID even if effect runs oddly
+    const activeId = currentSessionIdRef.current;
 
-  const chatStarted = messages.length > 0;
+    if (!activeId || messages.length === 0) return;
 
-  // --- Session Logic ---
-  const generateId = () => Date.now().toString();
-
-  const startNewChat = () => {
-    if (messages.length === 0 && currentSessionId) return;
-
-    const newId = generateId();
-    setCurrentSessionId(newId);
-    setMessages([]);
-    setQuestion("");
-    setShowHistory(false);
-  };
-
-  const updateSessionsList = (activeId: string, currentMessages: Message[]) => {
     setSessions((prev) => {
       const existingIndex = prev.findIndex((s) => s.id === activeId);
       let title = "New Chat";
-      const firstUserMsg = currentMessages.find((m) => m.sender === "user");
+      const firstUserMsg = messages.find((m) => m.sender === "user");
 
       if (existingIndex >= 0) {
         title = prev[existingIndex].title;
@@ -210,7 +256,7 @@ const AiMode = () => {
       const updatedSession: ChatSession = {
         id: activeId,
         title,
-        messages: currentMessages,
+        messages,
         date: new Date().toISOString(),
       };
 
@@ -225,23 +271,97 @@ const AiMode = () => {
         return [updatedSession, ...prev];
       }
     });
+  }, [messages]); // Removed currentSessionId from dep array to rely on Ref/Messages sync
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const chatStarted = messages.length > 0;
+
+  // --- Voice Logic ---
+  const toggleLanguage = () => {
+    setLanguage((prev) => (prev === "en-US" ? "ar-EG" : "en-US"));
   };
 
-  const addMessage = (sender: "user" | "ai", text: string) => {
-    setMessages((prev) => {
-      const newMessages = [...prev, { sender, text }];
-      let activeId = currentSessionId;
-      if (!activeId) {
-        activeId = generateId();
-        setCurrentSessionId(activeId);
-      }
-      updateSessionsList(activeId, newMessages);
-      return newMessages;
-    });
+  const startListening = () => {
+    if (
+      !("webkitSpeechRecognition" in window) &&
+      !("SpeechRecognition" in window)
+    ) {
+      alert("Your browser does not support voice input.");
+      return;
+    }
+
+    // @ts-ignore
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = language;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setQuestion((prev) => prev + (prev ? " " : "") + transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    }
+  };
+
+  // --- Session Logic ---
+  const generateId = () => Date.now().toString();
+
+  const startNewChat = () => {
+    if (messages.length === 0 && currentSessionId) return;
+
+    const newId = generateId();
+    setCurrentSessionId(newId);
+    currentSessionIdRef.current = newId; // Update ref immediately
+    setMessages([]);
+    setQuestion("");
+    setShowHistory(false);
+  };
+
+  // Helper to safely add message using the correct ID
+  const addMessageSafe = (sender: "user" | "ai", text: string) => {
+    let activeId = currentSessionIdRef.current;
+
+    // If no session exists, create one immediately
+    if (!activeId) {
+      activeId = generateId();
+      setCurrentSessionId(activeId);
+      currentSessionIdRef.current = activeId;
+    }
+
+    setMessages((prev) => [...prev, { sender, text }]);
   };
 
   const loadSession = (session: ChatSession) => {
     setCurrentSessionId(session.id);
+    currentSessionIdRef.current = session.id;
     setMessages(session.messages);
     setShowHistory(false);
   };
@@ -251,6 +371,7 @@ const AiMode = () => {
     setSessions((prev) => prev.filter((s) => s.id !== id));
     if (currentSessionId === id) {
       setCurrentSessionId(null);
+      currentSessionIdRef.current = null;
       setMessages([]);
     }
   };
@@ -260,7 +381,8 @@ const AiMode = () => {
     const textToSend = textOverride || question;
     if (!textToSend.trim()) return;
 
-    addMessage("user", textToSend);
+    // 1. User Message (will initialize session if null)
+    addMessageSafe("user", textToSend);
     setQuestion("");
     setLoading(true);
 
@@ -271,9 +393,11 @@ const AiMode = () => {
         body: JSON.stringify({ question: textToSend }),
       });
       const data = await res.json();
-      addMessage("ai", data.answer);
+
+      // 2. AI Message (Uses addMessageSafe which reads from Ref, preventing stale closure)
+      addMessageSafe("ai", data.answer);
     } catch (err) {
-      addMessage(
+      addMessageSafe(
         "ai",
         "Sorry, I encountered an error. Please check your connection."
       );
@@ -288,7 +412,7 @@ const AiMode = () => {
 
     const formData = new FormData();
     formData.append("file", file);
-    addMessage("user", `Uploaded: ${file.name}`);
+    addMessageSafe("user", `Uploaded: ${file.name}`);
 
     try {
       const res = await fetch(`${API_URL}/upload`, {
@@ -297,33 +421,31 @@ const AiMode = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        addMessage(
+        addMessageSafe(
           "ai",
           `I've read **${file.name}**. Ask me anything about it!`
         );
       } else {
-        addMessage("ai", `Error uploading file: ${data.error}`);
+        addMessageSafe("ai", `Error uploading file: ${data.error}`);
       }
     } catch (err) {
-      addMessage("ai", "Failed to upload file. Is the server running?");
+      addMessageSafe("ai", "Failed to upload file. Is the server running?");
     }
   };
 
   return (
+    // FORCE FIXED PAGE LAYOUT
+    // h-[calc(100vh-64px)] assumes header is roughly 64px (h-16).
+    // We use overflow-hidden on the parent to prevent body scroll.
     <div className="flex bg-background h-[calc(100vh-theme(spacing.16))] w-full text-foreground font-sans overflow-hidden">
-      {/* 
-          UNIFIED SIDEBAR CONTAINER 
-          Includes the Icon Strip (Rail) AND the Expansible History List.
-          Uses a single parent div with transitions for width.
-       */}
+      {/* Sidebar (Fixed Height, not scrolling with chat) */}
       <div
         className={`
-           z-30 bg-card border-l border-border shrink-0 flex overflow-hidden transition-all duration-300 ease-in-out
+           z-30 bg-card border-l border-border shrink-0 flex overflow-hidden transition-all duration-300 ease-in-out relative
            ${showHistory ? "w-80" : "w-16"}
          `}
       >
-        {/* 1. Icon Strip (Always visible, fixed width 16) */}
-        <div className="w-16 flex flex-col items-center py-4 gap-6 shrink-0 h-full border-r border-border/50 bg-card z-40">
+        <div className="w-16 flex flex-col items-center py-4 gap-6 shrink-0 h-full border-r border-border/50 bg-card z-40 relative">
           <button
             onClick={startNewChat}
             title="New Chat"
@@ -335,7 +457,7 @@ const AiMode = () => {
           <button
             onClick={() => setShowHistory(!showHistory)}
             title="History"
-            className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
+            className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 relative ${
               showHistory
                 ? "bg-accent text-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -343,12 +465,11 @@ const AiMode = () => {
           >
             <Clock className="h-5 w-5" />
             {sessions.length > 0 && (
-              <div className="absolute ml-6 mb-6 h-2 w-2 rounded-full bg-red-500 border border-card" />
+              <span className="absolute top-2 right-3 h-2 w-2 rounded-full bg-red-500 border border-card pointer-events-none" />
             )}
           </button>
         </div>
 
-        {/* 2. History List Panel (Expands out) */}
         <div
           className={`flex flex-col h-full bg-card/50 w-64 shrink-0 transition-opacity duration-300 ${
             showHistory ? "opacity-100" : "opacity-0"
@@ -377,7 +498,9 @@ const AiMode = () => {
                   }`}
                 >
                   <MessageSquare className="h-4 w-4 shrink-0 opacity-70" />
-                  <div className="truncate flex-1">{session.title}</div>
+                  <div className="truncate flex-1 text-left">
+                    {session.title}
+                  </div>
                   <button
                     onClick={(e) => deleteSession(e, session.id)}
                     className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all p-1"
@@ -391,9 +514,9 @@ const AiMode = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col relative min-w-0">
-        {/* Mobile Header (Shows AI Mode title + Mobile Menu Toggle) */}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col relative min-w-0 h-full">
+        {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-10 flex items-center p-4 bg-background/80 backdrop-blur-sm border-b border-border justify-between">
           <span className="font-medium">AI Mode</span>
           <button
@@ -404,7 +527,13 @@ const AiMode = () => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        {/* 
+           Chat Scroll Area 
+           - flex-1: Takes remaining space
+           - overflow-y-auto: Enables scrolling
+           - Scrollbar hidden utilities applied
+        */}
+        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {!chatStarted ? (
             <div className="flex min-h-full flex-col items-center justify-center p-4">
               <div className="mb-8 text-center animate-fade-in">
@@ -424,6 +553,11 @@ const AiMode = () => {
                   handleSend={handleSend}
                   handleUpload={handleUpload}
                   fileInputRef={fileInputRef}
+                  startListening={startListening}
+                  stopListening={stopListening}
+                  isListening={isListening}
+                  language={language}
+                  toggleLanguage={toggleLanguage}
                 />
 
                 <div className="mt-8 flex flex-col gap-2">
@@ -478,7 +612,7 @@ const AiMode = () => {
           )}
         </div>
 
-        {/* Floating Input (Chat Mode) */}
+        {/* Floating Input (Fixed at Bottom of Chat Area) */}
         {chatStarted && (
           <div className="sticky bottom-0 z-10 w-full bg-gradient-to-t from-background via-background to-transparent pb-6 pt-10">
             <div className="px-4">
@@ -489,6 +623,11 @@ const AiMode = () => {
                 handleSend={handleSend}
                 handleUpload={handleUpload}
                 fileInputRef={fileInputRef}
+                startListening={startListening}
+                stopListening={stopListening}
+                isListening={isListening}
+                language={language}
+                toggleLanguage={toggleLanguage}
               />
               <div className="mt-2 text-center text-xs text-muted-foreground">
                 AI can make mistakes. Please verify important information.
