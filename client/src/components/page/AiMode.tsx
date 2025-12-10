@@ -318,7 +318,7 @@ const AiMode = () => {
        */}
       <div
         className={`
-           z-30 bg-card border-r border-border shrink-0 flex overflow-hidden transition-all duration-300 ease-in-out
+           z-30 bg-card border-l border-border shrink-0 flex overflow-hidden transition-all duration-300 ease-in-out
            ${showHistory ? "w-80" : "w-16"}
          `}
       >

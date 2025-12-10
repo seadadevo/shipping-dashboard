@@ -1,78 +1,41 @@
-import { Button, createTheme, ThemeProvider } from "@mui/material";
-import { styled, keyframes } from "@mui/system";
 import { NavLink } from "react-router-dom";
-
-// --- 1. Define Keyframes for the Color Movement ---
-
-// This animation rotates a custom CSS variable to move the gradient along the border.
-const colorCycle = keyframes`
-  from {
-    --angle: 0deg;
-  }
-  to {
-    --angle: 360deg;
-  }
-`;
-
-// --- 2. Create the Styled Button Component ---
-
-const AnimatedBorderButton = styled(Button)(({ theme }) => {
-  return {
-    borderRadius: "50px", // Fully rounded corners
-    padding: "4px 24px",
-    color: theme.palette.text.primary,
-    backgroundColor: theme.palette.background.paper,
-    border: "2px solid transparent", // Crucial: creates space for the gradient
-    position: "relative",
-    zIndex: 1,
-    overflow: "hidden",
-
-    // Initialize the custom CSS variable
-    "--angle": "0deg",
-
-    // The dual-background technique:
-    // 1. Solid color for the inside (padding-box)
-    // 2. Conic gradient for the border area (border-box)
-    background: `linear-gradient(${theme.palette.background.paper}, ${theme.palette.background.paper}) padding-box,
-                 conic-gradient(from var(--angle), #4285F4, #0F9D58, #F4B400, #DB4437, #4285F4) border-box`,
-    backgroundSize: "100% 100%",
-    backgroundOrigin: "padding-box, border-box",
-
-    // Apply the animation to the background colors
-    animation: `${colorCycle} 3s linear infinite forwards`, // Continuous loop
-
-    // Ensure the button itself does not physically rotate
-    transform: "rotate(0deg)",
-
-    "&:hover": {
-      // Prevents MUI default hover background color
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.2)",
-      // Optional: Speed up the animation on hover
-      animationDuration: "1.5s",
-    },
-  };
-});
-
-// --- 3. Main Application Component (with ThemeProvider) ---
-
-// Create a default MUI theme instance to ensure theme context exists
-const defaultTheme = createTheme();
+import { Sparkles } from "lucide-react";
 
 const AiButton = () => {
   return (
-    // Must wrap in ThemeProvider for MUI palette values to be defined
-    <ThemeProvider theme={defaultTheme}>
-      <NavLink
-        to="/ai-mode"
-        style={{ display: "flex", justifyContent: "center" }}
-        // onClick={() => {
-        //   navigate("/ai-mode");
-        // }}
-      >
-        <AnimatedBorderButton variant="outlined">AI Mode</AnimatedBorderButton>
-      </NavLink>
-    </ThemeProvider>
+    <NavLink
+      to="/ai-mode"
+      className="group relative flex items-center justify-center rounded-full p-[2px] transition-all duration-300 ease-in-out hover:scale-105 active:scale-95"
+      style={
+        {
+          // Default: Transparent or subtle border
+          // We use the p-[2px] as the 'border width' container
+        }
+      }
+    >
+      {/* 1. Spinning Gradient Background (Visible on Hover) */}
+      <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden">
+        <div
+          className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_340deg,white_360deg)] group-hover:bg-[conic-gradient(from_0deg,#ea4335_0deg,#fbbc04_72deg,#34a853_144deg,#4285f4_216deg,#ea4335_360deg)] animate-spin-slow origin-center"
+          style={{ animationDuration: "3s" }}
+        />
+      </div>
+
+      {/* 2. Static Border (Visible when NOT hovering, optional) */}
+      <div className="absolute inset-0 rounded-full border border-border group-hover:border-transparent transition-colors duration-300" />
+
+      {/* 3. Button Content (Overlay) */}
+      <div className="relative flex items-center gap-2 rounded-full bg-card px-5 py-2 transition-all duration-300 backface-hidden z-10 group-hover:bg-background">
+        {/* Icon */}
+        <div className="relative flex items-center justify-center">
+          <Sparkles className="h-4 w-4 text-primary" />
+          {/* Red Dot Notification (as seen in image) */}
+          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+        </div>
+
+        <span className="text-sm font-medium text-foreground">AI Mode</span>
+      </div>
+    </NavLink>
   );
 };
 
