@@ -14,6 +14,18 @@ import {
   ChevronLeft,
   MoreVertical,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  Legend,
+} from "recharts";
 
 const API_URL = "http://localhost:5000/api/ai";
 
@@ -44,6 +56,98 @@ interface ChatSession {
   date: string;
 }
 
+// --- Component: ChartRenderer ---
+const ChartRenderer = ({ jsonString }: { jsonString: string }) => {
+  try {
+    const chartData = JSON.parse(jsonString);
+    const { type, title, xLabel, yLabel, data } = chartData;
+
+    return (
+      <div className="my-4 w-full max-w-2xl rounded-xl border bg-card p-4 shadow-sm animate-fade-in-up">
+        <h3 className="mb-4 text-center font-semibold text-foreground text-lg">
+          {title}
+        </h3>
+        <div className="h-[300px] w-full text-xs">
+          <ResponsiveContainer width="100%" height="100%">
+            {type === "line" ? (
+              <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis
+                  dataKey="name"
+                  label={{
+                    value: xLabel,
+                    position: "insideBottom",
+                    offset: -5,
+                  }}
+                  stroke="#888888"
+                />
+                <YAxis
+                  label={{ value: yLabel, angle: -90, position: "insideLeft" }}
+                  stroke="#888888"
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1f2937",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#8884d8"
+                  strokeWidth={3}
+                  activeDot={{ r: 8 }}
+                  animationDuration={1500}
+                />
+              </LineChart>
+            ) : (
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis
+                  dataKey="name"
+                  label={{
+                    value: xLabel,
+                    position: "insideBottom",
+                    offset: -5,
+                  }}
+                  stroke="#888888"
+                />
+                <YAxis
+                  label={{ value: yLabel, angle: -90, position: "insideLeft" }}
+                  stroke="#888888"
+                />
+                <Tooltip
+                  cursor={{ fill: "transparent" }}
+                  contentStyle={{
+                    backgroundColor: "#1f2937",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                  }}
+                />
+                <Legend />
+                <Bar
+                  dataKey="value"
+                  fill="#82ca9d"
+                  radius={[4, 4, 0, 0]}
+                  animationDuration={1500}
+                >
+                  {/* Subtle Gradient effect could go here */}
+                </Bar>
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  } catch (e) {
+    return <div className="text-red-500 text-sm">Error rendering chart.</div>;
+  }
+};
+
 // --- Component: InputBox ---
 const InputBox = ({
   question,
@@ -55,8 +159,7 @@ const InputBox = ({
   startListening,
   stopListening,
   isListening,
-  language,
-  toggleLanguage,
+  isUploading, // New prop
   showIntroGlow = false, // New prop for animation
 }: {
   question: string;
@@ -68,8 +171,7 @@ const InputBox = ({
   startListening: () => void;
   stopListening: () => void;
   isListening: boolean;
-  language: "en-US" | "ar-EG";
-  toggleLanguage: () => void;
+  isUploading: boolean;
   showIntroGlow?: boolean;
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -123,25 +225,26 @@ const InputBox = ({
           ref={inputRef}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
+          disabled={isUploading}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              if (question.trim()) {
+              if (question.trim() && !isUploading) {
                 handleSend();
               }
             }
           }}
           placeholder={
-            isListening
-              ? language === "ar-EG"
-                ? "جاري الاستماع..."
-                : "Listening..."
-              : language === "ar-EG"
-              ? "اسأل أي شيء..."
-              : "Ask anything..."
+            isUploading
+              ? "Reading file... please wait ⏳"
+              : isListening
+              ? "جاري الاستماع..."
+              : "Ask anything... | اسأل أي شيء"
           }
-          dir={language === "ar-EG" && isListening ? "rtl" : "auto"}
-          className="w-full resize-none bg-transparent p-3 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none"
+          dir="auto"
+          className={`w-full resize-none bg-transparent p-3 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none ${
+            isUploading ? "opacity-50 cursor-not-allowed" : ""
+          }`}
           style={{ minHeight: centered ? "80px" : "40px" }}
         />
 
@@ -149,7 +252,8 @@ const InputBox = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1 rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              disabled={isUploading}
+              className="flex items-center gap-1 rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
             >
               <Plus className="h-5 w-5" />
               <span className="text-sm font-medium">Attach</span>
@@ -158,30 +262,21 @@ const InputBox = ({
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept=".txt"
+              accept=".txt,.csv"
               onChange={handleUpload}
             />
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Language Toggle */}
-            <button
-              onClick={toggleLanguage}
-              className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold bg-accent/50 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              title="Switch Language"
-            >
-              <Globe className="h-3 w-3" />
-              {language === "en-US" ? "EN" : "عربي"}
-            </button>
-
             {/* Voice Input Button */}
             <button
               onClick={isListening ? stopListening : startListening}
+              disabled={isUploading}
               className={`rounded-full p-2 transition-all duration-200 ${
                 isListening
                   ? "bg-red-500 text-white animate-pulse"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              }`}
+              } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
               title={isListening ? "Stop Listening" : "Start Voice Input"}
             >
               {isListening ? (
@@ -193,14 +288,18 @@ const InputBox = ({
 
             <button
               onClick={() => handleSend()}
-              disabled={!question.trim()}
+              disabled={!question.trim() || isUploading}
               className={`rounded-full p-2 transition-all ${
-                question.trim()
+                question.trim() && !isUploading
                   ? "bg-primary text-primary-foreground hover:opacity-90"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               }`}
             >
-              <Send className="h-5 w-5" />
+              {isUploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
             </button>
           </div>
         </div>
@@ -219,11 +318,11 @@ const AiMode = () => {
 
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // New state
   const [showHistory, setShowHistory] = useState(false);
 
   // Voice Input State
   const [isListening, setIsListening] = useState(false);
-  const [language, setLanguage] = useState<"en-US" | "ar-EG">("en-US");
   const recognitionRef = useRef<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -233,10 +332,10 @@ const AiMode = () => {
   const [showIntroGlow, setShowIntroGlow] = useState(true);
 
   useEffect(() => {
-    // Turn off glow after 6 seconds (adjusted per user request)
+    // Turn off glow after 5 seconds (adjusted per user request)
     const timer = setTimeout(() => {
       setShowIntroGlow(false);
-    }, 5000); // 5 seconds
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -318,11 +417,7 @@ const AiMode = () => {
 
   const chatStarted = messages.length > 0;
 
-  // --- Voice Logic ---
-  const toggleLanguage = () => {
-    setLanguage((prev) => (prev === "en-US" ? "ar-EG" : "en-US"));
-  };
-
+  // --- Voice Logic (Defaulted to Arabic/Auto) ---
   const startListening = () => {
     if (
       !("webkitSpeechRecognition" in window) &&
@@ -339,7 +434,7 @@ const AiMode = () => {
 
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = language;
+    recognition.lang = "ar-EG"; // Default to Arabic as requested context implies
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -442,9 +537,12 @@ const AiMode = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsUploading(true); // START LOADING
+    setQuestion(""); // Clear input if any
+
     const formData = new FormData();
     formData.append("file", file);
-    addMessageSafe("user", `Uploaded: ${file.name}`);
+    addMessageSafe("user", `📤 Uploading: ${file.name}...`);
 
     try {
       const res = await fetch(`${API_URL}/upload`, {
@@ -455,14 +553,50 @@ const AiMode = () => {
       if (res.ok) {
         addMessageSafe(
           "ai",
-          `I've read **${file.name}**. Ask me anything about it!`
+          `✅ I've read **${file.name}**. Ask me about the orders, costs, or future predictions!`
         );
       } else {
-        addMessageSafe("ai", `Error uploading file: ${data.error}`);
+        addMessageSafe("ai", `❌ Error uploading file: ${data.error}`);
       }
     } catch (err) {
-      addMessageSafe("ai", "Failed to upload file. Is the server running?");
+      addMessageSafe("ai", "❌ Failed to upload file. Is the server running?");
+    } finally {
+      setIsUploading(false); // END LOADING
     }
+  };
+
+  // --- RENDER MESSAGE HELPER for CHARTS ---
+  const renderMessageContent = (text: string) => {
+    // Check for JSON chart block
+    const chartRegex = /```json-chart([\s\S]*?)```/;
+    const match = text.match(chartRegex);
+
+    if (match) {
+      // Split text into: Before Chart, Chart, After Chart
+      const jsonString = match[1];
+      const parts = text.split(match[0]);
+
+      return (
+        <div className="flex flex-col gap-4 w-full">
+          {parts[0].trim() && (
+            <div className="leading-relaxed whitespace-pre-wrap">
+              {parts[0]}
+            </div>
+          )}
+
+          <ChartRenderer jsonString={jsonString} />
+
+          {parts[1] && parts[1].trim() && (
+            <div className="leading-relaxed whitespace-pre-wrap">
+              {parts[1]}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Default text render
+    return <div className="leading-relaxed whitespace-pre-wrap">{text}</div>;
   };
 
   return (
@@ -610,8 +744,7 @@ const AiMode = () => {
                   startListening={startListening}
                   stopListening={stopListening}
                   isListening={isListening}
-                  language={language}
-                  toggleLanguage={toggleLanguage}
+                  isUploading={isUploading}
                   showIntroGlow={showIntroGlow} // Pass the animation state
                 />
 
@@ -635,7 +768,11 @@ const AiMode = () => {
             <div className="mx-auto w-full max-w-4xl p-4 md:p-8 pb-32">
               {messages.map((msg, idx) => (
                 <div key={idx} className="mb-8 animate-fade-in">
-                  <div className="mb-2 flex items-center gap-3">
+                  <div
+                    className={`mb-2 flex items-center gap-3 ${
+                      msg.sender === "user" ? "flex-row-reverse" : ""
+                    }`}
+                  >
                     {msg.sender === "user" ? (
                       <div className="text-lg font-medium text-foreground">
                         You
@@ -646,13 +783,32 @@ const AiMode = () => {
                           <Sparkles className="h-3 w-3" />
                         </div>
                         <span className="text-lg font-medium text-foreground">
-                          AI Assistant
+                          AI Assistant | المساعد الذكي
                         </span>
                       </div>
                     )}
                   </div>
-                  <div className="pl-0 text-foreground/90 leading-relaxed whitespace-pre-wrap">
-                    {msg.text}
+
+                  {/* Message Content Bubble */}
+                  <div
+                    className={`flex w-full ${
+                      msg.sender === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`
+                        max-w-[85%] leading-relaxed whitespace-pre-wrap
+                        ${
+                          msg.sender === "user"
+                            ? "bg-muted/50 p-4 rounded-2xl rounded-tr-none text-foreground/90 border border-border/50"
+                            : "pl-0 text-foreground/90"
+                        }
+                      `}
+                    >
+                      {msg.sender === "ai"
+                        ? renderMessageContent(msg.text)
+                        : msg.text}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -660,6 +816,12 @@ const AiMode = () => {
                 <div className="flex items-center gap-3 text-muted-foreground animate-pulse">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Thinking...
+                </div>
+              )}
+              {isUploading && (
+                <div className="flex items-center gap-3 text-blue-500 animate-pulse mt-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Reading file content...
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -681,8 +843,7 @@ const AiMode = () => {
                 startListening={startListening}
                 stopListening={stopListening}
                 isListening={isListening}
-                language={language}
-                toggleLanguage={toggleLanguage}
+                isUploading={isUploading}
                 showIntroGlow={false} // Never show glow on bottom input, only on the centered one
               />
               <div className="mt-2 text-center text-xs text-muted-foreground">

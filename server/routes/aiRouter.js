@@ -125,7 +125,23 @@ async function generateAnswer(context, query) {
        - If the user provides structured data (like CSV/orders), act as a **Senior Data Analyst**.
        - Analyze trends, calculate totals, and identify patterns.
        - If asked for a "prediction" of the next 30 days, use the data trends to extrapolate a logical forecast. Explain your reasoning.
-    6. Be detailed, helpful, and polite. "Hold the user's hand" with step-by-step instructions if needed.
+    6. **VISUAL REPORTS (CHARTS)**:
+       - If the data involves numbers over time or comparisons (e.g. Sales per Month, Orders per Driver), YOU MUST provide a JSON block for a chart at the end of your response.
+       - Format:
+         \`\`\`json-chart
+         {
+           "type": "bar", // or "line"
+           "title": "Monthly Revenue Prediction",
+           "xLabel": "Month",
+           "yLabel": "Revenue (EGP)",
+           "data": [
+             {"name": "Oct", "value": 5000},
+             {"name": "Nov", "value": 7000}
+           ]
+         }
+         \`\`\`
+       - Ensure the JSON is valid and parsable.
+    7. Be detailed, helpful, and polite. "Hold the user's hand" with step-by-step instructions if needed.
     
     Context:
     ${context}
