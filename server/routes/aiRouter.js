@@ -4,8 +4,10 @@ const fs = require("fs");
 const path = require("path");
 const pdf = require("pdf-parse");
 const csv = require("csv-parser");
+const tesseract = require("tesseract.js");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
 const { ChromaClient } = require("chromadb");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -15,9 +17,33 @@ const upload = multer({ dest: "uploads/" });
 const client = new ChromaClient();
 const COLLECTION_NAME = "rag_knowledge_base";
 
+// Access your API key as an environment variable
+const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
 // ================= HELPER FUNCTIONS =================
 
+// --- RESET DB ON STARTUP (Fix for Garbage Data) ---
+async function resetCollection() {
+  try {
+    console.log(
+      `🧹 Attempting to delete collection '${COLLECTION_NAME}' to clear old data...`
+    );
+    await client.deleteCollection({ name: COLLECTION_NAME });
+    console.log(`✅ Collection '${COLLECTION_NAME}' deleted.`);
+  } catch (e) {
+    // Ignore if it doesn't exist
+    console.log(
+      `ℹ️ Collection '${COLLECTION_NAME}' did not exist or could not be deleted.`
+    );
+  }
+}
+// Fire and forget on startup
+resetCollection();
+
 async function getEmbedding(text) {
+  // Use OpenRouter for embeddings for consistency if specific model needed,
+  // or use a local one. Here we use OpenRouter as per original code.
   const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
     headers: {
@@ -38,30 +64,47 @@ async function getEmbedding(text) {
   return data.data[0].embedding;
 }
 
-function parseCSV(filePath) {
+// Helper: Convert tabular CSV data to semantic text for RAG
+const parseCSV = (filePath) => {
   return new Promise((resolve, reject) => {
-    const rows = [];
+    const results = [];
     fs.createReadStream(filePath)
       .pipe(csv())
-      .on("data", (data) => rows.push(data))
+      .on("data", (data) => results.push(data))
       .on("end", () => {
-        // Convert CSV rows to a readable text summary
-        // E.g. "Row 1: Client=ABC, Amount=500..."
-        const textSummary = rows
+        // Convert rows to a readable string context
+        const textContext = results
           .map((row, index) => {
-            const rowStr = Object.entries(row)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(", ");
-            return `Record ${index + 1}: ${rowStr}`;
+            return (
+              `Record ${index + 1}: ` +
+              Object.entries(row)
+                .map(([key, val]) => `${key}: ${val}`)
+                .join(", ")
+            );
           })
           .join("\n");
-        resolve(textSummary);
+        resolve(textContext);
       })
       .on("error", (err) => reject(err));
   });
-}
+};
 
 async function processAndStoreDocument(rawText) {
+  if (!rawText || rawText.length < 10) {
+    console.warn("⚠️ Text too short to process.");
+    return;
+  }
+
+  // Sanity check for binary garbage
+  const sample = rawText.slice(0, 100);
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x08\x0E-\x1F]/.test(sample)) {
+    console.warn(
+      "🚨 BINARY DETECTED! Aborting text processing to prevent garbage index."
+    );
+    return;
+  }
+
   try {
     const cleanText = rawText.replace(/\0/g, "").trim();
     console.log(`Processing document. Size: ${cleanText.length} chars.`);
@@ -83,12 +126,7 @@ async function processAndStoreDocument(rawText) {
       });
     }
 
-    try {
-      await client.deleteCollection({ name: COLLECTION_NAME });
-      console.log("Cleared old collection.");
-    } catch (e) {}
-
-    const collection = await client.createCollection({
+    const collection = await client.getOrCreateCollection({
       name: COLLECTION_NAME,
       embeddingFunction: null,
     });
@@ -196,6 +234,7 @@ async function initDefaultDocument() {
   }
 }
 
+// Run init on start
 initDefaultDocument();
 
 // ================= API ENDPOINTS =================
@@ -221,6 +260,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       req.file.mimetype === "application/vnd.ms-excel" ||
       req.file.originalname.toLowerCase().endsWith(".csv");
 
+    const isImage =
+      req.file.mimetype.startsWith("image/") ||
+      /\.(jpg|jpeg|png|webp)$/.test(req.file.originalname.toLowerCase());
+
     if (isPdf) {
       console.log("📄 Detected PDF. Parsing...");
       const dataBuffer = fs.readFileSync(filePath);
@@ -229,11 +272,18 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     } else if (isCsv) {
       console.log("📊 Detected CSV. Parsing...");
       rawText = await parseCSV(filePath);
+    } else if (isImage) {
+      console.log("📷 Detected Image. Performing OCR...");
+      const {
+        data: { text },
+      } = await tesseract.recognize(filePath, "ara+eng");
+      rawText = text;
     } else {
+      console.log("📝 Detected Text File. Reading...");
       rawText = fs.readFileSync(filePath, "utf-8");
     }
 
-    if (!rawText.trim()) throw new Error("Parsed text is empty.");
+    if (!rawText || !rawText.trim()) throw new Error("Parsed text is empty.");
 
     await processAndStoreDocument(rawText);
     fs.unlinkSync(filePath);
@@ -265,15 +315,15 @@ router.post("/chat", async (req, res) => {
     );
 
     const contextText =
-      result.metadatas && result.metadatas[0]
+      result.metadatas && result.metadatas[0] && result.metadatas[0].length > 0
         ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
         : "";
 
     if (!contextText.trim()) {
-      return res.json({
-        answer:
-          "I don't have enough information in the current document to answer that.",
-      });
+      // If no context, just ask the AI without specific RAG context, or provide a default fallback
+      // For now, let's just let it answer generally or say it doesn't know.
+      // But better to give it a chance to answer general questions.
+      console.log("⚠️ No context found in vector DB. Using empty context.");
     }
 
     const answer = await generateAnswer(contextText, question);

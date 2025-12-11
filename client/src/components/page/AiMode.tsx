@@ -10,7 +10,6 @@ import {
   Menu,
   Clock,
   StopCircle,
-  Globe,
   ChevronLeft,
   MoreVertical,
 } from "lucide-react";
@@ -143,7 +142,7 @@ const ChartRenderer = ({ jsonString }: { jsonString: string }) => {
         </div>
       </div>
     );
-  } catch (e) {
+  } catch {
     return <div className="text-red-500 text-sm">Error rendering chart.</div>;
   }
 };
@@ -262,7 +261,7 @@ const InputBox = ({
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept=".txt,.csv"
+              accept=".txt,.csv,.pdf,.jpg,.jpeg,.png,.webp"
               onChange={handleUpload}
             />
           </div>
@@ -427,7 +426,6 @@ const AiMode = () => {
       return;
     }
 
-    // @ts-ignore
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
@@ -550,12 +548,13 @@ const AiMode = () => {
       if (res.ok) {
         addMessageSafe(
           "ai",
-          `✅ تم قراءة الملف **${file.name}**. اسألني أي شيء عن الطلبات أو التوقعات!`
+          data.answer ||
+            `✅ تم قراءة الملف **${file.name}**. اسألني أي شيء عنه!`
         );
       } else {
         addMessageSafe("ai", `❌ خطأ في رفع الملف: ${data.error}`);
       }
-    } catch (err) {
+    } catch {
       addMessageSafe("ai", "❌ فشل الرفع. هل الخادم يعمل؟");
     } finally {
       setIsUploading(false); // END LOADING
