@@ -9,13 +9,10 @@ import {
   Trash2,
   Menu,
   Clock,
-  X,
-  MessageSquare,
   StopCircle,
   Globe,
   ChevronLeft,
   MoreVertical,
-  LogOut,
 } from "lucide-react";
 
 const API_URL = "http://localhost:5000/api/ai";
@@ -60,6 +57,7 @@ const InputBox = ({
   isListening,
   language,
   toggleLanguage,
+  showIntroGlow = false, // New prop for animation
 }: {
   question: string;
   setQuestion: (val: string) => void;
@@ -72,6 +70,7 @@ const InputBox = ({
   isListening: boolean;
   language: "en-US" | "ar-EG";
   toggleLanguage: () => void;
+  showIntroGlow?: boolean;
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -87,14 +86,39 @@ const InputBox = ({
         centered ? "max-w-2xl" : "max-w-4xl mx-auto"
       }`}
     >
+      {/* 
+         ANIMATION LAYERS (Only visible if showIntroGlow is true) 
+         Similar to AiButton but adapted for a box
+      */}
+      {showIntroGlow && (
+        <>
+          {/* 1. The Glowing Beam */}
+          <div className="absolute -inset-[3px] rounded-2xl opacity-100 overflow-hidden pointer-events-none z-0">
+            <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
+          </div>
+          {/* 2. Glow Blur Layer */}
+          <div className="absolute -inset-[3px] rounded-2xl opacity-60 blur-md overflow-hidden pointer-events-none z-0">
+            <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
+          </div>
+        </>
+      )}
+
+      {/* Actual Input Container */}
       <div
         className={`
-        relative flex flex-col gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm transition-all
-        focus-within:border-ring focus-within:ring-1 focus-within:ring-ring
+        relative flex flex-col gap-2 rounded-2xl border bg-card p-2 shadow-sm transition-all z-10
+        ${
+          !showIntroGlow
+            ? "border-border focus-within:border-ring focus-within:ring-1 focus-within:ring-ring"
+            : "border-transparent"
+        }
         ${centered ? "min-h-[120px]" : "min-h-[60px]"}
         ${isListening ? "ring-2 ring-red-500/50 border-red-500/50" : ""}
       `}
       >
+        {/* Background to cover the gradient behind */}
+        <div className="absolute inset-0 bg-card rounded-2xl -z-10" />
+
         <textarea
           ref={inputRef}
           value={question}
@@ -204,6 +228,18 @@ const AiMode = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Intro Animation State
+  const [showIntroGlow, setShowIntroGlow] = useState(true);
+
+  useEffect(() => {
+    // Turn off glow after 6 seconds (adjusted per user request)
+    const timer = setTimeout(() => {
+      setShowIntroGlow(false);
+    }, 5000); // 5 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Sync ref with state
   useEffect(() => {
@@ -576,6 +612,7 @@ const AiMode = () => {
                   isListening={isListening}
                   language={language}
                   toggleLanguage={toggleLanguage}
+                  showIntroGlow={showIntroGlow} // Pass the animation state
                 />
 
                 <div className="mt-8 flex flex-col gap-2">
@@ -646,6 +683,7 @@ const AiMode = () => {
                 isListening={isListening}
                 language={language}
                 toggleLanguage={toggleLanguage}
+                showIntroGlow={false} // Never show glow on bottom input, only on the centered one
               />
               <div className="mt-2 text-center text-xs text-muted-foreground">
                 AI can make mistakes. Please verify important information.

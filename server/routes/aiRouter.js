@@ -3,6 +3,7 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const pdf = require("pdf-parse");
+const csv = require("csv-parser");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
 const { ChromaClient } = require("chromadb");
 const dotenv = require("dotenv");
@@ -35,6 +36,29 @@ async function getEmbedding(text) {
     throw new Error("Failed to generate embeddings. Check API Key or Quota.");
   }
   return data.data[0].embedding;
+}
+
+function parseCSV(filePath) {
+  return new Promise((resolve, reject) => {
+    const rows = [];
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (data) => rows.push(data))
+      .on("end", () => {
+        // Convert CSV rows to a readable text summary
+        // E.g. "Row 1: Client=ABC, Amount=500..."
+        const textSummary = rows
+          .map((row, index) => {
+            const rowStr = Object.entries(row)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(", ");
+            return `Record ${index + 1}: ${rowStr}`;
+          })
+          .join("\n");
+        resolve(textSummary);
+      })
+      .on("error", (err) => reject(err));
+  });
 }
 
 async function processAndStoreDocument(rawText) {
@@ -97,7 +121,11 @@ async function generateAnswer(context, query) {
     2. Analyze the provided Context, which is the knowledge base.
     3. **CRITICAL**: You MUST provide the final answer in **ARABIC** (اللغة العربية).
     4. If the question is in English, understand it, find the answer in the context, and TRANSLATE the answer to Arabic.
-    5. Be detailed, helpful, and polite. "Hold the user's hand" with step-by-step instructions if needed.
+    5. **DATA ANALYSIS & PREDICTION**:
+       - If the user provides structured data (like CSV/orders), act as a **Senior Data Analyst**.
+       - Analyze trends, calculate totals, and identify patterns.
+       - If asked for a "prediction" of the next 30 days, use the data trends to extrapolate a logical forecast. Explain your reasoning.
+    6. Be detailed, helpful, and polite. "Hold the user's hand" with step-by-step instructions if needed.
     
     Context:
     ${context}
@@ -172,11 +200,19 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       req.file.mimetype === "application/pdf" ||
       req.file.originalname.toLowerCase().endsWith(".pdf");
 
+    const isCsv =
+      req.file.mimetype === "text/csv" ||
+      req.file.mimetype === "application/vnd.ms-excel" ||
+      req.file.originalname.toLowerCase().endsWith(".csv");
+
     if (isPdf) {
       console.log("📄 Detected PDF. Parsing...");
       const dataBuffer = fs.readFileSync(filePath);
       const data = await pdf(dataBuffer);
       rawText = data.text;
+    } else if (isCsv) {
+      console.log("📊 Detected CSV. Parsing...");
+      rawText = await parseCSV(filePath);
     } else {
       rawText = fs.readFileSync(filePath, "utf-8");
     }
