@@ -13,6 +13,9 @@ import {
   MessageSquare,
   StopCircle,
   Globe,
+  ChevronLeft,
+  MoreVertical,
+  LogOut,
 } from "lucide-react";
 
 const API_URL = "http://localhost:5000/api/ai";
@@ -20,15 +23,15 @@ const API_URL = "http://localhost:5000/api/ai";
 const SUGGESTIONS = [
   {
     icon: <Sparkles className="w-4 h-4" />,
-    text: "Free local events happening this week",
+    text: "هل يمكنني تعديل طلب بعد إنشائه؟",
   },
   {
     icon: <Sparkles className="w-4 h-4" />,
-    text: "Make a table comparing memory foam vs hybrid mattresses",
+    text: "ماذا أفعل إذا واجهت خطأ في النظام؟",
   },
   {
     icon: <Sparkles className="w-4 h-4" />,
-    text: "How do I get started playing padel?",
+    text: "كيف أنشئ طلب شحن جديد؟ (للمسؤولين والعملاء)",
   },
 ];
 
@@ -271,7 +274,7 @@ const AiMode = () => {
         return [updatedSession, ...prev];
       }
     });
-  }, [messages]); // Removed currentSessionId from dep array to rely on Ref/Messages sync
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -339,23 +342,19 @@ const AiMode = () => {
 
     const newId = generateId();
     setCurrentSessionId(newId);
-    currentSessionIdRef.current = newId; // Update ref immediately
+    currentSessionIdRef.current = newId;
     setMessages([]);
     setQuestion("");
-    setShowHistory(false);
+    // Don't close history automatically on new chat, up to user preference, but let's keep it open if open
   };
 
-  // Helper to safely add message using the correct ID
   const addMessageSafe = (sender: "user" | "ai", text: string) => {
     let activeId = currentSessionIdRef.current;
-
-    // If no session exists, create one immediately
     if (!activeId) {
       activeId = generateId();
       setCurrentSessionId(activeId);
       currentSessionIdRef.current = activeId;
     }
-
     setMessages((prev) => [...prev, { sender, text }]);
   };
 
@@ -363,7 +362,7 @@ const AiMode = () => {
     setCurrentSessionId(session.id);
     currentSessionIdRef.current = session.id;
     setMessages(session.messages);
-    setShowHistory(false);
+    // Don't close history automatically when selecting a chat
   };
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
@@ -381,7 +380,6 @@ const AiMode = () => {
     const textToSend = textOverride || question;
     if (!textToSend.trim()) return;
 
-    // 1. User Message (will initialize session if null)
     addMessageSafe("user", textToSend);
     setQuestion("");
     setLoading(true);
@@ -393,8 +391,6 @@ const AiMode = () => {
         body: JSON.stringify({ question: textToSend }),
       });
       const data = await res.json();
-
-      // 2. AI Message (Uses addMessageSafe which reads from Ref, preventing stale closure)
       addMessageSafe("ai", data.answer);
     } catch (err) {
       addMessageSafe(
@@ -434,54 +430,82 @@ const AiMode = () => {
   };
 
   return (
-    // FORCE FIXED PAGE LAYOUT
-    // h-[calc(100vh-64px)] assumes header is roughly 64px (h-16).
-    // We use overflow-hidden on the parent to prevent body scroll.
+    // Main Container
     <div className="flex bg-background h-[calc(100vh-theme(spacing.16))] w-full text-foreground font-sans overflow-hidden">
-      {/* Sidebar (Fixed Height, not scrolling with chat) */}
-      <div
-        className={`
-           z-30 bg-card border-l border-border shrink-0 flex overflow-hidden transition-all duration-300 ease-in-out relative
-           ${showHistory ? "w-80" : "w-16"}
-         `}
-      >
-        <div className="w-16 flex flex-col items-center py-4 gap-6 shrink-0 h-full border-r border-border/50 bg-card z-40 relative">
-          <button
-            onClick={startNewChat}
-            title="New Chat"
-            className="flex items-center justify-center p-3 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 transition-all duration-200"
-          >
-            <Edit className="h-5 w-5" />
-          </button>
+      {/* 
+          1. FIXED ICON RAIL
+          Always visible, width 16
+       */}
+      <div className="w-16 flex flex-col items-center py-4 gap-6 shrink-0 h-full border-l border-border bg-card z-50 relative">
+        <button
+          onClick={startNewChat}
+          title="New Chat"
+          className="p-3 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 hover:scale-105 transition-all duration-200"
+        >
+          <Edit className="h-5 w-5" />
+        </button>
 
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            title="History"
-            className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 relative ${
-              showHistory
-                ? "bg-accent text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground"
-            }`}
-          >
-            <Clock className="h-5 w-5" />
-            {sessions.length > 0 && (
-              <span className="absolute top-2 right-3 h-2 w-2 rounded-full bg-red-500 border border-card pointer-events-none" />
-            )}
-          </button>
-        </div>
-
-        <div
-          className={`flex flex-col h-full bg-card/50 w-64 shrink-0 transition-opacity duration-300 ${
-            showHistory ? "opacity-100" : "opacity-0"
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          title="History"
+          className={`p-3 rounded-xl transition-all duration-200 relative ${
+            showHistory
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent"
           }`}
         >
-          <div className="p-4 border-b border-border font-medium text-sm flex items-center justify-between shrink-0 h-16">
-            <span>Recent Chats</span>
-            <button onClick={() => setShowHistory(false)}>
-              <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+          <Clock className="h-5 w-5" />
+          {sessions.length > 0 && (
+            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border border-card pointer-events-none" />
+          )}
+        </button>
+      </div>
+
+      {/* 
+          2. SLIDING DRAWER
+          Sitting next to the rail. Width 0 -> 64 (16rem).
+       */}
+      <div
+        className={`
+           flex flex-col bg-card border-r border-border shrink-0 overflow-hidden transition-all duration-300 ease-in-out
+           ${showHistory ? "w-64 opacity-100" : "w-0 opacity-0 border-none"}
+         `}
+      >
+        {/* Drawer Content */}
+        <div className="flex flex-col h-full w-64">
+          {/* Match Image Header: Left Arrow, Right Buttons */}
+          <div className="flex items-center justify-between p-4 pb-2">
+            <button
+              onClick={() => setShowHistory(false)}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
+              title="Close"
+            >
+              <ChevronLeft className="h-5 w-5" />
             </button>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={startNewChat}
+                className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
+                title="New Chat"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
+                title="Menu"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 min-w-0">
+
+          {/* Title Row */}
+          <div className="px-4 pb-4 font-medium text-sm text-muted-foreground">
+            AI Mode history
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-2 pb-2 min-w-0">
             {sessions.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center mt-10">
                 No history
@@ -497,7 +521,6 @@ const AiMode = () => {
                       : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   }`}
                 >
-                  <MessageSquare className="h-4 w-4 shrink-0 opacity-70" />
                   <div className="truncate flex-1 text-left">
                     {session.title}
                   </div>
@@ -527,12 +550,7 @@ const AiMode = () => {
           </button>
         </div>
 
-        {/* 
-           Chat Scroll Area 
-           - flex-1: Takes remaining space
-           - overflow-y-auto: Enables scrolling
-           - Scrollbar hidden utilities applied
-        */}
+        {/* Chat Scroll Area */}
         <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {!chatStarted ? (
             <div className="flex min-h-full flex-col items-center justify-center p-4">

@@ -90,13 +90,19 @@ async function processAndStoreDocument(rawText) {
 
 async function generateAnswer(context, query) {
   const prompt = `
-    You are a helpful assistant. Use the following context to answer the user's question accurately.
-    If the answer is not in the context, say "I don't know based on the document."
+    You are a smart and helpful assistant for a Shipping Dashboard application.
+    
+    INSTRUCTIONS:
+    1. Analyze the user's question, which may be in English or Arabic.
+    2. Analyze the provided Context, which is the knowledge base.
+    3. **CRITICAL**: You MUST provide the final answer in **ARABIC** (اللغة العربية).
+    4. If the question is in English, understand it, find the answer in the context, and TRANSLATE the answer to Arabic.
+    5. Be detailed, helpful, and polite. "Hold the user's hand" with step-by-step instructions if needed.
     
     Context:
     ${context}
     
-    Question: ${query}
+    User Question: ${query}
     `;
 
   const response = await fetch(
@@ -110,7 +116,11 @@ async function generateAnswer(context, query) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "You are a helpful assistant." },
+          {
+            role: "system",
+            content:
+              "You are a helpful assistant that ALWAYS answers in Arabic.",
+          },
           { role: "user", content: prompt },
         ],
         temperature: 0.2,
