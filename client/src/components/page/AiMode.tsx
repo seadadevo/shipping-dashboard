@@ -256,7 +256,7 @@ const InputBox = ({
               className="flex items-center gap-1 rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
             >
               <Plus className="h-5 w-5" />
-              <span className="text-sm font-medium">Attach</span>
+              <span className="text-sm font-medium">إرفاق ملف</span>
             </button>
             <input
               type="file"
@@ -277,7 +277,7 @@ const InputBox = ({
                   ? "bg-red-500 text-white animate-pulse"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
-              title={isListening ? "Stop Listening" : "Start Voice Input"}
+              title={isListening ? "إيقاف الاستماع" : "ابدأ التحدث"}
             >
               {isListening ? (
                 <StopCircle className="h-5 w-5" />
@@ -524,10 +524,7 @@ const AiMode = () => {
       const data = await res.json();
       addMessageSafe("ai", data.answer);
     } catch (err) {
-      addMessageSafe(
-        "ai",
-        "Sorry, I encountered an error. Please check your connection."
-      );
+      addMessageSafe("ai", "عذراً، حدث خطأ. يرجى التحقق من الاتصال.");
     } finally {
       setLoading(false);
     }
@@ -542,7 +539,7 @@ const AiMode = () => {
 
     const formData = new FormData();
     formData.append("file", file);
-    addMessageSafe("user", `📤 Uploading: ${file.name}...`);
+    addMessageSafe("user", `📤 جاري رفع الملف: ${file.name}...`);
 
     try {
       const res = await fetch(`${API_URL}/upload`, {
@@ -553,13 +550,13 @@ const AiMode = () => {
       if (res.ok) {
         addMessageSafe(
           "ai",
-          `✅ I've read **${file.name}**. Ask me about the orders, costs, or future predictions!`
+          `✅ تم قراءة الملف **${file.name}**. اسألني أي شيء عن الطلبات أو التوقعات!`
         );
       } else {
-        addMessageSafe("ai", `❌ Error uploading file: ${data.error}`);
+        addMessageSafe("ai", `❌ خطأ في رفع الملف: ${data.error}`);
       }
     } catch (err) {
-      addMessageSafe("ai", "❌ Failed to upload file. Is the server running?");
+      addMessageSafe("ai", "❌ فشل الرفع. هل الخادم يعمل؟");
     } finally {
       setIsUploading(false); // END LOADING
     }
@@ -609,7 +606,7 @@ const AiMode = () => {
       <div className="w-16 flex flex-col items-center py-4 gap-6 shrink-0 h-full border-l border-border bg-card z-50 relative">
         <button
           onClick={startNewChat}
-          title="New Chat"
+          title="محادثة جديدة"
           className="p-3 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 hover:scale-105 transition-all duration-200"
         >
           <Edit className="h-5 w-5" />
@@ -617,7 +614,7 @@ const AiMode = () => {
 
         <button
           onClick={() => setShowHistory(!showHistory)}
-          title="History"
+          title="Sijil"
           className={`p-3 rounded-xl transition-all duration-200 relative ${
             showHistory
               ? "bg-accent text-foreground"
@@ -657,28 +654,27 @@ const AiMode = () => {
               <button
                 onClick={startNewChat}
                 className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
-                title="New Chat"
+                title="محادثة جديدة"
               >
                 <Edit className="h-4 w-4" />
               </button>
               <button
                 className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
-                title="Menu"
+                title="القائمة"
               >
                 <MoreVertical className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          {/* Title Row */}
-          <div className="px-4 pb-4 font-medium text-sm text-muted-foreground">
-            AI Mode history
+          <div className="px-4 pb-4 font-medium text-sm text-muted-foreground text-right">
+            سجل المحادثات
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 pb-2 min-w-0">
             {sessions.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center mt-10">
-                No history
+                لا يوجد سجل
               </p>
             ) : (
               sessions.map((session) => (
@@ -711,7 +707,7 @@ const AiMode = () => {
       <div className="flex-1 flex flex-col relative min-w-0 h-full">
         {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-10 flex items-center p-4 bg-background/80 backdrop-blur-sm border-b border-border justify-between">
-          <span className="font-medium">AI Mode</span>
+          <span className="font-medium">الوضع الذكي</span>
           <button
             onClick={() => setShowHistory(!showHistory)}
             className="p-2 -mr-2 text-muted-foreground"
@@ -726,10 +722,10 @@ const AiMode = () => {
             <div className="flex min-h-full flex-col items-center justify-center p-4">
               <div className="mb-8 text-center animate-fade-in">
                 <h1 className="mb-3 text-4xl font-medium text-foreground tracking-tight">
-                  Meet AI Mode
+                  مرحباً بك في المساعد الذكي
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                  Ask detailed questions for better responses
+                  اطرح أسئلة دقيقة للحصول على إجابات أفضل
                 </p>
               </div>
 
@@ -775,7 +771,7 @@ const AiMode = () => {
                   >
                     {msg.sender === "user" ? (
                       <div className="text-lg font-medium text-foreground">
-                        You
+                        أنت
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -783,7 +779,7 @@ const AiMode = () => {
                           <Sparkles className="h-3 w-3" />
                         </div>
                         <span className="text-lg font-medium text-foreground">
-                          AI Assistant | المساعد الذكي
+                          المساعد الذكي
                         </span>
                       </div>
                     )}
@@ -815,13 +811,13 @@ const AiMode = () => {
               {loading && (
                 <div className="flex items-center gap-3 text-muted-foreground animate-pulse">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Thinking...
+                  جاري التفكير...
                 </div>
               )}
               {isUploading && (
                 <div className="flex items-center gap-3 text-blue-500 animate-pulse mt-4">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Reading file content...
+                  جاري قراءة الملف...
                 </div>
               )}
               <div ref={messagesEndRef} />

@@ -131,12 +131,12 @@ async function generateAnswer(context, query) {
          \`\`\`json-chart
          {
            "type": "bar", // or "line"
-           "title": "Monthly Revenue Prediction",
-           "xLabel": "Month",
-           "yLabel": "Revenue (EGP)",
+           "title": "توقعات الأرباح الشهرية",
+           "xLabel": "الشهر",
+           "yLabel": "الإيرادات (جنيه مصري)",
            "data": [
-             {"name": "Oct", "value": 5000},
-             {"name": "Nov", "value": 7000}
+             {"name": "أكتوبر", "value": 5000},
+             {"name": "نوفمبر", "value": 7000}
            ]
          }
          \`\`\`

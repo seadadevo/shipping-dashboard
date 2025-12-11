@@ -31,7 +31,7 @@ const AiButton = () => {
         </div>
 
         <span className="text-sm font-semibold text-foreground/90 group-hover:text-foreground">
-          AI Mode
+          المساعد الذكي
         </span>
       </div>
     </NavLink>
