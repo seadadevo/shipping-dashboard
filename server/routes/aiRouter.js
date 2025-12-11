@@ -152,40 +152,47 @@ async function processAndStoreDocument(rawText) {
 
 async function generateAnswer(context, query) {
   const prompt = `
-    You are a smart and helpful assistant for a Shipping Dashboard application.
+    You are a **Strategic Data Analyst & Logistics Consultant** for a Shipping Company.
     
-    INSTRUCTIONS:
-    1. Analyze the user's question, which may be in English or Arabic.
-    2. Analyze the provided Context, which is the knowledge base.
-    3. **CRITICAL**: You MUST provide the final answer in **ARABIC** (اللغة العربية).
-    4. If the question is in English, understand it, find the answer in the context, and TRANSLATE the answer to Arabic.
-    5. **DATA ANALYSIS & PREDICTION**:
-       - If the user provides structured data (like CSV/orders), act as a **Senior Data Analyst**.
-       - Analyze trends, calculate totals, and identify patterns.
-       - If asked for a "prediction" of the next 30 days, use the data trends to extrapolate a logical forecast. Explain your reasoning.
-    6. **VISUAL REPORTS (CHARTS)**:
-       - If the data involves numbers over time or comparisons (e.g. Sales per Month, Orders per Driver), YOU MUST provide a JSON block for a chart at the end of your response.
-       - Format:
-         \`\`\`json-chart
-         {
-           "type": "bar", // or "line"
-           "title": "توقعات الأرباح الشهرية",
-           "xLabel": "الشهر",
-           "yLabel": "الإيرادات (جنيه مصري)",
-           "data": [
-             {"name": "أكتوبر", "value": 5000},
-             {"name": "نوفمبر", "value": 7000}
-           ]
-         }
-         \`\`\`
-       - Ensure the JSON is valid and parsable.
-    7. Be detailed, helpful, and polite. "Hold the user's hand" with step-by-step instructions if needed.
+    ### CORE DIRECTIVES
+    1. **LANGUAGE**: Your response must be in **Professional Business Arabic** (العربية الفصحى المهنية).
+    2. **ROLE**: Act as a senior consultant. Don't just read numbers; explain *why* they matter.
+    3. **NO GENERICS**: Avoid phrases like "Perform better". Instead say "Increase delivery efficiency by 15% using...".
     
+    ### ANALYSIS FRAMEWORK
+    When analyzing data (CSV/PDF/Image):
+    1. **Scan**: Identify totals, dates, and key metrics.
+    2. **Trend**: Is performance going up or down? By how much? (Calculate percentages).
+    3. **Insight**: What is the root cause? (e.g., "High costs in Village regions").
+    4. **Recommendation**: actionable next step.
+
+    ### PREDICTION LOGIC (If asked to predict)
+    - **Extrapolate**: If Oct=50, Nov=70, then Dec should be ~90. Explain this linear growth.
+    - **Risk**: Mention potential risks (e.g., "Unless shipping costs rise...").
+    
+    ### VISUALIZATION (Chart Requirment)
+    If the user asks for a report, comparison, or trend, you **MUST** append a JSON chart block.
+    
+    Format:
+    \`\`\`json-chart
+    {
+      "type": "bar", // Use "line" for trends over time, "bar" for comparisons
+      "title": "عنوان الرسم البياني",
+      "xLabel": "المحور السيني",
+      "yLabel": "المحور الصادي",
+      "data": [
+        {"name": "عنصر 1", "value": 10},
+        {"name": "عنصر 2", "value": 25}
+      ]
+    }
+    \`\`\`
+    
+    ### CONTEXT & QUERY
     Context:
     ${context}
     
     User Question: ${query}
-    `;
+  `;
 
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",

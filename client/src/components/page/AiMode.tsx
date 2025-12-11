@@ -12,6 +12,7 @@ import {
   StopCircle,
   ChevronLeft,
   MoreVertical,
+  X,
 } from "lucide-react";
 import {
   BarChart,
@@ -158,8 +159,10 @@ const InputBox = ({
   startListening,
   stopListening,
   isListening,
-  isUploading, // New prop
-  showIntroGlow = false, // New prop for animation
+  isLoading, // Changed from isUploading
+  selectedFile,
+  clearFile,
+  showIntroGlow = false,
 }: {
   question: string;
   setQuestion: (val: string) => void;
@@ -170,7 +173,9 @@ const InputBox = ({
   startListening: () => void;
   stopListening: () => void;
   isListening: boolean;
-  isUploading: boolean;
+  isLoading: boolean;
+  selectedFile?: File | null;
+  clearFile?: () => void;
   showIntroGlow?: boolean;
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -189,15 +194,12 @@ const InputBox = ({
     >
       {/* 
          ANIMATION LAYERS (Only visible if showIntroGlow is true) 
-         Similar to AiButton but adapted for a box
       */}
       {showIntroGlow && (
         <>
-          {/* 1. The Glowing Beam */}
           <div className="absolute -inset-[3px] rounded-2xl opacity-100 overflow-hidden pointer-events-none z-0">
             <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
           </div>
-          {/* 2. Glow Blur Layer */}
           <div className="absolute -inset-[3px] rounded-2xl opacity-60 blur-md overflow-hidden pointer-events-none z-0">
             <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
           </div>
@@ -217,33 +219,45 @@ const InputBox = ({
         ${isListening ? "ring-2 ring-red-500/50 border-red-500/50" : ""}
       `}
       >
-        {/* Background to cover the gradient behind */}
         <div className="absolute inset-0 bg-card rounded-2xl -z-10" />
+
+        {/* Pending File Chip */}
+        {selectedFile && (
+          <div className="mx-2 mt-2 flex items-center gap-2 w-fit bg-accent/50 px-3 py-1 rounded-lg border border-border">
+            <span className="text-xs text-foreground font-medium truncate max-w-[200px]">
+              {selectedFile.name}
+            </span>
+            <button
+              onClick={clearFile}
+              className="text-muted-foreground hover:text-red-500 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
 
         <textarea
           ref={inputRef}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          disabled={isUploading}
+          disabled={false}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              if (question.trim() && !isUploading) {
+              if (question.trim() || selectedFile) {
                 handleSend();
               }
             }
           }}
           placeholder={
-            isUploading
-              ? "Reading file... please wait ⏳"
+            isLoading
+              ? "Speaking with AI..."
               : isListening
               ? "جاري الاستماع..."
               : "Ask anything... | اسأل أي شيء"
           }
           dir="auto"
-          className={`w-full resize-none bg-transparent p-3 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none ${
-            isUploading ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className={`w-full resize-none bg-transparent p-3 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none`}
           style={{ minHeight: centered ? "80px" : "40px" }}
         />
 
@@ -251,7 +265,7 @@ const InputBox = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isLoading}
               className="flex items-center gap-1 rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
             >
               <Plus className="h-5 w-5" />
@@ -267,15 +281,14 @@ const InputBox = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Voice Input Button */}
             <button
               onClick={isListening ? stopListening : startListening}
-              disabled={isUploading}
+              disabled={isLoading}
               className={`rounded-full p-2 transition-all duration-200 ${
                 isListening
                   ? "bg-red-500 text-white animate-pulse"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
+              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
               title={isListening ? "إيقاف الاستماع" : "ابدأ التحدث"}
             >
               {isListening ? (
@@ -287,14 +300,14 @@ const InputBox = ({
 
             <button
               onClick={() => handleSend()}
-              disabled={!question.trim() || isUploading}
+              disabled={(!question.trim() && !selectedFile) || isLoading}
               className={`rounded-full p-2 transition-all ${
-                question.trim() && !isUploading
+                (question.trim() || selectedFile) && !isLoading
                   ? "bg-primary text-primary-foreground hover:opacity-90"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               }`}
             >
-              {isUploading ? (
+              {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <Send className="h-5 w-5" />
@@ -317,7 +330,7 @@ const AiMode = () => {
 
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // New state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   // Voice Input State
@@ -491,7 +504,7 @@ const AiMode = () => {
     setCurrentSessionId(session.id);
     currentSessionIdRef.current = session.id;
     setMessages(session.messages);
-    // Don't close history automatically when selecting a chat
+    setShowHistory(false); // Close history drawer on selection
   };
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
@@ -505,61 +518,66 @@ const AiMode = () => {
   };
 
   // --- Handlers ---
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+    // Reset input so same file can be selected again if cleared
+    if (e.target) e.target.value = "";
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+  };
+
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || question;
-    if (!textToSend.trim()) return;
+    const hasFile = !!selectedFile;
 
-    addMessageSafe("user", textToSend);
+    if (!textToSend.trim() && !hasFile) return;
+
+    // Display User Message
+    const displayMsg = hasFile
+      ? textToSend
+        ? `${textToSend} \n[Attached: ${selectedFile?.name}]`
+        : `[Uploaded: ${selectedFile?.name}]`
+      : textToSend;
+
+    addMessageSafe("user", displayMsg);
     setQuestion("");
+    clearFile(); // Remove chip immediately
     setLoading(true);
 
     try {
+      const formData = new FormData();
+      if (textToSend.trim()) formData.append("question", textToSend);
+      if (hasFile && selectedFile) formData.append("file", selectedFile);
+
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: textToSend }),
+        body: formData, // Automatic multipart/form-data
       });
+
       const data = await res.json();
+
+      if (!res.ok || !data.answer) {
+        throw new Error(data.error || "Unknown error from server");
+      }
+
       addMessageSafe("ai", data.answer);
-    } catch (err) {
-      addMessageSafe("ai", "عذراً، حدث خطأ. يرجى التحقق من الاتصال.");
+    } catch (err: any) {
+      console.error("Chat Error:", err);
+      addMessageSafe(
+        "ai",
+        `⚠️ حدث خطأ: ${err.message || "يرجى المحاولة مرة أخرى."}`
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true); // START LOADING
-    setQuestion(""); // Clear input if any
-
-    const formData = new FormData();
-    formData.append("file", file);
-    addMessageSafe("user", `📤 جاري رفع الملف: ${file.name}...`);
-
-    try {
-      const res = await fetch(`${API_URL}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addMessageSafe(
-          "ai",
-          data.answer ||
-            `✅ تم قراءة الملف **${file.name}**. اسألني أي شيء عنه!`
-        );
-      } else {
-        addMessageSafe("ai", `❌ خطأ في رفع الملف: ${data.error}`);
-      }
-    } catch {
-      addMessageSafe("ai", "❌ فشل الرفع. هل الخادم يعمل؟");
-    } finally {
-      setIsUploading(false); // END LOADING
-    }
-  };
+  // Alias for legacy props compatibility if needed, though we should update usage
+  const handleUpload = handleFileSelect;
 
   // --- RENDER MESSAGE HELPER for CHARTS ---
   const renderMessageContent = (text: string) => {
@@ -739,7 +757,9 @@ const AiMode = () => {
                   startListening={startListening}
                   stopListening={stopListening}
                   isListening={isListening}
-                  isUploading={isUploading}
+                  isLoading={loading}
+                  selectedFile={selectedFile}
+                  clearFile={clearFile}
                   showIntroGlow={showIntroGlow} // Pass the animation state
                 />
 
@@ -813,12 +833,6 @@ const AiMode = () => {
                   جاري التفكير...
                 </div>
               )}
-              {isUploading && (
-                <div className="flex items-center gap-3 text-blue-500 animate-pulse mt-4">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  جاري قراءة الملف...
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -838,11 +852,14 @@ const AiMode = () => {
                 startListening={startListening}
                 stopListening={stopListening}
                 isListening={isListening}
-                isUploading={isUploading}
+                isLoading={loading}
+                selectedFile={selectedFile}
+                clearFile={clearFile}
                 showIntroGlow={false} // Never show glow on bottom input, only on the centered one
               />
               <div className="mt-2 text-center text-xs text-muted-foreground">
-                AI can make mistakes. Please verify important information.
+                قد ترتكب تقنيات الذكاء الاصطناعي أخطاءً، لذا يُرجى التحقق من
+                المعلومات الهامة قبل الاعتماد عليها.
               </div>
             </div>
           </div>
