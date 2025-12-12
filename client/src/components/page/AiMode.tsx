@@ -617,12 +617,18 @@ const AiMode = () => {
     currentSessionIdRef.current = newId;
     setMessages([]);
     setQuestion("");
+<<<<<<< HEAD
     setShowHistory(false); // Close history on new chat
     isUserAtBottomRef.current = true; // Reset scroll state
 
     setTimeout(() => {
       textAreaRef.current?.focus();
     }, 100);
+=======
+    setMessages([]);
+    setQuestion("");
+    setShowHistory(false); // Close history on new chat
+>>>>>>> 5ca1b35 (enhance ai mode)
   };
 
   const clearAllSessions = () => {
@@ -812,6 +818,14 @@ const AiMode = () => {
           )}
         </button>
       </div>
+
+      {/* OVERLAY: Click outside to close history */}
+      {showHistory && (
+        <div
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+          onClick={() => setShowHistory(false)}
+        />
+      )}
 
       {/* 
           2. SLIDING DRAWER
