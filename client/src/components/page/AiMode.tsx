@@ -368,7 +368,15 @@ const AiMode = () => {
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
-        setSessions(JSON.parse(saved));
+        const parsedSessions = JSON.parse(saved);
+        setSessions(parsedSessions);
+
+        // AUTO-RESTORE LAST SESSION
+        if (parsedSessions.length > 0) {
+          const lastSession = parsedSessions[0]; // Assuming sorted by date descending
+          setCurrentSessionId(lastSession.id);
+          setMessages(lastSession.messages);
+        }
       } catch (e) {
         console.error("Failed to parse history", e);
       }
@@ -664,14 +672,6 @@ const AiMode = () => {
         </button>
       </div>
 
-      {/* OVERLAY: Click outside to close history */}
-      {showHistory && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
-          onClick={() => setShowHistory(false)}
-        />
-      )}
-
       {/* 
           2. SLIDING DRAWER
           Sitting next to the rail. Width 0 -> 64 (16rem).
@@ -749,6 +749,15 @@ const AiMode = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative min-w-0 h-full">
+        {/* OVERLAY: Click content to close history (Desktop & Mobile) */}
+        {showHistory && (
+          <div
+            className="absolute inset-0 z-40 bg-black/5 cursor-pointer"
+            onClick={() => setShowHistory(false)}
+            title="Close History"
+          />
+        )}
+
         {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-10 flex items-center p-4 bg-background/80 backdrop-blur-sm border-b border-border justify-between">
           <span className="font-medium">الوضع الذكي</span>

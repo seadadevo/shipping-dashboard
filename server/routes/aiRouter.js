@@ -43,11 +43,25 @@ async function fetchDynamicSystemContext(userType, userId) {
     const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
-    // Served Areas (Everyone sees areas)
+    // 4. Fetch Served Areas (Cities & Governorates)
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
       .map((c) => `${c.cityName} (${c.governorate?.govName})`)
       .join(", ");
+
+    const governorates = await Governotate.find({ isActive: true });
+    const govList = governorates.map((g) => g.govName).join(", ");
+
+    // 5. Fetch Shipping Types
+    const shippingTypes = await ShippingType.find();
+    const shippingSummary = shippingTypes
+      .map(
+        (s) =>
+          `- Type: ${s.type}, Cost: ${s.cost}, Description: ${
+            s.description || "N/A"
+          }`
+      )
+      .join("\n");
 
     // ---------------- ADMIN CONTEXT ----------------
     if (userType === "admin") {
@@ -105,7 +119,17 @@ async function fetchDynamicSystemContext(userType, userId) {
         )
         .join("\n");
 
+      // Fetch Current Admin Info
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email"
+      );
+
       return `
+        [CURRENT USER PROFILE]
+        - Name: ${currentUser?.fullName || "Admin"}
+        - Role: Admin
+        - Phone: ${currentUser?.phone || "N/A"}
+
         [ADMIN DASHBOARD - FULL ACCESS]
         - Total Orders: ${totalOrders}
         - Pending: ${pendingOrders} | Delivered: ${deliveredOrders}
@@ -120,7 +144,11 @@ async function fetchDynamicSystemContext(userType, userId) {
         ${driverSummary || "No drivers."}
 
         [AREAS]
-        ${cityList}
+        - Cities: ${cityList || "No active cities found."}
+        - Governorates: ${govList || "No active governorates."}
+
+        [SHIPPING TYPES & SERVICES]
+        ${shippingSummary || "No specific shipping types defined."}
 
         [PRICING]
         - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
@@ -182,7 +210,18 @@ async function fetchDynamicSystemContext(userType, userId) {
         )
         .join("\n");
 
+      // Fetch Current Merchant Info
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email companyName"
+      );
+
       return `
+        [CURRENT USER PROFILE]
+        - Name: ${currentUser?.fullName || "Merchant"}
+        - Role: Merchant
+        - Company: ${currentUser?.companyName || "N/A"}
+        - Phone: ${currentUser?.phone || "N/A"}
+
         [MERCHANT DASHBOARD - PERSONALIZED]
         - Your Total Orders: ${myOrdersCount}
         - Your Pending: ${myPending} | Delivered: ${myDelivered}
@@ -192,7 +231,11 @@ async function fetchDynamicSystemContext(userType, userId) {
         - Potential: ${myPotential} EGP
         
         [AREAS SERVED]
-        ${cityList}
+        - Cities: ${cityList || "No active cities found."}
+        - Governorates: ${govList || "No active governorates."}
+
+        [SHIPPING TYPES & SERVICES]
+        ${shippingSummary || "No specific shipping types defined."}
 
         [PRICING RULES]
         - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
@@ -203,17 +246,31 @@ async function fetchDynamicSystemContext(userType, userId) {
     }
 
     // ---------------- EMPLOYEE CONTEXT ----------------
+    // Fetch Current Employee Info
+    const currentUser = await User.findById(userId).select(
+      "fullName phone email"
+    );
+
     return `
+    [CURRENT USER PROFILE]
+    - Name: ${currentUser?.fullName || "Employee"}
+    - Role: Employee
+    - Phone: ${currentUser?.phone || "N/A"}
+
     [EMPLOYEE VIEW]
     - Access to General Shipping Rules.
     - No Financial Access.
     - No Driver List Access.
     
     [SERVED AREAS]
-    ${cityList}
+    - Cities: ${cityList || "No active cities found."}
+    - Governorates: ${govList || "No active governorates."}
+
+    [SHIPPING TYPES & SERVICES]
+    ${shippingSummary || "No specific shipping types defined."}
     
     [PRICING RULES]
-    - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
     `;
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
