@@ -65,7 +65,7 @@ async function fetchDynamicSystemContext() {
       .map((c) => `${c.cityName} (${c.governorate?.govName})`)
       .join(", ");
 
-    // 5. Calculate Daily Profit (Sum of orderCost for today)
+    // 5. Calculate Daily Profit (Breakdown by Status)
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -73,14 +73,33 @@ async function fetchDynamicSystemContext() {
       { $match: { createdAt: { $gte: startOfDay } } },
       {
         $group: {
-          _id: null,
-          totalProfit: { $sum: "$orderCost" },
+          _id: "$status",
+          totalCost: { $sum: "$orderCost" },
           count: { $sum: 1 },
         },
       },
     ]);
-    const dailyProfit = profitStats[0]?.totalProfit || 0;
-    const dailyOrdersCount = profitStats[0]?.count || 0;
+
+    let deliveredProfit = 0;
+    let pendingProfit = 0;
+    let deliveredCount = 0;
+    let pendingCount = 0;
+
+    profitStats.forEach((stat) => {
+      if (stat._id === "Delivered") {
+        deliveredProfit = stat.totalCost;
+        deliveredCount = stat.count;
+      } else if (
+        stat._id === "Pending" ||
+        stat._id === "Processing" ||
+        stat._id === "On the Way"
+      ) {
+        pendingProfit += stat.totalCost;
+        pendingCount += stat.count;
+      }
+    });
+
+    const totalPotentialProfit = deliveredProfit + pendingProfit;
 
     // 6. Fetch Recent Activity (Last 5 orders)
     const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
@@ -97,8 +116,12 @@ async function fetchDynamicSystemContext() {
     - Total Orders (All Time): ${totalOrders}
     - Pending Orders: ${pendingOrders}
     - Delivered Orders: ${deliveredOrders}
-    - Orders Today: ${dailyOrdersCount}
-    - PROFIT TODAY: ${dailyProfit} EGP
+    
+    [DAILY FINANCIALS (Today)]
+    - Orders Created Today: ${deliveredCount + pendingCount}
+    - REALIZED REVENUE (Delivered): ${deliveredProfit} EGP
+    - POTENTIAL REVENUE (Pending/Processing): ${pendingProfit} EGP
+    - TOTAL EXPECTED REVENUE: ${totalPotentialProfit} EGP
 
     [OUR FLEET & DRIVERS]
     ${driverSummary || "No drivers currently registered."}
