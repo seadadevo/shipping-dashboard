@@ -671,19 +671,54 @@ const AiMode = () => {
         body: formData, // Automatic multipart/form-data
       });
 
-      const data = await res.json();
+      // STREAMING RESPONSE HANDLER
+      addMessageSafe("ai", ""); // Init empty AI message
 
-      if (!res.ok || !data.answer) {
-        throw new Error(data.error || "Unknown error from server");
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      if (!reader) throw new Error("No reader available");
+
+      let done = false;
+      let accumulatedText = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+
+          // Handle potential JSON error response from server if it wasn't a stream?
+          // Our server sets text/plain for stream. If error, it might send json.
+          // Assuming stream is pure text for now.
+
+          accumulatedText += chunk;
+
+          setMessages((prev) => {
+            const newMsgs = [...prev];
+            // Update the last message (which is the AI one we just added)
+            const lastIdx = newMsgs.length - 1;
+            if (lastIdx >= 0 && newMsgs[lastIdx].sender === "ai") {
+              newMsgs[lastIdx].text = accumulatedText;
+            }
+            return newMsgs;
+          });
+        }
       }
-
-      addMessageSafe("ai", data.answer, true); // Animate AI response
     } catch (err: any) {
       console.error("Chat Error:", err);
-      addMessageSafe(
-        "ai",
-        `⚠️ حدث خطأ: ${err.message || "يرجى المحاولة مرة أخرى."}`
-      );
+      // If we already started streaming, appending error might be weird, but okay
+      setMessages((prev) => {
+        const newMsgs = [...prev];
+        const lastIdx = newMsgs.length - 1;
+        if (lastIdx >= 0 && newMsgs[lastIdx].sender === "ai") {
+          newMsgs[lastIdx].text += `\n⚠️ حدث خطأ: ${err.message}`;
+        } else {
+          // If failed before start
+          newMsgs.push({ sender: "ai", text: `⚠️ حدث خطأ: ${err.message}` });
+        }
+        return newMsgs;
+      });
     } finally {
       setLoading(false);
     }
@@ -911,26 +946,9 @@ const AiMode = () => {
                         }
                       `}
                     >
-                      {msg.sender === "ai" ? (
-                        msg.isAnimated ? (
-                          <Typewriter
-                            text={msg.text}
-                            onComplete={() => {
-                              // Mark as not animated so it stays static
-                              setMessages((prev) => {
-                                const newMsgs = [...prev];
-                                if (newMsgs[idx])
-                                  newMsgs[idx].isAnimated = false;
-                                return newMsgs;
-                              });
-                            }}
-                          />
-                        ) : (
-                          renderMessageContent(msg.text)
-                        )
-                      ) : (
-                        msg.text
-                      )}
+                      {msg.sender === "ai"
+                        ? renderMessageContent(msg.text)
+                        : msg.text}
                     </div>
                   </div>
                 </div>

@@ -405,7 +405,7 @@ async function processAndStoreDocument(rawText) {
   }
 }
 
-async function generateAnswer(context, query) {
+async function generateAnswer(context, query, res = null) {
   const prompt = `
     You are a **Strategic Data Analyst & Logistics Consultant** for a Shipping Company.
     
@@ -449,31 +449,84 @@ async function generateAnswer(context, query) {
     User Question: ${query}
   `;
 
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.2,
-      }),
-    }
-  );
+  try {
+    const fetchResponse = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
+            },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.2,
+          stream: !!res, // Enable streaming if res is active
+        }),
+      }
+    );
 
-  const data = await response.json();
-  return data.choices[0].message.content;
+    if (!res) {
+      // Non-streaming fallback (e.g. for internal use, though not used currently)
+      const data = await fetchResponse.json();
+      return data.choices?.[0]?.message?.content || "No response.";
+    }
+
+    // --- STREAMING HANDLER ---
+    // We expect OpenRouter/OpenAI SSE format: "data: {...}"
+    const reader = fetchResponse.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let fullText = ""; // Keep for logging or fallback
+
+    // Set headers for streaming if not already set by caller?
+    // Usually caller shouldn't set json content-type if we are streaming text/plain or SSE.
+    // We'll trust the caller (route handler) to manage headers or we do it here?
+    // Route handler should've handled it. We just write to res.
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      // OpenRouter sends SSE lines: data: {"id":..., "choices":[{"delta":{"content":"..."}}]}
+
+      const lines = chunk.split("\n").filter((line) => line.trim() !== "");
+      for (const line of lines) {
+        if (line.includes("[DONE]")) continue;
+        if (line.startsWith("data: ")) {
+          try {
+            const jsonStr = line.replace("data: ", "");
+            const json = JSON.parse(jsonStr);
+            const content = json.choices?.[0]?.delta?.content || "";
+            if (content) {
+              res.write(content);
+              fullText += content;
+            }
+          } catch (e) {
+            console.error("Error parsing stream chunk", e);
+          }
+        }
+      }
+    }
+
+    res.end(); // Close stream
+    return fullText;
+  } catch (err) {
+    console.error("Generate Answer Error:", err);
+    if (res) {
+      res.write("\n[System Error: Failed to generate response]");
+      res.end();
+    }
+    return "[Error]";
+  }
 }
 
 // ================= INITIALIZATION =================
@@ -585,11 +638,16 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         // Ask AI to summarize the new content
         const summaryPrompt =
           "I just uploaded this file. Please analyze it briefly and give me a summary of what it contains in Arabic.";
-        finalAnswer = await generateAnswer(fileContext, summaryPrompt);
+
+        // Stream the summary
+        res.setHeader("Content-Type", "text/plain; charset=utf-8"); // Optional: Consider Transfer-Encoding chunked
+        await generateAnswer(fileContext, summaryPrompt, res);
       } else {
-        finalAnswer = `✅ تم رفع الملف **${file.originalname}** بنجاح. النص فيه غير واضح أو فارغ.`;
+        return res.json({
+          answer: `✅ تم رفع الملف **${file.originalname}** بنجاح. النص فيه غير واضح أو فارغ.`,
+        });
       }
-      return res.json({ answer: finalAnswer });
+      return; // End response handled by stream or fast return
     }
 
     // CASE B: Question (with or without File)
@@ -624,8 +682,8 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       ${retrievedContext}
       `;
 
-      finalAnswer = await generateAnswer(retrievedContext, question);
-      return res.json({ answer: finalAnswer });
+      finalAnswer = await generateAnswer(retrievedContext, question, res);
+      return; // Response ended by generateAnswer stream
     }
   } catch (error) {
     console.error("❌ Error in /chat:", error);
