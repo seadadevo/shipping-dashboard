@@ -21,8 +21,11 @@ const Order = require("../models/Order");
 const WeightSetting = require("../models/WeightSetting");
 const User = require("../models/User");
 const City = require("../models/City");
+<<<<<<< HEAD
 const ShippingType = require("../models/ShippingType");
 const Governotate = require("../models/Governotate");
+=======
+>>>>>>> 3b899f9 (enhance ai mode)
 
 // Access your API key as an environment variable
 const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");
@@ -31,10 +34,22 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 // ================= HELPER FUNCTIONS =================
 
 // --- DYNAMIC SYSTEM CONTEXT (Fetch from DB) ---
+<<<<<<< HEAD
 async function fetchDynamicSystemContext(userType, userId) {
   try {
     // ---------------- COMMON DATA ----------------
     // Fetch Weight Settings (Everyone sees pricing)
+=======
+async function fetchDynamicSystemContext() {
+  try {
+    // 1. Fetch Key Stats
+    const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ status: "Pending" });
+    const deliveredOrders = await Order.countDocuments({ status: "Delivered" });
+    const totalUsers = await User.countDocuments();
+
+    // 2. Fetch Weight Settings
+>>>>>>> 3b899f9 (enhance ai mode)
     const weightSettings = await WeightSetting.findOne().sort({
       updatedAt: -1,
     });
@@ -42,12 +57,30 @@ async function fetchDynamicSystemContext(userType, userId) {
     const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
+<<<<<<< HEAD
     // 4. Fetch Served Areas (Cities & Governorates)
+=======
+    // 3. Fetch Active Drivers (Couriers)
+    const drivers = await User.find({ userType: "courier" }).select(
+      "fullName phone isAvailable assignedCities"
+    );
+    const driverSummary = drivers
+      .map(
+        (d) =>
+          `- ${d.fullName} (${d.phone}) [${
+            d.isAvailable ? "Available" : "Busy"
+          }]`
+      )
+      .join("\n");
+
+    // 4. Fetch Served Areas (Cities)
+>>>>>>> 3b899f9 (enhance ai mode)
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
       .map((c) => `${c.cityName} (${c.governorate?.govName})`)
       .join(", ");
 
+<<<<<<< HEAD
     const governorates = await Governotate.find({ isActive: true });
     const govList = governorates.map((g) => g.govName).join(", ");
 
@@ -269,6 +302,56 @@ async function fetchDynamicSystemContext(userType, userId) {
     
     [PRICING RULES]
     - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+=======
+    // 5. Calculate Daily Profit (Sum of orderCost for today)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const profitStats = await Order.aggregate([
+      { $match: { createdAt: { $gte: startOfDay } } },
+      {
+        $group: {
+          _id: null,
+          totalProfit: { $sum: "$orderCost" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    const dailyProfit = profitStats[0]?.totalProfit || 0;
+    const dailyOrdersCount = profitStats[0]?.count || 0;
+
+    // 6. Fetch Recent Activity (Last 5 orders)
+    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
+    const recentSummary = recentOrders
+      .map(
+        (o) =>
+          `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}, to ${o.city}`
+      )
+      .join("\n");
+
+    return `
+    [LIVE SYSTEM DASHBOARD]
+    - Total Registered Users: ${totalUsers}
+    - Total Orders (All Time): ${totalOrders}
+    - Pending Orders: ${pendingOrders}
+    - Delivered Orders: ${deliveredOrders}
+    - Orders Today: ${dailyOrdersCount}
+    - PROFIT TODAY: ${dailyProfit} EGP
+
+    [OUR FLEET & DRIVERS]
+    ${driverSummary || "No drivers currently registered."}
+
+    [SERVED AREAS]
+    ${cityList || "No active cities found."}
+    
+    [PRICING RULES]
+    - Standard Weight Limit: ${limitWeight} Kg
+    - Cost per Extra Kg: ${kgPrice} EGP
+    - Village Delivery Surcharge: ${villagePrice} EGP
+    
+    [RECENT ACTIVITY]
+    ${recentSummary}
+>>>>>>> 3b899f9 (enhance ai mode)
     `;
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
@@ -452,11 +535,33 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
   // Construct Messages Payload
   const messages = [
     {
+<<<<<<< HEAD
       role: "system",
       content:
         "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
     },
   ];
+=======
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.2,
+      }),
+    }
+  );
+>>>>>>> 3b899f9 (enhance ai mode)
 
   if (base64Image) {
     // Vision Payload
@@ -789,6 +894,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           : "";
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       // If we just uploaded a file, prioritize its context if RAG didn't find it yet
       // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
 
@@ -817,10 +923,22 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       return; // Response ended by generateAnswer stream
 =======
       // If we just uploaded a file, prioritize its context if RAG didn't find it yet (though processAndStore does insert it)
+=======
+      // If we just uploaded a file, prioritize its context if RAG didn't find it yet
+>>>>>>> 3b899f9 (enhance ai mode)
       // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
-      if (fileContext) {
-        retrievedContext = `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n\n[EXISTING KNOWLEDGE]:\n${retrievedContext}`;
-      }
+
+      // --- INJECT DYNAMIC SYSTEM DATA ---
+      const systemContext = await fetchDynamicSystemContext();
+
+      retrievedContext = `
+      ${systemContext}
+
+      ${fileContext ? `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n` : ""}
+
+      [EXISTING KNOWLEDGE BASE]:
+      ${retrievedContext}
+      `;
 
       finalAnswer = await generateAnswer(retrievedContext, question);
       return res.json({ answer: finalAnswer });
