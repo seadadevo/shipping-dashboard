@@ -30,15 +30,10 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 // ================= HELPER FUNCTIONS =================
 
 // --- DYNAMIC SYSTEM CONTEXT (Fetch from DB) ---
-async function fetchDynamicSystemContext() {
+async function fetchDynamicSystemContext(userType, userId) {
   try {
-    // 1. Fetch Key Stats
-    const totalOrders = await Order.countDocuments();
-    const pendingOrders = await Order.countDocuments({ status: "Pending" });
-    const deliveredOrders = await Order.countDocuments({ status: "Delivered" });
-    const totalUsers = await User.countDocuments();
-
-    // 2. Fetch Weight Settings
+    // ---------------- COMMON DATA ----------------
+    // Fetch Weight Settings (Everyone sees pricing)
     const weightSettings = await WeightSetting.findOne().sort({
       updatedAt: -1,
     });
@@ -46,96 +41,177 @@ async function fetchDynamicSystemContext() {
     const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
-    // 3. Fetch Active Drivers (Couriers)
-    const drivers = await User.find({ userType: "courier" }).select(
-      "fullName phone isAvailable assignedCities"
-    );
-    const driverSummary = drivers
-      .map(
-        (d) =>
-          `- ${d.fullName} (${d.phone}) [${
-            d.isAvailable ? "Available" : "Busy"
-          }]`
-      )
-      .join("\n");
-
-    // 4. Fetch Served Areas (Cities)
+    // Served Areas (Everyone sees areas)
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
       .map((c) => `${c.cityName} (${c.governorate?.govName})`)
       .join(", ");
 
-    // 5. Calculate Daily Profit (Breakdown by Status)
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // ---------------- ADMIN CONTEXT ----------------
+    if (userType === "admin") {
+      const totalOrders = await Order.countDocuments();
+      const pendingOrders = await Order.countDocuments({ status: "Pending" });
+      const deliveredOrders = await Order.countDocuments({
+        status: "Delivered",
+      });
+      const totalUsers = await User.countDocuments();
 
-    const profitStats = await Order.aggregate([
-      { $match: { createdAt: { $gte: startOfDay } } },
-      {
-        $group: {
-          _id: "$status",
-          totalCost: { $sum: "$orderCost" },
-          count: { $sum: 1 },
+      // Admin: Drivers List
+      const drivers = await User.find({ userType: "courier" }).select(
+        "fullName phone isAvailable assignedCities"
+      );
+      const driverSummary = drivers
+        .map(
+          (d) =>
+            `- ${d.fullName} (${d.phone}) [${
+              d.isAvailable ? "Available" : "Busy"
+            }]`
+        )
+        .join("\n");
+
+      // Admin: Financials
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const profitStats = await Order.aggregate([
+        { $match: { createdAt: { $gte: startOfDay } } },
+        {
+          $group: {
+            _id: "$status",
+            totalCost: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
         },
-      },
-    ]);
+      ]);
 
-    let deliveredProfit = 0;
-    let pendingProfit = 0;
-    let deliveredCount = 0;
-    let pendingCount = 0;
+      let deliveredProfit = 0;
+      let pendingProfit = 0;
+      const mongoose = require("mongoose"); // Ensure mongoose is available or use implicit if global (better to be safe, but file likely has it or we rely on model imports. Wait, aiRouter didn't import mongoose. I should add it or check imports. Models use it.)
 
-    profitStats.forEach((stat) => {
-      if (stat._id === "Delivered") {
-        deliveredProfit = stat.totalCost;
-        deliveredCount = stat.count;
-      } else if (
-        stat._id === "Pending" ||
-        stat._id === "Processing" ||
-        stat._id === "On the Way"
-      ) {
-        pendingProfit += stat.totalCost;
-        pendingCount += stat.count;
-      }
-    });
+      profitStats.forEach((stat) => {
+        if (stat._id === "Delivered") {
+          deliveredProfit = stat.totalCost;
+        } else if (["Pending", "Processing", "On the Way"].includes(stat._id)) {
+          pendingProfit += stat.totalCost;
+        }
+      });
 
-    const totalPotentialProfit = deliveredProfit + pendingProfit;
+      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
+      const recentSummary = recentOrders
+        .map(
+          (o) =>
+            `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}, to ${o.city}`
+        )
+        .join("\n");
 
-    // 6. Fetch Recent Activity (Last 5 orders)
-    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
-    const recentSummary = recentOrders
-      .map(
-        (o) =>
-          `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}, to ${o.city}`
-      )
-      .join("\n");
+      return `
+        [ADMIN DASHBOARD - FULL ACCESS]
+        - Total Orders: ${totalOrders}
+        - Pending: ${pendingOrders} | Delivered: ${deliveredOrders}
+        - Total Users: ${totalUsers}
 
+        [FINANCIALS (Today)]
+        - Realized (Delivered): ${deliveredProfit} EGP
+        - Potential (Pending): ${pendingProfit} EGP
+        - Total Today: ${deliveredProfit + pendingProfit} EGP
+
+        [DRIVERS]
+        ${driverSummary || "No drivers."}
+
+        [AREAS]
+        ${cityList}
+
+        [PRICING]
+        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+
+        [RECENT SYSTEM ACTIVITY]
+        ${recentSummary}
+        `;
+    }
+
+    // ---------------- MERCHANT CONTEXT ----------------
+    if (userType === "merchant") {
+      if (!userId) return "[Merchant Data Error: No ID]";
+
+      // Need mongoose for ObjectId casting if stored as ObjectId
+      const mongoose = require("mongoose");
+
+      const myOrdersCount = await Order.countDocuments({ createdBy: userId });
+      const myPending = await Order.countDocuments({
+        createdBy: userId,
+        status: "Pending",
+      });
+      const myDelivered = await Order.countDocuments({
+        createdBy: userId,
+        status: "Delivered",
+      });
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const myStats = await Order.aggregate([
+        {
+          $match: {
+            createdBy: new mongoose.Types.ObjectId(userId),
+            createdAt: { $gte: startOfDay },
+          },
+        },
+        {
+          $group: {
+            _id: "$status",
+            totalCost: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      let myRealized = 0;
+      let myPotential = 0;
+      myStats.forEach((stat) => {
+        if (stat._id === "Delivered") myRealized = stat.totalCost;
+        else if (["Pending", "Processing", "On the Way"].includes(stat._id))
+          myPotential += stat.totalCost;
+      });
+
+      const myRecent = await Order.find({ createdBy: userId })
+        .sort({ createdAt: -1 })
+        .limit(5);
+      const myRecentSummary = myRecent
+        .map(
+          (o) => `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}`
+        )
+        .join("\n");
+
+      return `
+        [MERCHANT DASHBOARD - PERSONALIZED]
+        - Your Total Orders: ${myOrdersCount}
+        - Your Pending: ${myPending} | Delivered: ${myDelivered}
+        
+        [YOUR FINANCIALS (Today)]
+        - Realized: ${myRealized} EGP
+        - Potential: ${myPotential} EGP
+        
+        [AREAS SERVED]
+        ${cityList}
+
+        [PRICING RULES]
+        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+
+        [YOUR RECENT ACTIVITY]
+        ${myRecentSummary}
+        `;
+    }
+
+    // ---------------- EMPLOYEE CONTEXT ----------------
     return `
-    [LIVE SYSTEM DASHBOARD]
-    - Total Registered Users: ${totalUsers}
-    - Total Orders (All Time): ${totalOrders}
-    - Pending Orders: ${pendingOrders}
-    - Delivered Orders: ${deliveredOrders}
+    [EMPLOYEE VIEW]
+    - Access to General Shipping Rules.
+    - No Financial Access.
+    - No Driver List Access.
     
-    [DAILY FINANCIALS (Today)]
-    - Orders Created Today: ${deliveredCount + pendingCount}
-    - REALIZED REVENUE (Delivered): ${deliveredProfit} EGP
-    - POTENTIAL REVENUE (Pending/Processing): ${pendingProfit} EGP
-    - TOTAL EXPECTED REVENUE: ${totalPotentialProfit} EGP
-
-    [OUR FLEET & DRIVERS]
-    ${driverSummary || "No drivers currently registered."}
-
     [SERVED AREAS]
-    ${cityList || "No active cities found."}
+    ${cityList}
     
     [PRICING RULES]
-    - Standard Weight Limit: ${limitWeight} Kg
-    - Cost per Extra Kg: ${kgPrice} EGP
-    - Village Delivery Surcharge: ${villagePrice} EGP
-    
-    [RECENT ACTIVITY]
-    ${recentSummary}
+    - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
     `;
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
@@ -370,6 +446,8 @@ router.post("/chat", upload.single("file"), async (req, res) => {
   try {
     const question = req.body.question;
     const file = req.file;
+    const userId = req.body.userId;
+    const userType = req.body.userType;
 
     // Check if we have at least one of them
     if (!question && !file) {
@@ -476,7 +554,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
 
       // --- INJECT DYNAMIC SYSTEM DATA ---
-      const systemContext = await fetchDynamicSystemContext();
+      const systemContext = await fetchDynamicSystemContext(userType, userId);
 
       retrievedContext = `
       ${systemContext}

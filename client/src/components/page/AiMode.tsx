@@ -359,6 +359,8 @@ const AiMode = () => {
     currentSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
+
   // Load sessions
   useEffect(() => {
     if (!user) return;
@@ -373,18 +375,19 @@ const AiMode = () => {
     } else {
       setSessions([]); // Clear sessions if none for this user
     }
+    setIsHistoryLoaded(true);
   }, [user]);
 
   // Save sessions
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isHistoryLoaded) return;
     const storageKey = `ai_chat_sessions_${user._id}`;
     if (sessions.length > 0) {
       localStorage.setItem(storageKey, JSON.stringify(sessions));
     } else if (localStorage.getItem(storageKey)) {
       localStorage.removeItem(storageKey);
     }
-  }, [sessions, user]);
+  }, [sessions, user, isHistoryLoaded]);
 
   // Update session list when messages change
   useEffect(() => {
