@@ -246,98 +246,124 @@ initDefaultDocument();
 
 // ================= API ENDPOINTS =================
 
-router.post("/upload", upload.single("file"), async (req, res) => {
+router.post("/chat", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded." });
+    const question = req.body.question;
+    const file = req.file;
+
+    // Check if we have at least one of them
+    if (!question && !file) {
+      return res
+        .status(400)
+        .json({ error: "Please provide a question or a file." });
     }
 
     console.log(
-      `📂 File received: ${req.file.originalname} (${req.file.mimetype})`
-    );
-    const filePath = req.file.path;
-    let rawText = "";
-
-    const isPdf =
-      req.file.mimetype === "application/pdf" ||
-      req.file.originalname.toLowerCase().endsWith(".pdf");
-
-    const isCsv =
-      req.file.mimetype === "text/csv" ||
-      req.file.mimetype === "application/vnd.ms-excel" ||
-      req.file.originalname.toLowerCase().endsWith(".csv");
-
-    const isImage =
-      req.file.mimetype.startsWith("image/") ||
-      /\.(jpg|jpeg|png|webp)$/.test(req.file.originalname.toLowerCase());
-
-    if (isPdf) {
-      console.log("📄 Detected PDF. Parsing...");
-      const dataBuffer = fs.readFileSync(filePath);
-      const data = await pdf(dataBuffer);
-      rawText = data.text;
-    } else if (isCsv) {
-      console.log("📊 Detected CSV. Parsing...");
-      rawText = await parseCSV(filePath);
-    } else if (isImage) {
-      console.log("📷 Detected Image. Performing OCR...");
-      const {
-        data: { text },
-      } = await tesseract.recognize(filePath, "ara+eng");
-      rawText = text;
-    } else {
-      console.log("📝 Detected Text File. Reading...");
-      rawText = fs.readFileSync(filePath, "utf-8");
-    }
-
-    if (!rawText || !rawText.trim()) throw new Error("Parsed text is empty.");
-
-    await processAndStoreDocument(rawText);
-    fs.unlinkSync(filePath);
-    res.json({ message: "Document processed successfully! Ready to chat." });
-  } catch (error) {
-    console.error("❌ Error in /upload:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post("/chat", async (req, res) => {
-  try {
-    const { question } = req.body;
-    if (!question)
-      return res.status(400).json({ error: "Question is required." });
-
-    console.log(`💬 Received question: "${question}"`);
-    const queryVector = await getEmbedding(question);
-    const collection = await client.getCollection({ name: COLLECTION_NAME });
-
-    const result = await collection.query({
-      queryEmbeddings: [queryVector],
-      nResults: 3,
-    });
-
-    console.log(
-      "🔍 Retrieval Result Metadatas:",
-      JSON.stringify(result.metadatas, null, 2)
+      `💬 Request: Text="${question || "None"}", File="${
+        file ? file.originalname : "None"
+      }"`
     );
 
-    const contextText =
-      result.metadatas && result.metadatas[0] && result.metadatas[0].length > 0
-        ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
-        : "";
+    // --- 1. PROCESS FILE (If attached) ---
+    let fileContext = "";
 
-    if (!contextText.trim()) {
-      // If no context, just ask the AI without specific RAG context, or provide a default fallback
-      // For now, let's just let it answer generally or say it doesn't know.
-      // But better to give it a chance to answer general questions.
-      console.log("⚠️ No context found in vector DB. Using empty context.");
+    if (file) {
+      console.log(`📂 Processing attached file: ${file.originalname}`);
+      const filePath = file.path;
+      let rawText = "";
+
+      const isPdf =
+        file.mimetype === "application/pdf" ||
+        file.originalname.toLowerCase().endsWith(".pdf");
+      const isCsv =
+        file.mimetype === "text/csv" ||
+        file.mimetype === "application/vnd.ms-excel" ||
+        file.originalname.toLowerCase().endsWith(".csv");
+      const isImage =
+        file.mimetype.startsWith("image/") ||
+        /\.(jpg|jpeg|png|webp)$/.test(file.originalname.toLowerCase());
+
+      try {
+        if (isPdf) {
+          const dataBuffer = fs.readFileSync(filePath);
+          const data = await pdf(dataBuffer);
+          rawText = data.text;
+        } else if (isCsv) {
+          rawText = await parseCSV(filePath);
+        } else if (isImage) {
+          // For images, we just use OCR text as context
+          const {
+            data: { text },
+          } = await tesseract.recognize(filePath, "ara+eng");
+          rawText = text;
+        } else {
+          rawText = fs.readFileSync(filePath, "utf-8");
+        }
+
+        // Index file into Vector DB, preserving Base Document context.
+        if (rawText && rawText.trim()) {
+          await processAndStoreDocument(rawText);
+          fileContext = rawText; // Keep a reference
+        }
+      } catch (fileErr) {
+        console.error("Error parsing file:", fileErr);
+        // Continue even if file fails? Or throw? Let's inform user.
+        return res
+          .status(400)
+          .json({ error: `Failed to process file: ${fileErr.message}` });
+      } finally {
+        // Cleanup temp file
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
     }
 
-    const answer = await generateAnswer(contextText, question);
-    res.json({ answer });
+    // --- 2. DETERMINE RESPONSE STRATEGY ---
+
+    let finalAnswer = "";
+
+    // CASE A: File ONLY (No question)
+    // -> Provide a summary or confirmation
+    if (file && !question) {
+      if (fileContext) {
+        // Ask AI to summarize the new content
+        const summaryPrompt =
+          "I just uploaded this file. Please analyze it briefly and give me a summary of what it contains in Arabic.";
+        finalAnswer = await generateAnswer(fileContext, summaryPrompt);
+      } else {
+        finalAnswer = `✅ تم رفع الملف **${file.originalname}** بنجاح. النص فيه غير واضح أو فارغ.`;
+      }
+      return res.json({ answer: finalAnswer });
+    }
+
+    // CASE B: Question (with or without File)
+    // -> RAG Search + Answer
+    if (question) {
+      // RAG Search
+      const queryVector = await getEmbedding(question);
+      const collection = await client.getCollection({ name: COLLECTION_NAME });
+
+      const result = await collection.query({
+        queryEmbeddings: [queryVector],
+        nResults: 3,
+      });
+
+      let retrievedContext =
+        result.metadatas && result.metadatas[0]
+          ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
+          : "";
+
+      // If we just uploaded a file, prioritize its context if RAG didn't find it yet (though processAndStore does insert it)
+      // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
+      if (fileContext) {
+        retrievedContext = `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n\n[EXISTING KNOWLEDGE]:\n${retrievedContext}`;
+      }
+
+      finalAnswer = await generateAnswer(retrievedContext, question);
+      return res.json({ answer: finalAnswer });
+    }
   } catch (error) {
     console.error("❌ Error in /chat:", error);
-    res.status(500).json({ error: "Failed to generate answer." });
+    res.status(500).json({ error: "Failed to process request." });
   }
 });
 
