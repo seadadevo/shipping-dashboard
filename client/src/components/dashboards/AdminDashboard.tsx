@@ -30,7 +30,7 @@ import type {ApiError, GetOrdersResponse, Order, User} from '../../types';
 import {getMenuItemsByRole} from "../../constants/menuItems.ts";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api.ts";
-import { generatePDFReport, generateAdminReport } from "../../lib/exportUtils";
+import { generatePDFReport, generateAdminReportCSVSingleFile } from "../../lib/exportUtils";
 
 const AdminDashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -94,6 +94,27 @@ const AdminDashboard: React.FC = () => {
     const [chartData, setChartData] = useState<{ day: string; orders: number }[]>([]);
     const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState<number>(0);
     const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState<number>(0);
+
+    const [shippingTypes, setShippingTypes] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [weightSettings, setWeightSettings] = useState([]);
+
+    useEffect(() => {
+      // جلب أنواع الشحن
+      api.get("/api/shipping-types").then(res => setShippingTypes(res.data.data));
+      // جلب المدن
+      api.get("/api/locations/cities")
+      .then(res => setCities(res.data.data || []))
+      .catch(err => {
+          console.error("خطأ في جلب المدن:", err);
+          setCities([]);
+      });
+      // جلب إعدادات الوزن
+      api.get("/api/weight-settings").then(res => {
+        const weightData = Array.isArray(res.data) ? res.data : [res.data];
+        setWeightSettings(weightData);
+      });
+    }, []);
 
     const fetchOrders = async (): Promise<void> => {
         // setLoading(true);
@@ -220,26 +241,28 @@ const AdminDashboard: React.FC = () => {
               }
             });
           }}>إنشاء تقرير</Button>
-          <Button variant="outline"
-                className="mr-2"
-                onClick={() => {
-                    generateAdminReport({
-                      orders: allOrders,
-                      users: users,
-                      stats: {
-                        "الطلبات اليوم": countOrdersToday,
-                        "الشحنات المعلقة": pendingOrdersToday,
-                        "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
-                        "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
-                        "الإيرادات اليوم": moneysToday,
-                        "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
-                        "المستخدمين النشطين": users.length,
-                      }
-                    });
-                    }}
+          <Button variant="outline" className="mr-2"
+            onClick={() => {
+                generateAdminReportCSVSingleFile({
+                  orders: allOrders,
+                  users: users,
+                  stats: {
+                    "الطلبات اليوم": countOrdersToday,
+                    "الشحنات المعلقة": pendingOrdersToday,
+                    "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                    "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
+                    "الإيرادات اليوم": moneysToday,
+                    "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
+                    "المستخدمين النشطين": users.length,
+                  },
+                   shippingTypes: shippingTypes,
+                    cities: cities,
+                    weightSettings: weightSettings
+                });
+            }}
           >
               <Download className="h-4 w-4 mr-2" />
-              تصدير البيانات
+              تصدير كل البيانات
           </Button>
         </div>
       </div>
