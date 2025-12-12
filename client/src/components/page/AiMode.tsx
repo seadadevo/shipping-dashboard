@@ -14,6 +14,7 @@ import {
   MoreVertical,
   X,
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 import {
   BarChart,
   Bar,
@@ -321,6 +322,7 @@ const InputBox = ({
 };
 
 const AiMode = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -359,24 +361,30 @@ const AiMode = () => {
 
   // Load sessions
   useEffect(() => {
-    const saved = localStorage.getItem("ai_chat_sessions");
+    if (!user) return;
+    const storageKey = `ai_chat_sessions_${user._id}`;
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         setSessions(JSON.parse(saved));
       } catch (e) {
         console.error("Failed to parse history", e);
       }
+    } else {
+      setSessions([]); // Clear sessions if none for this user
     }
-  }, []);
+  }, [user]);
 
   // Save sessions
   useEffect(() => {
+    if (!user) return;
+    const storageKey = `ai_chat_sessions_${user._id}`;
     if (sessions.length > 0) {
-      localStorage.setItem("ai_chat_sessions", JSON.stringify(sessions));
-    } else if (localStorage.getItem("ai_chat_sessions")) {
-      localStorage.removeItem("ai_chat_sessions");
+      localStorage.setItem(storageKey, JSON.stringify(sessions));
+    } else if (localStorage.getItem(storageKey)) {
+      localStorage.removeItem(storageKey);
     }
-  }, [sessions]);
+  }, [sessions, user]);
 
   // Update session list when messages change
   useEffect(() => {
@@ -552,6 +560,12 @@ const AiMode = () => {
       const formData = new FormData();
       if (textToSend.trim()) formData.append("question", textToSend);
       if (hasFile && selectedFile) formData.append("file", selectedFile);
+
+      // Inject User Context for RBAC
+      if (user) {
+        formData.append("userId", user._id);
+        formData.append("userType", user.userType);
+      }
 
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
