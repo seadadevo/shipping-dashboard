@@ -584,8 +584,11 @@ router.post("/chat", upload.single("file"), async (req, res) => {
   try {
     const question = req.body.question;
     const file = req.file;
+<<<<<<< HEAD
     const userId = req.body.userId;
     const userType = req.body.userType;
+=======
+>>>>>>> 2975ddb (enhance to read diffrent files type)
 
     // Check if we have at least one of them
     if (!question && !file) {
@@ -595,14 +598,23 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     }
 
     console.log(
+<<<<<<< HEAD
       `💬 Request: QuestionType=${typeof question}, QuestionValue="${question}", File=${
         file ? file.originalname : "None"
       }`
+=======
+      `💬 Request: Text="${question || "None"}", File="${
+        file ? file.originalname : "None"
+      }"`
+>>>>>>> 2975ddb (enhance to read diffrent files type)
     );
 
     // --- 1. PROCESS FILE (If attached) ---
     let fileContext = "";
+<<<<<<< HEAD
     let base64Image = null;
+=======
+>>>>>>> 2975ddb (enhance to read diffrent files type)
 
     if (file) {
       console.log(`📂 Processing attached file: ${file.originalname}`);
@@ -621,6 +633,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         /\.(jpg|jpeg|png|webp)$/.test(file.originalname.toLowerCase());
 
       try {
+<<<<<<< HEAD
         if (isImage) {
           // Read image as Base64 for Vision API
           const imageBuffer = fs.readFileSync(filePath);
@@ -644,6 +657,12 @@ router.post("/chat", upload.single("file"), async (req, res) => {
             console.error("❌ PDF Parse Error:", pdfErr);
             rawText = ""; // Treat as empty if parsing crashes
           }
+=======
+        if (isPdf) {
+          const dataBuffer = fs.readFileSync(filePath);
+          const data = await pdf(dataBuffer);
+          rawText = data.text;
+>>>>>>> 2975ddb (enhance to read diffrent files type)
         } else if (isCsv) {
           rawText = await parseCSV(filePath);
         } else if (isImage) {
@@ -656,6 +675,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           rawText = fs.readFileSync(filePath, "utf-8");
         }
 
+<<<<<<< HEAD
         console.log(
           `🔍 Extracted Text Length: ${rawText ? rawText.length : 0} chars`
         );
@@ -681,6 +701,12 @@ router.post("/chat", upload.single("file"), async (req, res) => {
             `⚠️ File text too short (<${minLength} chars), treating as empty/scanned.`
           );
           fileContext = ""; // Force empty to trigger the smart error handler
+=======
+        // Index file into Vector DB, preserving Base Document context.
+        if (rawText && rawText.trim()) {
+          await processAndStoreDocument(rawText);
+          fileContext = rawText; // Keep a reference
+>>>>>>> 2975ddb (enhance to read diffrent files type)
         }
       } catch (fileErr) {
         console.error("Error parsing file:", fileErr);
@@ -701,6 +727,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     // CASE A: File ONLY (No question)
     // -> Provide a summary or confirmation
     if (file && !question) {
+<<<<<<< HEAD
       console.log(
         `🔍 CASE A TRIGGERED: File Only. ContextLen=${
           fileContext.length
@@ -731,6 +758,17 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         });
       }
       return; // End response handled by stream or fast return
+=======
+      if (fileContext) {
+        // Ask AI to summarize the new content
+        const summaryPrompt =
+          "I just uploaded this file. Please analyze it briefly and give me a summary of what it contains in Arabic.";
+        finalAnswer = await generateAnswer(fileContext, summaryPrompt);
+      } else {
+        finalAnswer = `✅ تم رفع الملف **${file.originalname}** بنجاح. النص فيه غير واضح أو فارغ.`;
+      }
+      return res.json({ answer: finalAnswer });
+>>>>>>> 2975ddb (enhance to read diffrent files type)
     }
 
     // CASE B: Question (with or without File)
@@ -750,6 +788,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
           : "";
 
+<<<<<<< HEAD
       // If we just uploaded a file, prioritize its context if RAG didn't find it yet
       // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
 
@@ -776,6 +815,16 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         base64Image
       );
       return; // Response ended by generateAnswer stream
+=======
+      // If we just uploaded a file, prioritize its context if RAG didn't find it yet (though processAndStore does insert it)
+      // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
+      if (fileContext) {
+        retrievedContext = `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n\n[EXISTING KNOWLEDGE]:\n${retrievedContext}`;
+      }
+
+      finalAnswer = await generateAnswer(retrievedContext, question);
+      return res.json({ answer: finalAnswer });
+>>>>>>> 2975ddb (enhance to read diffrent files type)
     }
   } catch (error) {
     console.error("❌ Error in /chat:", error);
