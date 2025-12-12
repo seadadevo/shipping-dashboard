@@ -1,7 +1,15 @@
 import { NavLink } from "react-router-dom";
 import { Sparkles } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 const AiButton = () => {
+  const { user } = useAuth();
+
+  // RESTRICT ACCESS: Hide for drivers (couriers) or unauthenticated users
+  if (!user || user.userType === "courier") {
+    return null;
+  }
+
   return (
     <NavLink
       to="/ai-mode"

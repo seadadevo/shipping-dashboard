@@ -12,7 +12,9 @@ import {
   StopCircle,
   ChevronLeft,
   MoreVertical,
+  X,
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 import {
   BarChart,
   Bar,
@@ -46,6 +48,7 @@ const SUGGESTIONS = [
 interface Message {
   sender: "user" | "ai";
   text: string;
+  isAnimated?: boolean; // New flag for typing effect
 }
 
 interface ChatSession {
@@ -147,6 +150,82 @@ const ChartRenderer = ({ jsonString }: { jsonString: string }) => {
   }
 };
 
+// --- Component: Typewriter ---
+const Typewriter = ({
+  text,
+  onComplete,
+}: {
+  text: string;
+  onComplete?: () => void;
+}) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const indexRef = useRef(0);
+
+  useEffect(() => {
+    // If text is empty, just complete immediately
+    if (!text) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    indexRef.current = 0;
+    setDisplayedText("");
+
+    const intervalId = setInterval(() => {
+      // Add multiple chars per tick for speed (adjustable)
+      const chunkSize = 5;
+      const nextIndex = Math.min(indexRef.current + chunkSize, text.length);
+
+      setDisplayedText(text.slice(0, nextIndex));
+      indexRef.current = nextIndex;
+
+      if (indexRef.current >= text.length) {
+        clearInterval(intervalId);
+        if (onComplete) onComplete();
+      }
+    }, 15); // Speed in ms
+
+    return () => clearInterval(intervalId);
+  }, [text]); // Re-run if text content changes completely (should happen once per msg)
+
+  // Use the parent's render logic for the partial text
+  // We need to pass this back up or replicate the render logic?
+  // Easier: Just return the content using the logic directly here or via a render prop?
+  // Let's use a render prop approach or just duplicate the renderMessageContent call if accessible?
+  // Since Typewriter is defined outside AiMode, it doesn't have access to renderMessageContent easily unless passed or moved.
+  // I will move renderMessageContent to be a helper outside or pass it.
+
+  // Actually, I can render standard text here. But renderMessageContent handles Charts.
+  // Let's assume Typewriter is used *inside* AiMode where renderMessageContent is available?
+  // No, I'm defining it outside. I'll move renderMessageContent outside or duplicate relevant logic.
+  // Actually, standardizing: The ChartRenderer is receiving a string.
+  // Let's make `renderMessageContent` a standalone helper outside AiMode.
+  return <>{renderMessageContent(displayedText)}</>;
+};
+
+// Helper function wrapper for external usage if needed
+const renderMessageContent = (text: string) => {
+  const chartRegex = /```json-chart([\s\S]*?)```/;
+  const match = text.match(chartRegex);
+
+  if (match) {
+    const jsonString = match[1];
+    const parts = text.split(match[0]);
+    return (
+      <div className="flex flex-col gap-4 w-full">
+        {parts[0].trim() && (
+          <div className="leading-relaxed whitespace-pre-wrap">{parts[0]}</div>
+        )}
+        <ChartRenderer jsonString={jsonString} />
+        {parts[1] && parts[1].trim() && (
+          <div className="leading-relaxed whitespace-pre-wrap">{parts[1]}</div>
+        )}
+      </div>
+    );
+  }
+  return <div className="leading-relaxed whitespace-pre-wrap">{text}</div>;
+};
+
 // --- Component: InputBox ---
 const InputBox = ({
   question,
@@ -158,8 +237,10 @@ const InputBox = ({
   startListening,
   stopListening,
   isListening,
-  isUploading, // New prop
-  showIntroGlow = false, // New prop for animation
+  isLoading, // Changed from isUploading
+  selectedFile,
+  clearFile,
+  showIntroGlow = false,
 }: {
   question: string;
   setQuestion: (val: string) => void;
@@ -170,7 +251,9 @@ const InputBox = ({
   startListening: () => void;
   stopListening: () => void;
   isListening: boolean;
-  isUploading: boolean;
+  isLoading: boolean;
+  selectedFile?: File | null;
+  clearFile?: () => void;
   showIntroGlow?: boolean;
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -189,15 +272,12 @@ const InputBox = ({
     >
       {/* 
          ANIMATION LAYERS (Only visible if showIntroGlow is true) 
-         Similar to AiButton but adapted for a box
       */}
       {showIntroGlow && (
         <>
-          {/* 1. The Glowing Beam */}
           <div className="absolute -inset-[3px] rounded-2xl opacity-100 overflow-hidden pointer-events-none z-0">
             <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
           </div>
-          {/* 2. Glow Blur Layer */}
           <div className="absolute -inset-[3px] rounded-2xl opacity-60 blur-md overflow-hidden pointer-events-none z-0">
             <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
           </div>
@@ -217,33 +297,45 @@ const InputBox = ({
         ${isListening ? "ring-2 ring-red-500/50 border-red-500/50" : ""}
       `}
       >
-        {/* Background to cover the gradient behind */}
         <div className="absolute inset-0 bg-card rounded-2xl -z-10" />
+
+        {/* Pending File Chip */}
+        {selectedFile && (
+          <div className="mx-2 mt-2 flex items-center gap-2 w-fit bg-accent/50 px-3 py-1 rounded-lg border border-border">
+            <span className="text-xs text-foreground font-medium truncate max-w-[200px]">
+              {selectedFile.name}
+            </span>
+            <button
+              onClick={clearFile}
+              className="text-muted-foreground hover:text-red-500 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
 
         <textarea
           ref={inputRef}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          disabled={isUploading}
+          disabled={false}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              if (question.trim() && !isUploading) {
+              if (question.trim() || selectedFile) {
                 handleSend();
               }
             }
           }}
           placeholder={
-            isUploading
-              ? "Reading file... please wait ⏳"
+            isLoading
+              ? "Speaking with AI..."
               : isListening
               ? "جاري الاستماع..."
               : "Ask anything... | اسأل أي شيء"
           }
           dir="auto"
-          className={`w-full resize-none bg-transparent p-3 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none ${
-            isUploading ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className={`w-full resize-none bg-transparent p-3 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none`}
           style={{ minHeight: centered ? "80px" : "40px" }}
         />
 
@@ -251,7 +343,7 @@ const InputBox = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isLoading}
               className="flex items-center gap-1 rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
             >
               <Plus className="h-5 w-5" />
@@ -267,15 +359,14 @@ const InputBox = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Voice Input Button */}
             <button
               onClick={isListening ? stopListening : startListening}
-              disabled={isUploading}
+              disabled={isLoading}
               className={`rounded-full p-2 transition-all duration-200 ${
                 isListening
                   ? "bg-red-500 text-white animate-pulse"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
+              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
               title={isListening ? "إيقاف الاستماع" : "ابدأ التحدث"}
             >
               {isListening ? (
@@ -287,14 +378,14 @@ const InputBox = ({
 
             <button
               onClick={() => handleSend()}
-              disabled={!question.trim() || isUploading}
+              disabled={(!question.trim() && !selectedFile) || isLoading}
               className={`rounded-full p-2 transition-all ${
-                question.trim() && !isUploading
+                (question.trim() || selectedFile) && !isLoading
                   ? "bg-primary text-primary-foreground hover:opacity-90"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               }`}
             >
-              {isUploading ? (
+              {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <Send className="h-5 w-5" />
@@ -308,6 +399,7 @@ const InputBox = ({
 };
 
 const AiMode = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -317,7 +409,7 @@ const AiMode = () => {
 
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // New state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   // Voice Input State
@@ -344,26 +436,48 @@ const AiMode = () => {
     currentSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
+
   // Load sessions
   useEffect(() => {
-    const saved = localStorage.getItem("ai_chat_sessions");
+    if (!user) return;
+    const storageKey = `ai_chat_sessions_${user._id}`;
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
-        setSessions(JSON.parse(saved));
+        const parsedSessions = JSON.parse(saved);
+        // Ensure legacy sessions don't animate on load
+        const sanitizedSessions = parsedSessions.map((s: ChatSession) => ({
+          ...s,
+          messages: s.messages.map((m) => ({ ...m, isAnimated: false })),
+        }));
+        setSessions(sanitizedSessions);
+
+        // AUTO-RESTORE LAST SESSION
+        if (sanitizedSessions.length > 0) {
+          const lastSession = sanitizedSessions[0];
+          setCurrentSessionId(lastSession.id);
+          setMessages(lastSession.messages);
+        }
       } catch (e) {
         console.error("Failed to parse history", e);
       }
+    } else {
+      setSessions([]); // Clear sessions if none for this user
     }
-  }, []);
+    setIsHistoryLoaded(true);
+  }, [user]);
 
   // Save sessions
   useEffect(() => {
+    if (!user || !isHistoryLoaded) return;
+    const storageKey = `ai_chat_sessions_${user._id}`;
     if (sessions.length > 0) {
-      localStorage.setItem("ai_chat_sessions", JSON.stringify(sessions));
-    } else if (localStorage.getItem("ai_chat_sessions")) {
-      localStorage.removeItem("ai_chat_sessions");
+      localStorage.setItem(storageKey, JSON.stringify(sessions));
+    } else if (localStorage.getItem(storageKey)) {
+      localStorage.removeItem(storageKey);
     }
-  }, [sessions]);
+  }, [sessions, user, isHistoryLoaded]);
 
   // Update session list when messages change
   useEffect(() => {
@@ -474,24 +588,30 @@ const AiMode = () => {
     currentSessionIdRef.current = newId;
     setMessages([]);
     setQuestion("");
-    // Don't close history automatically on new chat, up to user preference, but let's keep it open if open
+    setMessages([]);
+    setQuestion("");
+    setShowHistory(false); // Close history on new chat
   };
 
-  const addMessageSafe = (sender: "user" | "ai", text: string) => {
+  const addMessageSafe = (
+    sender: "user" | "ai",
+    text: string,
+    animate = false
+  ) => {
     let activeId = currentSessionIdRef.current;
     if (!activeId) {
       activeId = generateId();
       setCurrentSessionId(activeId);
       currentSessionIdRef.current = activeId;
     }
-    setMessages((prev) => [...prev, { sender, text }]);
+    setMessages((prev) => [...prev, { sender, text, isAnimated: animate }]);
   };
 
   const loadSession = (session: ChatSession) => {
     setCurrentSessionId(session.id);
     currentSessionIdRef.current = session.id;
     setMessages(session.messages);
-    // Don't close history automatically when selecting a chat
+    setShowHistory(false); // Close history drawer on selection
   };
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
@@ -505,95 +625,110 @@ const AiMode = () => {
   };
 
   // --- Handlers ---
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+    // Reset input so same file can be selected again if cleared
+    if (e.target) e.target.value = "";
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+  };
+
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || question;
-    if (!textToSend.trim()) return;
+    const hasFile = !!selectedFile;
 
-    addMessageSafe("user", textToSend);
+    if (!textToSend.trim() && !hasFile) return;
+
+    // Display User Message
+    const displayMsg = hasFile
+      ? textToSend
+        ? `${textToSend} \n[Attached: ${selectedFile?.name}]`
+        : `[Uploaded: ${selectedFile?.name}]`
+      : textToSend;
+
+    addMessageSafe("user", displayMsg);
     setQuestion("");
+    clearFile(); // Remove chip immediately
     setLoading(true);
 
     try {
+      const formData = new FormData();
+      if (textToSend.trim()) formData.append("question", textToSend);
+      if (hasFile && selectedFile) formData.append("file", selectedFile);
+
+      // Inject User Context for RBAC
+      if (user) {
+        formData.append("userId", user._id);
+        formData.append("userType", user.userType);
+      }
+
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: textToSend }),
+        body: formData, // Automatic multipart/form-data
       });
-      const data = await res.json();
-      addMessageSafe("ai", data.answer);
-    } catch (err) {
-      addMessageSafe("ai", "عذراً، حدث خطأ. يرجى التحقق من الاتصال.");
+
+      // STREAMING RESPONSE HANDLER
+      addMessageSafe("ai", ""); // Init empty AI message
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      if (!reader) throw new Error("No reader available");
+
+      let done = false;
+      let accumulatedText = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+
+          // Handle potential JSON error response from server if it wasn't a stream?
+          // Our server sets text/plain for stream. If error, it might send json.
+          // Assuming stream is pure text for now.
+
+          accumulatedText += chunk;
+
+          setMessages((prev) => {
+            const newMsgs = [...prev];
+            // Update the last message (which is the AI one we just added)
+            const lastIdx = newMsgs.length - 1;
+            if (lastIdx >= 0 && newMsgs[lastIdx].sender === "ai") {
+              newMsgs[lastIdx].text = accumulatedText;
+            }
+            return newMsgs;
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error("Chat Error:", err);
+      // If we already started streaming, appending error might be weird, but okay
+      setMessages((prev) => {
+        const newMsgs = [...prev];
+        const lastIdx = newMsgs.length - 1;
+        if (lastIdx >= 0 && newMsgs[lastIdx].sender === "ai") {
+          newMsgs[lastIdx].text += `\n⚠️ حدث خطأ: ${err.message}`;
+        } else {
+          // If failed before start
+          newMsgs.push({ sender: "ai", text: `⚠️ حدث خطأ: ${err.message}` });
+        }
+        return newMsgs;
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Alias for legacy props compatibility if needed, though we should update usage
+  const handleUpload = handleFileSelect;
 
-    setIsUploading(true); // START LOADING
-    setQuestion(""); // Clear input if any
-
-    const formData = new FormData();
-    formData.append("file", file);
-    addMessageSafe("user", `📤 جاري رفع الملف: ${file.name}...`);
-
-    try {
-      const res = await fetch(`${API_URL}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addMessageSafe(
-          "ai",
-          data.answer ||
-            `✅ تم قراءة الملف **${file.name}**. اسألني أي شيء عنه!`
-        );
-      } else {
-        addMessageSafe("ai", `❌ خطأ في رفع الملف: ${data.error}`);
-      }
-    } catch {
-      addMessageSafe("ai", "❌ فشل الرفع. هل الخادم يعمل؟");
-    } finally {
-      setIsUploading(false); // END LOADING
-    }
-  };
-
-  // --- RENDER MESSAGE HELPER for CHARTS ---
-  const renderMessageContent = (text: string) => {
-    // Check for JSON chart block
-    const chartRegex = /```json-chart([\s\S]*?)```/;
-    const match = text.match(chartRegex);
-
-    if (match) {
-      // Split text into: Before Chart, Chart, After Chart
-      const jsonString = match[1];
-      const parts = text.split(match[0]);
-
-      return (
-        <div className="flex flex-col gap-4 w-full">
-          {parts[0].trim() && (
-            <div className="leading-relaxed whitespace-pre-wrap">
-              {parts[0]}
-            </div>
-          )}
-
-          <ChartRenderer jsonString={jsonString} />
-
-          {parts[1] && parts[1].trim() && (
-            <div className="leading-relaxed whitespace-pre-wrap">
-              {parts[1]}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Default text render
-    return <div className="leading-relaxed whitespace-pre-wrap">{text}</div>;
-  };
+  // --- RENDER MESSAGE HELPER MOVED OUTSIDE ---
+  // Keeping this comment anchor but functionality is now external 'const renderMessageContent'
 
   return (
     // Main Container
@@ -704,6 +839,15 @@ const AiMode = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative min-w-0 h-full">
+        {/* OVERLAY: Click content to close history (Desktop & Mobile) */}
+        {showHistory && (
+          <div
+            className="absolute inset-0 z-40 bg-black/5 cursor-pointer"
+            onClick={() => setShowHistory(false)}
+            title="Close History"
+          />
+        )}
+
         {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-10 flex items-center p-4 bg-background/80 backdrop-blur-sm border-b border-border justify-between">
           <span className="font-medium">الوضع الذكي</span>
@@ -739,7 +883,9 @@ const AiMode = () => {
                   startListening={startListening}
                   stopListening={stopListening}
                   isListening={isListening}
-                  isUploading={isUploading}
+                  isLoading={loading}
+                  selectedFile={selectedFile}
+                  clearFile={clearFile}
                   showIntroGlow={showIntroGlow} // Pass the animation state
                 />
 
@@ -813,12 +959,6 @@ const AiMode = () => {
                   جاري التفكير...
                 </div>
               )}
-              {isUploading && (
-                <div className="flex items-center gap-3 text-blue-500 animate-pulse mt-4">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  جاري قراءة الملف...
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -838,11 +978,14 @@ const AiMode = () => {
                 startListening={startListening}
                 stopListening={stopListening}
                 isListening={isListening}
-                isUploading={isUploading}
+                isLoading={loading}
+                selectedFile={selectedFile}
+                clearFile={clearFile}
                 showIntroGlow={false} // Never show glow on bottom input, only on the centered one
               />
               <div className="mt-2 text-center text-xs text-muted-foreground">
-                AI can make mistakes. Please verify important information.
+                قد ترتكب تقنيات الذكاء الاصطناعي أخطاءً، لذا يُرجى التحقق من
+                المعلومات الهامة قبل الاعتماد عليها.
               </div>
             </div>
           </div>
