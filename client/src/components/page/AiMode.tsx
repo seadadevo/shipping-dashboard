@@ -48,6 +48,7 @@ const SUGGESTIONS = [
 interface Message {
   sender: "user" | "ai";
   text: string;
+  isAnimated?: boolean; // New flag for typing effect
 }
 
 interface ChatSession {
@@ -147,6 +148,82 @@ const ChartRenderer = ({ jsonString }: { jsonString: string }) => {
   } catch {
     return <div className="text-red-500 text-sm">Error rendering chart.</div>;
   }
+};
+
+// --- Component: Typewriter ---
+const Typewriter = ({
+  text,
+  onComplete,
+}: {
+  text: string;
+  onComplete?: () => void;
+}) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const indexRef = useRef(0);
+
+  useEffect(() => {
+    // If text is empty, just complete immediately
+    if (!text) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    indexRef.current = 0;
+    setDisplayedText("");
+
+    const intervalId = setInterval(() => {
+      // Add multiple chars per tick for speed (adjustable)
+      const chunkSize = 5;
+      const nextIndex = Math.min(indexRef.current + chunkSize, text.length);
+
+      setDisplayedText(text.slice(0, nextIndex));
+      indexRef.current = nextIndex;
+
+      if (indexRef.current >= text.length) {
+        clearInterval(intervalId);
+        if (onComplete) onComplete();
+      }
+    }, 15); // Speed in ms
+
+    return () => clearInterval(intervalId);
+  }, [text]); // Re-run if text content changes completely (should happen once per msg)
+
+  // Use the parent's render logic for the partial text
+  // We need to pass this back up or replicate the render logic?
+  // Easier: Just return the content using the logic directly here or via a render prop?
+  // Let's use a render prop approach or just duplicate the renderMessageContent call if accessible?
+  // Since Typewriter is defined outside AiMode, it doesn't have access to renderMessageContent easily unless passed or moved.
+  // I will move renderMessageContent to be a helper outside or pass it.
+
+  // Actually, I can render standard text here. But renderMessageContent handles Charts.
+  // Let's assume Typewriter is used *inside* AiMode where renderMessageContent is available?
+  // No, I'm defining it outside. I'll move renderMessageContent outside or duplicate relevant logic.
+  // Actually, standardizing: The ChartRenderer is receiving a string.
+  // Let's make `renderMessageContent` a standalone helper outside AiMode.
+  return <>{renderMessageContent(displayedText)}</>;
+};
+
+// Helper function wrapper for external usage if needed
+const renderMessageContent = (text: string) => {
+  const chartRegex = /```json-chart([\s\S]*?)```/;
+  const match = text.match(chartRegex);
+
+  if (match) {
+    const jsonString = match[1];
+    const parts = text.split(match[0]);
+    return (
+      <div className="flex flex-col gap-4 w-full">
+        {parts[0].trim() && (
+          <div className="leading-relaxed whitespace-pre-wrap">{parts[0]}</div>
+        )}
+        <ChartRenderer jsonString={jsonString} />
+        {parts[1] && parts[1].trim() && (
+          <div className="leading-relaxed whitespace-pre-wrap">{parts[1]}</div>
+        )}
+      </div>
+    );
+  }
+  return <div className="leading-relaxed whitespace-pre-wrap">{text}</div>;
 };
 
 // --- Component: InputBox ---
@@ -369,11 +446,16 @@ const AiMode = () => {
     if (saved) {
       try {
         const parsedSessions = JSON.parse(saved);
-        setSessions(parsedSessions);
+        // Ensure legacy sessions don't animate on load
+        const sanitizedSessions = parsedSessions.map((s: ChatSession) => ({
+          ...s,
+          messages: s.messages.map((m) => ({ ...m, isAnimated: false })),
+        }));
+        setSessions(sanitizedSessions);
 
         // AUTO-RESTORE LAST SESSION
-        if (parsedSessions.length > 0) {
-          const lastSession = parsedSessions[0]; // Assuming sorted by date descending
+        if (sanitizedSessions.length > 0) {
+          const lastSession = sanitizedSessions[0];
           setCurrentSessionId(lastSession.id);
           setMessages(lastSession.messages);
         }
@@ -511,14 +593,18 @@ const AiMode = () => {
     setShowHistory(false); // Close history on new chat
   };
 
-  const addMessageSafe = (sender: "user" | "ai", text: string) => {
+  const addMessageSafe = (
+    sender: "user" | "ai",
+    text: string,
+    animate = false
+  ) => {
     let activeId = currentSessionIdRef.current;
     if (!activeId) {
       activeId = generateId();
       setCurrentSessionId(activeId);
       currentSessionIdRef.current = activeId;
     }
-    setMessages((prev) => [...prev, { sender, text }]);
+    setMessages((prev) => [...prev, { sender, text, isAnimated: animate }]);
   };
 
   const loadSession = (session: ChatSession) => {
@@ -591,7 +677,7 @@ const AiMode = () => {
         throw new Error(data.error || "Unknown error from server");
       }
 
-      addMessageSafe("ai", data.answer);
+      addMessageSafe("ai", data.answer, true); // Animate AI response
     } catch (err: any) {
       console.error("Chat Error:", err);
       addMessageSafe(
@@ -606,39 +692,8 @@ const AiMode = () => {
   // Alias for legacy props compatibility if needed, though we should update usage
   const handleUpload = handleFileSelect;
 
-  // --- RENDER MESSAGE HELPER for CHARTS ---
-  const renderMessageContent = (text: string) => {
-    // Check for JSON chart block
-    const chartRegex = /```json-chart([\s\S]*?)```/;
-    const match = text.match(chartRegex);
-
-    if (match) {
-      // Split text into: Before Chart, Chart, After Chart
-      const jsonString = match[1];
-      const parts = text.split(match[0]);
-
-      return (
-        <div className="flex flex-col gap-4 w-full">
-          {parts[0].trim() && (
-            <div className="leading-relaxed whitespace-pre-wrap">
-              {parts[0]}
-            </div>
-          )}
-
-          <ChartRenderer jsonString={jsonString} />
-
-          {parts[1] && parts[1].trim() && (
-            <div className="leading-relaxed whitespace-pre-wrap">
-              {parts[1]}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Default text render
-    return <div className="leading-relaxed whitespace-pre-wrap">{text}</div>;
-  };
+  // --- RENDER MESSAGE HELPER MOVED OUTSIDE ---
+  // Keeping this comment anchor but functionality is now external 'const renderMessageContent'
 
   return (
     // Main Container
@@ -856,9 +911,26 @@ const AiMode = () => {
                         }
                       `}
                     >
-                      {msg.sender === "ai"
-                        ? renderMessageContent(msg.text)
-                        : msg.text}
+                      {msg.sender === "ai" ? (
+                        msg.isAnimated ? (
+                          <Typewriter
+                            text={msg.text}
+                            onComplete={() => {
+                              // Mark as not animated so it stays static
+                              setMessages((prev) => {
+                                const newMsgs = [...prev];
+                                if (newMsgs[idx])
+                                  newMsgs[idx].isAnimated = false;
+                                return newMsgs;
+                              });
+                            }}
+                          />
+                        ) : (
+                          renderMessageContent(msg.text)
+                        )
+                      ) : (
+                        msg.text
+                      )}
                     </div>
                   </div>
                 </div>
