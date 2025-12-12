@@ -17,11 +17,108 @@ const upload = multer({ dest: "uploads/" });
 const client = new ChromaClient();
 const COLLECTION_NAME = "rag_knowledge_base";
 
+// Import Models for Dynamic Data
+const Order = require("../models/Order");
+const WeightSetting = require("../models/WeightSetting");
+const User = require("../models/User");
+const City = require("../models/City");
+
 // Access your API key as an environment variable
 const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 // ================= HELPER FUNCTIONS =================
+
+// --- DYNAMIC SYSTEM CONTEXT (Fetch from DB) ---
+async function fetchDynamicSystemContext() {
+  try {
+    // 1. Fetch Key Stats
+    const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ status: "Pending" });
+    const deliveredOrders = await Order.countDocuments({ status: "Delivered" });
+    const totalUsers = await User.countDocuments();
+
+    // 2. Fetch Weight Settings
+    const weightSettings = await WeightSetting.findOne().sort({
+      updatedAt: -1,
+    });
+    const kgPrice = weightSettings?.extraKgCost || 0;
+    const villagePrice = weightSettings?.villageDeliveryCost || 0;
+    const limitWeight = weightSettings?.defaultWeightLimit || 0;
+
+    // 3. Fetch Active Drivers (Couriers)
+    const drivers = await User.find({ userType: "courier" }).select(
+      "fullName phone isAvailable assignedCities"
+    );
+    const driverSummary = drivers
+      .map(
+        (d) =>
+          `- ${d.fullName} (${d.phone}) [${
+            d.isAvailable ? "Available" : "Busy"
+          }]`
+      )
+      .join("\n");
+
+    // 4. Fetch Served Areas (Cities)
+    const cities = await City.find({ isActive: true }).populate("governorate");
+    const cityList = cities
+      .map((c) => `${c.cityName} (${c.governorate?.govName})`)
+      .join(", ");
+
+    // 5. Calculate Daily Profit (Sum of orderCost for today)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const profitStats = await Order.aggregate([
+      { $match: { createdAt: { $gte: startOfDay } } },
+      {
+        $group: {
+          _id: null,
+          totalProfit: { $sum: "$orderCost" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    const dailyProfit = profitStats[0]?.totalProfit || 0;
+    const dailyOrdersCount = profitStats[0]?.count || 0;
+
+    // 6. Fetch Recent Activity (Last 5 orders)
+    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
+    const recentSummary = recentOrders
+      .map(
+        (o) =>
+          `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}, to ${o.city}`
+      )
+      .join("\n");
+
+    return `
+    [LIVE SYSTEM DASHBOARD]
+    - Total Registered Users: ${totalUsers}
+    - Total Orders (All Time): ${totalOrders}
+    - Pending Orders: ${pendingOrders}
+    - Delivered Orders: ${deliveredOrders}
+    - Orders Today: ${dailyOrdersCount}
+    - PROFIT TODAY: ${dailyProfit} EGP
+
+    [OUR FLEET & DRIVERS]
+    ${driverSummary || "No drivers currently registered."}
+
+    [SERVED AREAS]
+    ${cityList || "No active cities found."}
+    
+    [PRICING RULES]
+    - Standard Weight Limit: ${limitWeight} Kg
+    - Cost per Extra Kg: ${kgPrice} EGP
+    - Village Delivery Surcharge: ${villagePrice} EGP
+    
+    [RECENT ACTIVITY]
+    ${recentSummary}
+    `;
+  } catch (err) {
+    console.error("Error fetching dynamic context:", err);
+    return "[System Data Unavailable]";
+  }
+}
 
 // --- RESET DB ON STARTUP (Fix for Garbage Data) ---
 async function resetCollection() {
@@ -208,7 +305,7 @@ async function generateAnswer(context, query) {
           {
             role: "system",
             content:
-              "You are a helpful assistant that ALWAYS answers in Arabic.",
+              "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
           },
           { role: "user", content: prompt },
         ],
@@ -352,11 +449,20 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
           : "";
 
-      // If we just uploaded a file, prioritize its context if RAG didn't find it yet (though processAndStore does insert it)
+      // If we just uploaded a file, prioritize its context if RAG didn't find it yet
       // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
-      if (fileContext) {
-        retrievedContext = `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n\n[EXISTING KNOWLEDGE]:\n${retrievedContext}`;
-      }
+
+      // --- INJECT DYNAMIC SYSTEM DATA ---
+      const systemContext = await fetchDynamicSystemContext();
+
+      retrievedContext = `
+      ${systemContext}
+
+      ${fileContext ? `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n` : ""}
+
+      [EXISTING KNOWLEDGE BASE]:
+      ${retrievedContext}
+      `;
 
       finalAnswer = await generateAnswer(retrievedContext, question);
       return res.json({ answer: finalAnswer });
