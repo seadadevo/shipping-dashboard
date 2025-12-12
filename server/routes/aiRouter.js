@@ -22,6 +22,8 @@ const Order = require("../models/Order");
 const WeightSetting = require("../models/WeightSetting");
 const User = require("../models/User");
 const City = require("../models/City");
+const ShippingType = require("../models/ShippingType");
+const Governotate = require("../models/Governotate");
 
 // Access your API key as an environment variable
 const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");

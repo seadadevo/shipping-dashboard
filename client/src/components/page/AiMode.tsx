@@ -498,7 +498,9 @@ const AiMode = () => {
     currentSessionIdRef.current = newId;
     setMessages([]);
     setQuestion("");
-    // Don't close history automatically on new chat, up to user preference, but let's keep it open if open
+    setMessages([]);
+    setQuestion("");
+    setShowHistory(false); // Close history on new chat
   };
 
   const addMessageSafe = (sender: "user" | "ai", text: string) => {
@@ -661,6 +663,14 @@ const AiMode = () => {
           )}
         </button>
       </div>
+
+      {/* OVERLAY: Click outside to close history */}
+      {showHistory && (
+        <div
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+          onClick={() => setShowHistory(false)}
+        />
+      )}
 
       {/* 
           2. SLIDING DRAWER
