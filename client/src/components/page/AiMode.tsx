@@ -558,9 +558,6 @@ const AiMode = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    // Force state update to hide button immediately usually handled by onScroll,
-    // but explicit set feels snappier
-    setShowScrollButton(false);
   };
 
   // Smart Auto-Scroll
@@ -632,6 +629,12 @@ const AiMode = () => {
   const generateId = () => Date.now().toString();
 
   const startNewChat = () => {
+    // If we are already in a new chat (no messages), just close the history
+    if (messages.length === 0) {
+      setShowHistory(false);
+      return;
+    }
+
     if (messages.length === 0 && currentSessionId) return;
 
     const newId = generateId();
@@ -641,6 +644,16 @@ const AiMode = () => {
     setQuestion("");
     setShowHistory(false); // Close history on new chat
     isUserAtBottomRef.current = true; // Reset scroll state
+  };
+
+  const clearAllSessions = () => {
+    if (window.confirm("هل أنت متأكد من حذف جميع المحادثات؟")) {
+      setSessions([]);
+      setMessages([]);
+      setCurrentSessionId(null);
+      currentSessionIdRef.current = null;
+      setShowHistory(false);
+    }
   };
 
   const addMessageSafe = (
@@ -843,10 +856,11 @@ const AiMode = () => {
                 <Edit className="h-4 w-4" />
               </button>
               <button
-                className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
-                title="القائمة"
+                onClick={clearAllSessions}
+                className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded-lg hover:bg-accent"
+                title="حذف السجل بالكامل"
               >
-                <MoreVertical className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -1021,10 +1035,10 @@ const AiMode = () => {
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="absolute bottom-28 left-1/2 -translate-x-1/2 z-20 p-2 rounded-full bg-primary/90 text-primary-foreground shadow-lg hover:bg-primary transition-all animate-bounce"
+            className="absolute bottom-55 left-1/2 -translate-x-1/2 z-20 p-2 rounded-full bg-secondary/80 text-secondary-foreground border border-border shadow-sm transition-all cursor-pointer"
             title="Go to bottom"
           >
-            <ArrowDown className="h-5 w-5" />
+            <ArrowDown className="h-4 w-4" />
           </button>
         )}
 
