@@ -384,7 +384,7 @@ export function EmployeeDashboard() {
                   </div>
                   <div>
                     <p className="font-medium">{order.customerName}</p>
-                    <p className="text-sm text-blue-600">{order.orderType}</p>
+                    <p className="text-sm text-blue-600">{order.shippingType}</p>
                     <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <MapPin className="h-3 w-3 mr-1" />
                       {order.governorate +

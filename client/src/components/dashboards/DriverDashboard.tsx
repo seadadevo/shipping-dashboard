@@ -333,6 +333,7 @@ export const DriverDashboard: React.FC = () => {
                     <TableHead className="text-right">رقم الهاتف</TableHead>
                     <TableHead className="text-right">العنوان</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
+                    <TableHead className="text-right">نوع الشحن</TableHead>
                     <TableHead className="text-right">إجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -352,6 +353,7 @@ export const DriverDashboard: React.FC = () => {
                         </span>
                       </TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{order.shippingType}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button

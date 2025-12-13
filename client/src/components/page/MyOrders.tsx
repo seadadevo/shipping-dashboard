@@ -293,6 +293,7 @@ export function MyOrders() {
                   <TableHead className="text-right">العميل</TableHead>
                   <TableHead className="text-right">الوجهة</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right">نوع الشحن</TableHead>
                   <TableHead className="text-right">التكلفة</TableHead>
                   <TableHead className="text-right">تاريخ الإنشاء</TableHead>
                   <TableHead className="text-right">الإجراءات</TableHead>
@@ -360,6 +361,7 @@ export function MyOrders() {
                           </span>
                         </Badge>
                       </TableCell>
+                      <TableCell>{order.shippingType}</TableCell>
                       <TableCell className="font-medium">
                         {order.orderCost.toFixed(2)} جنيه
                       </TableCell>

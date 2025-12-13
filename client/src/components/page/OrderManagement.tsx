@@ -571,6 +571,7 @@ export function OrderManagement() {
                   <TableHead className="text-right">الوجهة</TableHead>
                   <TableHead className="text-right">الموظف/التاجر</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right">نوع الشحن</TableHead>
                   <TableHead className="text-right">التكلفة</TableHead>
                   <TableHead className="text-right">تاريخ الإنشاء</TableHead>
                   <TableHead className="text-right">الإجراءات</TableHead>
@@ -646,6 +647,7 @@ export function OrderManagement() {
                           </span>
                         </Badge>
                       </TableCell>
+                      <TableCell>{order.shippingType}</TableCell>
                       <TableCell className="font-medium">
                         {/* (⭐ وهنا) سيعمل الآن عند جلب البيانات الصحيحة */}
                         {order.orderCost?.toFixed(2) ?? "-"} جنيه

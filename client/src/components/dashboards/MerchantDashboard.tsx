@@ -361,6 +361,7 @@ export function MerchantDashboard() {
                     </div>
                     <div>
                       <p className="font-medium">{order.customerName}</p>
+                      <p className="text-sm text-blue-600">{order.shippingType}</p>
                       <p className="text-sm text-muted-foreground">
                         {order.governorate}, {order.city}
                       </p>
