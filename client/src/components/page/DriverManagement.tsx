@@ -424,7 +424,7 @@ export default function DriverManagement() {
           <DialogHeader className="p-6 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-blue-600">
                   تعيين مناطق التغطية
                   <Badge variant="outline" className="text-base font-normal">
                     {selectedDriver?.fullName}

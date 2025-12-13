@@ -644,7 +644,7 @@ export function RegionsManagement() {
                         <TableRow
                           key={governorate._id}
                           className={
-                            !governorate.isActive ? "bg-gray-50 opacity-60" : ""
+                            !governorate.isActive ? "bg-gray-600 opacity-60" : ""
                           }
                         >
                           <TableCell className="font-medium">

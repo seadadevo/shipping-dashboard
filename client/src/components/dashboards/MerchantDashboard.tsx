@@ -210,7 +210,7 @@ export function MerchantDashboard() {
             }}
           >
             <Download className="h-4 w-4 mr-2" />
-            تصدير كل البيانات
+            تصدير البيانات
           </Button>
         </div>            
       </div>
