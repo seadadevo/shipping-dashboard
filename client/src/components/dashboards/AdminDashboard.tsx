@@ -1,12 +1,14 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    Package,
-    Clock,
-    DollarSign,
-    Users, Download,
-    // TrendingUp,
-    // Truck,
+  Package,
+  Clock,
+  DollarSign,
+  Users,
+  Download,
+  Loader2,
+  // TrendingUp,
+  // Truck,
 } from "lucide-react";
 import {
   LineChart,
@@ -26,178 +28,194 @@ import {
   CardContent,
 } from "../ui/card";
 import { Button } from "../ui/button";
-import type {ApiError, GetOrdersResponse, Order, User} from '../../types';
-import {getMenuItemsByRole} from "../../constants/menuItems.ts";
+import type { ApiError, GetOrdersResponse, Order, User } from "../../types";
+import { getMenuItemsByRole } from "../../constants/menuItems.ts";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api.ts";
 import { generatePDFReport, generateAdminReport } from "../../lib/exportUtils";
 
 const AdminDashboard: React.FC = () => {
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const menuItems = getMenuItemsByRole(user?.userType || 'admin');
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const menuItems = getMenuItemsByRole(user?.userType || "admin");
 
-    // calc order number today ////////////////////////////////////////////////////////
-    const [users, setUsers] = useState<User[]>([]);
-    const getUsers = async (): Promise<void> => {
-        const res = await api.get("/api/users?limit=1000");
-        // Handle paginated response: { status, results, meta, data: { users } }
-        const usersList = res.data?.data?.users || res.data || [];
-        setUsers(Array.isArray(usersList) ? usersList : []);
-    };
+  // calc order number today ////////////////////////////////////////////////////////
+  const [users, setUsers] = useState<User[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
 
-    useEffect(() => {
-        getUsers().catch(console.error);
-    }, []);
-
-    function isDateToday(dateString: string): "today" | "normal" | "oldOrder" {
-        const date = new Date(dateString);
-
-        const twoWeeksAgo = new Date();
-        twoWeeksAgo.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
-        twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 15); // subtract ~2 weeks
-
-        // Start of today (UTC)
-        const start = new Date();
-        start.setUTCHours(0, 0, 0, 0);
-
-        // End of today (UTC)
-        const end = new Date();
-        end.setUTCHours(23, 59, 59, 999);
-
-        return date >= start && date <= end ? "today" : date > twoWeeksAgo && date <= end ? "normal" : "oldOrder";
+  const getUsers = async (): Promise<void> => {
+    try {
+      const res = await api.get("/api/users?limit=1000");
+      // Handle paginated response: { status, results, meta, data: { users } }
+      const usersList = res.data?.data?.users || res.data || [];
+      setUsers(Array.isArray(usersList) ? usersList : []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUsersLoading(false);
     }
+  };
 
-    function getDayOfLast7DaysOrders(dateString: string): boolean {
-        const date = new Date(dateString);
+  useEffect(() => {
+    getUsers().catch(console.error);
+  }, []);
 
-        // Start of today (UTC)
-        const start = new Date();
-        start.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
-        start.setUTCDate(start.getUTCDate() - 6); // subtract 14 days
+  function isDateToday(dateString: string): "today" | "normal" | "oldOrder" {
+    const date = new Date(dateString);
 
-        // End of today (UTC)
-        const end = new Date();
-        end.setUTCHours(23, 59, 59, 999);
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setUTCHours(0, 0, 0, 0); // set to start of today UTC
+    twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 15); // subtract ~2 weeks
 
-        return date >= start && date <= end;
-    }
+    // Start of today (UTC)
+    const start = new Date();
+    start.setUTCHours(0, 0, 0, 0);
 
-    const [allOrders, setAllOrders] = useState<Order[]>([]);
-    // const [loading, setLoading] = useState<boolean>(true);
-    // const [error, setError] = useState<string | null>(null);
+    // End of today (UTC)
+    const end = new Date();
+    end.setUTCHours(23, 59, 59, 999);
 
-    const [countOrdersToday, setCountOrdersToday] = useState<number>(0);
-    const [pendingOrdersToday, setPendingOrdersToday] = useState<number>(0);
-    const [previousPendingOrders, setPreviousPendingOrders] = useState<number>(0);
-    const [moneysToday, setMoneysToday] = useState<number>(0);
-    const [chartData, setChartData] = useState<{ day: string; orders: number }[]>([]);
-    const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState<number>(0);
-    const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState<number>(0);
+    return date >= start && date <= end
+      ? "today"
+      : date > twoWeeksAgo && date <= end
+      ? "normal"
+      : "oldOrder";
+  }
 
-    const fetchOrders = async (): Promise<void> => {
-        // setLoading(true);
-        // setError(null);
-        try {
-            const response = await api.get<GetOrdersResponse>("/api/orders?limit=1000");
-            const ordersList = response.data?.data?.orders || [];
-            setAllOrders(Array.isArray(ordersList) ? ordersList : []);
-        } catch (err) {
-            const error = err as ApiError;
-            console.error("Error fetching orders:", error);
-            // setError(error.response?.data?.message || "فشل في جلب الطلبات.");
-        } finally {
-            console.log("Orders fetched successfully");
-            // setLoading(false);
-        }
-    };
-    useEffect(() => {
-        fetchOrders();
-    }, []);
+  function getDayOfLast7DaysOrders(dateString: string): boolean {
+    const date = new Date(dateString);
 
-    useEffect(() => {
-        // Local accumulators to avoid multiple re-renders and keep calculations consistent
-        let localCountOrdersToday = 0;
-        let localPendingOrdersToday = 0;
-        let localPreviousPendingOrders = 0;
-        let localMoneysToday = 0;
-        let localTotalOrders = 0;
-        let localTotalProfitAWeek = 0;
+    // Start of today (UTC)
+    const start = new Date();
+    start.setUTCHours(0, 0, 0, 0); // set to start of today UTC
+    start.setUTCDate(start.getUTCDate() - 6); // subtract 14 days
 
-        const counts: Record<string, number> = {
-            "الأحد": 0,
-            "الاثنين": 0,
-            "الثلاثاء": 0,
-            "الأربعاء": 0,
-            "الخميس": 0,
-            "الجمعة": 0,
-            "السبت": 0,
-        };
+    // End of today (UTC)
+    const end = new Date();
+    end.setUTCHours(23, 59, 59, 999);
 
-        if (allOrders.length) {
-            const todayNum = new Date().getDay();
-            for (const order of allOrders) {
-                if (isDateToday(order.createdAt) === "today") {
-                    localCountOrdersToday += 1;
-                }
-                if (order.status.toLowerCase() === "pending") {
-                    localPendingOrdersToday += 1;
-                }
-                if (
-                    order.status.toLowerCase() === "delivered" &&
-                    isDateToday(order.updatedAt) === "today"
-                ) {
-                    localMoneysToday += order.orderCost;
-                }
-                if (isDateToday(order.updatedAt) === "oldOrder") {
-                    localPreviousPendingOrders += 1;
-                }
-                if (getDayOfLast7DaysOrders(order.createdAt)) {
-                    const day = new Date(order.createdAt).getDay();
-                    if (day !== todayNum) {
-                        localTotalProfitAWeek += order.orderCost;
-                    }
-                    const dayKey = Object.keys(counts)[day];
-                    counts[dayKey] += 1;
-                }
+    return date >= start && date <= end;
+  }
+
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  // const [loading, setLoading] = useState<boolean>(true);
+  // const [error, setError] = useState<string | null>(null);
+
+  const [countOrdersToday, setCountOrdersToday] = useState<number>(0);
+  const [pendingOrdersToday, setPendingOrdersToday] = useState<number>(0);
+  const [previousPendingOrders, setPreviousPendingOrders] = useState<number>(0);
+  const [moneysToday, setMoneysToday] = useState<number>(0);
+  const [chartData, setChartData] = useState<{ day: string; orders: number }[]>(
+    []
+  );
+  const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] =
+    useState<number>(0);
+  const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] =
+    useState<number>(0);
+
+  const fetchOrders = async (): Promise<void> => {
+    try {
+      const response = await api.get<GetOrdersResponse>(
+        "/api/orders?limit=1000"
+      );
+      const ordersList = response.data?.data?.orders || [];
+      const safeOrders = Array.isArray(ordersList) ? ordersList : [];
+
+      setAllOrders(safeOrders);
+
+      // Local accumulators
+      let localCountOrdersToday = 0;
+      let localPendingOrdersToday = 0;
+      let localPreviousPendingOrders = 0;
+      let localMoneysToday = 0;
+      let localTotalOrders = 0;
+      let localTotalProfitAWeek = 0;
+
+      const counts: Record<string, number> = {
+        الأحد: 0,
+        الاثنين: 0,
+        الثلاثاء: 0,
+        الأربعاء: 0,
+        الخميس: 0,
+        الجمعة: 0,
+        السبت: 0,
+      };
+
+      if (safeOrders.length) {
+        const todayNum = new Date().getDay();
+        for (const order of safeOrders) {
+          if (isDateToday(order.createdAt) === "today") {
+            localCountOrdersToday += 1;
+          }
+          if (order.status.toLowerCase() === "pending") {
+            localPendingOrdersToday += 1;
+          }
+          if (
+            order.status.toLowerCase() === "delivered" &&
+            isDateToday(order.updatedAt) === "today"
+          ) {
+            localMoneysToday += order.orderCost;
+          }
+          if (isDateToday(order.updatedAt) === "oldOrder") {
+            localPreviousPendingOrders += 1;
+          }
+          if (getDayOfLast7DaysOrders(order.createdAt)) {
+            const day = new Date(order.createdAt).getDay();
+            if (day !== todayNum) {
+              localTotalProfitAWeek += order.orderCost;
             }
-
-            const todayIndex = new Date().getDay();
-            const sortedChart = Array.from({ length: 7 })
-                .map((_, i) => {
-                    const index = (todayIndex - i + 7) % 7;
-                    const day = Object.keys(counts)[index];
-                    if (i !== 0) localTotalOrders += counts[day];
-                    return { day, orders: counts[day] };
-                })
-                .reverse();
-
-            setChartData(sortedChart);
-        } else {
-            setChartData([]);
+            const dayKey = Object.keys(counts)[day];
+            counts[dayKey] += 1;
+          }
         }
 
-        const avgOrders = localTotalOrders / 6 || 0; // average over last 6 days (excluding today)
-        const avgProfit = localTotalProfitAWeek / 6 || 0; // average over last 6 days (excluding today)
+        const todayIndex = new Date().getDay();
+        const sortedChart = Array.from({ length: 7 })
+          .map((_, i) => {
+            const index = (todayIndex - i + 7) % 7;
+            const day = Object.keys(counts)[index];
+            if (i !== 0) localTotalOrders += counts[day];
+            return { day, orders: counts[day] };
+          })
+          .reverse();
 
-        const localOrdersTodayRelativeToWeek = avgOrders > 0
-            ? Math.ceil((localCountOrdersToday / avgOrders) * 100)
-            : 0;
-        const localProfitTodayRelativeToWeek = avgProfit > 0
-            ? Math.ceil((localMoneysToday / avgProfit) * 100)
-            : 0;
+        setChartData(sortedChart);
+      } else {
+        setChartData([]);
+      }
 
-        // Single batched state update pattern
-        setCountOrdersToday(localCountOrdersToday);
-        setPendingOrdersToday(localPendingOrdersToday);
-        setPreviousPendingOrders(localPreviousPendingOrders);
-        setMoneysToday(localMoneysToday);
-        setOrdersTodayRelativeToWeek(localOrdersTodayRelativeToWeek);
-        setProfitTodayRelativeToWeek(localProfitTodayRelativeToWeek);
-    }, [allOrders]);
+      const avgOrders = localTotalOrders / 6 || 0;
+      const avgProfit = localTotalProfitAWeek / 6 || 0;
 
-///////////////////////////////////////////////////////////////////////
-    return (
+      const localOrdersTodayRelativeToWeek =
+        avgOrders > 0
+          ? Math.ceil((localCountOrdersToday / avgOrders) * 100)
+          : 0;
+      const localProfitTodayRelativeToWeek =
+        avgProfit > 0 ? Math.ceil((localMoneysToday / avgProfit) * 100) : 0;
+
+      setCountOrdersToday(localCountOrdersToday);
+      setPendingOrdersToday(localPendingOrdersToday);
+      setPreviousPendingOrders(localPreviousPendingOrders);
+      setMoneysToday(localMoneysToday);
+      setOrdersTodayRelativeToWeek(localOrdersTodayRelativeToWeek);
+      setProfitTodayRelativeToWeek(localProfitTodayRelativeToWeek);
+    } catch (err) {
+      const error = err as ApiError;
+      console.error("Error fetching orders:", error);
+    } finally {
+      console.log("Orders fetched successfully");
+      setOrdersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  ///////////////////////////////////////////////////////////////////////
+  return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -205,41 +223,50 @@ const AdminDashboard: React.FC = () => {
           <p className="text-gray-500">نظرة شاملة على أداء نظام الشحن</p>
         </div>
         <div className="flex space-x-2 space-x-reverse">
-          <Button onClick={() => {
-            generatePDFReport({
-              orders: allOrders,
-              users: users,
-              stats: {
-                "الطلبات اليوم": countOrdersToday,
-                "الشحنات المعلقة": pendingOrdersToday,
-                "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
-                "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
-                "الإيرادات اليوم": moneysToday,
-                "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
-                "المستخدمين النشطين": users.length,
-              }
-            });
-          }}>إنشاء تقرير</Button>
-          <Button variant="outline"
-                className="mr-2"
-                onClick={() => {
-                    generateAdminReport({
-                      orders: allOrders,
-                      users: users,
-                      stats: {
-                        "الطلبات اليوم": countOrdersToday,
-                        "الشحنات المعلقة": pendingOrdersToday,
-                        "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
-                        "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
-                        "الإيرادات اليوم": moneysToday,
-                        "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
-                        "المستخدمين النشطين": users.length,
-                      }
-                    });
-                    }}
+          <Button
+            onClick={() => {
+              generatePDFReport({
+                orders: allOrders,
+                users: users,
+                stats: {
+                  "الطلبات اليوم": countOrdersToday,
+                  "الشحنات المعلقة": pendingOrdersToday,
+                  "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                  "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع":
+                    ordersTodayRelativeToWeek,
+                  "الإيرادات اليوم": moneysToday,
+                  "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع":
+                    profitTodayRelativeToWeek,
+                  "المستخدمين النشطين": users.length,
+                },
+              });
+            }}
           >
-              <Download className="h-4 w-4 mr-2" />
-              تصدير البيانات
+            إنشاء تقرير
+          </Button>
+          <Button
+            variant="outline"
+            className="mr-2"
+            onClick={() => {
+              generateAdminReport({
+                orders: allOrders,
+                users: users,
+                stats: {
+                  "الطلبات اليوم": countOrdersToday,
+                  "الشحنات المعلقة": pendingOrdersToday,
+                  "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                  "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع":
+                    ordersTodayRelativeToWeek,
+                  "الإيرادات اليوم": moneysToday,
+                  "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع":
+                    profitTodayRelativeToWeek,
+                  "المستخدمين النشطين": users.length,
+                },
+              });
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            تصدير البيانات
           </Button>
         </div>
       </div>
@@ -251,9 +278,18 @@ const AdminDashboard: React.FC = () => {
             <Package className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{countOrdersToday}</div>
+            <div className="text-2xl font-bold">
+              {ordersLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                countOrdersToday
+              )}
+            </div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">%{ordersTodayRelativeToWeek} </span>بالنسبة لمتوسط الطلبات خلال الاسبوع
+              <span className="text-green-600">
+                %{ordersTodayRelativeToWeek}{" "}
+              </span>
+              بالنسبة لمتوسط الطلبات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -266,9 +302,16 @@ const AdminDashboard: React.FC = () => {
             <Clock className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingOrdersToday}</div>
+            <div className="text-2xl font-bold">
+              {ordersLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                pendingOrdersToday
+              )}
+            </div>
             <p className="text-xs text-gray-500">
-              <span className="text-orange-600">+{previousPendingOrders} </span> منذ اكثر من اسبوعين
+              <span className="text-orange-600">+{previousPendingOrders} </span>{" "}
+              منذ اكثر من اسبوعين
             </p>
           </CardContent>
         </Card>
@@ -281,9 +324,18 @@ const AdminDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{moneysToday} جنيه</div>
+            <div className="text-2xl font-bold">
+              {ordersLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                `${moneysToday} جنيه`
+              )}
+            </div>
             <p className="text-xs text-gray-500">
-              <span className="text-green-600">{profitTodayRelativeToWeek}%</span> بالنسبة لمتوسط الايرادات خلال الاسبوع
+              <span className="text-green-600">
+                {profitTodayRelativeToWeek}%
+              </span>{" "}
+              بالنسبة لمتوسط الايرادات خلال الاسبوع
             </p>
           </CardContent>
         </Card>
@@ -296,7 +348,13 @@ const AdminDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">
+              {usersLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                users.length
+              )}
+            </div>
             <p className="text-xs text-gray-500">
               <span className="text-green-600"></span> مستخدمين جدد
             </p>
@@ -336,21 +394,25 @@ const AdminDashboard: React.FC = () => {
             <CardDescription>الوصول السريع للمهام الأساسية</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-              {menuItems.map((item) => {
-                  if(item.label !== "لوحة التحكم" && item.label !== "المجموعات والأذونات"){
-                  const Icon = item.icon;
+            {menuItems.map((item) => {
+              if (
+                item.label !== "لوحة التحكم" &&
+                item.label !== "المجموعات والأذونات"
+              ) {
+                const Icon = item.icon;
 
-                  return (
-                      <button
-                          key={item.id}
-                          onClick={() => navigate(item.path)}
-                          className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-primary hover:bg-gray-200 hover:text-black "
-                      >
-                          <Icon className="h-5 w-5 ml-3 text-gray-400" />
-                          <span>{item.label}</span>
-                      </button>
-                  );
-              }})}
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(item.path)}
+                    className="w-full cursor-pointer flex items-center px-3 py-2 rounded-lg text-right transition-colors text-primary hover:bg-gray-200 hover:text-black "
+                  >
+                    <Icon className="h-5 w-5 ml-3 text-gray-400" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              }
+            })}
           </CardContent>
         </Card>
       </div>
