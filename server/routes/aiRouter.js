@@ -11,13 +11,13 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// ================= CONFIGURATION =================
+
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 const client = new ChromaClient();
 const COLLECTION_NAME = "rag_knowledge_base";
 
-// Import Models for Dynamic Data
+
 const Order = require("../models/Order");
 const WeightSetting = require("../models/WeightSetting");
 const User = require("../models/User");
@@ -25,34 +25,32 @@ const City = require("../models/City");
 const ShippingType = require("../models/ShippingType");
 const Governotate = require("../models/Governotate");
 
-// Access your API key as an environment variable
+
 const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-// ================= HELPER FUNCTIONS =================
 
-// --- DYNAMIC SYSTEM CONTEXT (Fetch from DB) ---
+
+
 async function fetchDynamicSystemContext(userType, userId) {
   try {
-    // ---------------- COMMON DATA ----------------
-    // Fetch Weight Settings (Everyone sees pricing)
+    
     const weightSettings = await WeightSetting.findOne().sort({
       updatedAt: -1,
     });
     const kgPrice = weightSettings?.extraKgCost || 0;
-    const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
-    // 4. Fetch Served Areas (Cities & Governorates)
+    
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
-      .map((c) => `${c.cityName} (${c.governorate?.govName})`)
+      .map((c) => `${c.cityName} (${c.governorate?.govName}) - رسوم القرية: ${c.villageDeliveryCost || 0} جنيه`)
       .join(", ");
 
     const governorates = await Governotate.find({ isActive: true });
     const govList = governorates.map((g) => g.govName).join(", ");
 
-    // 5. Fetch Shipping Types
+   
     const shippingTypes = await ShippingType.find();
     const shippingSummary = shippingTypes
       .map(
@@ -65,7 +63,7 @@ async function fetchDynamicSystemContext(userType, userId) {
       )
       .join("\n");
 
-    // ---------------- ADMIN CONTEXT ----------------
+   
     if (userType === "admin") {
       const totalOrders = await Order.countDocuments();
       const pendingOrders = await Order.countDocuments({ status: "Pending" });
@@ -74,7 +72,6 @@ async function fetchDynamicSystemContext(userType, userId) {
       });
       const totalUsers = await User.countDocuments();
 
-      // Admin: Drivers List
       const drivers = await User.find({ userType: "courier" }).select(
         "fullName phone isAvailable assignedCities"
       );
@@ -87,7 +84,6 @@ async function fetchDynamicSystemContext(userType, userId) {
         )
         .join("\n");
 
-      // Admin: Financials
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       const profitStats = await Order.aggregate([
@@ -103,7 +99,7 @@ async function fetchDynamicSystemContext(userType, userId) {
 
       let deliveredProfit = 0;
       let pendingProfit = 0;
-      const mongoose = require("mongoose"); // Ensure mongoose is available or use implicit if global (better to be safe, but file likely has it or we rely on model imports. Wait, aiRouter didn't import mongoose. I should add it or check imports. Models use it.)
+      const mongoose = require("mongoose"); 
 
       profitStats.forEach((stat) => {
         if (stat._id === "Delivered") {
@@ -153,7 +149,9 @@ async function fetchDynamicSystemContext(userType, userId) {
         ${shippingSummary || "No specific shipping types defined."}
 
         [PRICING]
-        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP
+        - Village delivery cost varies by city (check city details)
+        - Village delivery cost varies by city (check city details)
 
         [RECENT SYSTEM ACTIVITY]
         ${recentSummary}
@@ -272,7 +270,8 @@ async function fetchDynamicSystemContext(userType, userId) {
     ${shippingSummary || "No specific shipping types defined."}
     
     [PRICING RULES]
-    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP
+    - Village delivery cost varies by city
     `;
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
@@ -299,8 +298,7 @@ async function resetCollection() {
 resetCollection();
 
 async function getEmbedding(text) {
-  // Use OpenRouter for embeddings for consistency if specific model needed,
-  // or use a local one. Here we use OpenRouter as per original code.
+  
   const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
     headers: {
@@ -509,23 +507,16 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
       return data.choices?.[0]?.message?.content || "No response.";
     }
 
-    // --- STREAMING HANDLER ---
-    // We expect OpenRouter/OpenAI SSE format: "data: {...}"
     const reader = fetchResponse.body.getReader();
     const decoder = new TextDecoder("utf-8");
-    let fullText = ""; // Keep for logging or fallback
+    let fullText = ""; 
 
-    // Set headers for streaming if not already set by caller?
-    // Usually caller shouldn't set json content-type if we are streaming text/plain or SSE.
-    // We'll trust the caller (route handler) to manage headers or we do it here?
-    // Route handler should've handled it. We just write to res.
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
       const chunk = decoder.decode(value, { stream: true });
-      // OpenRouter sends SSE lines: data: {"id":..., "choices":[{"delta":{"content":"..."}}]}
 
       const lines = chunk.split("\n").filter((line) => line.trim() !== "");
       for (const line of lines) {
@@ -558,7 +549,7 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
   }
 }
 
-// ================= INITIALIZATION =================
+
 const DEFAULT_DOC_PATH = path.join(__dirname, "../../client/document.txt");
 
 async function initDefaultDocument() {
@@ -578,10 +569,9 @@ async function initDefaultDocument() {
   }
 }
 
-// Run init on start
+
 initDefaultDocument();
 
-// ================= API ENDPOINTS =================
 
 router.post("/chat", upload.single("file"), async (req, res) => {
   try {
@@ -603,7 +593,6 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       }`
     );
 
-    // --- 1. PROCESS FILE (If attached) ---
     let fileContext = "";
     let base64Image = null;
 
@@ -650,7 +639,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         } else if (isCsv) {
           rawText = await parseCSV(filePath);
         } else if (isImage) {
-          // For images, we just use OCR text as context
+       
           const {
             data: { text },
           } = await tesseract.recognize(filePath, "ara+eng");
@@ -687,22 +676,20 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         }
       } catch (fileErr) {
         console.error("Error parsing file:", fileErr);
-        // Continue even if file fails? Or throw? Let's inform user.
+      
         return res
           .status(400)
           .json({ error: `Failed to process file: ${fileErr.message}` });
       } finally {
-        // Cleanup temp file
+        
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
     }
 
-    // --- 2. DETERMINE RESPONSE STRATEGY ---
+  
 
     let finalAnswer = "";
 
-    // CASE A: File ONLY (No question)
-    // -> Provide a summary or confirmation
     if (file && !question) {
       console.log(
         `🔍 CASE A TRIGGERED: File Only. ContextLen=${
@@ -733,13 +720,11 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           answer: `✅ تم رفع الملف **${file.originalname}** بنجاح، ولكن لم أتمكن من قراءة النص بوضوح. حاول رفعه كصورة أو ملف نصي.`,
         });
       }
-      return; // End response handled by stream or fast return
+      return; 
     }
 
-    // CASE B: Question (with or without File)
-    // -> RAG Search + Answer
     if (question) {
-      // RAG Search
+     
       const queryVector = await getEmbedding(question);
       const collection = await client.getCollection({ name: COLLECTION_NAME });
 
@@ -753,8 +738,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
           : "";
 
-      // If we just uploaded a file, prioritize its context if RAG didn't find it yet
-      // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
+    
 
       // --- INJECT DYNAMIC SYSTEM DATA ---
       const systemContext = await fetchDynamicSystemContext(userType, userId);

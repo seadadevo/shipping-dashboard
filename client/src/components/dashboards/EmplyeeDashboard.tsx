@@ -66,6 +66,21 @@ export function EmployeeDashboard() {
         setUsers(Array.isArray(usersList) ? usersList : []);
 
         const ordersList = ordersRes.data?.data?.orders || [];
+    useEffect(() => {
+        getUsers().catch(console.error);
+    }, []);
+
+   
+    const merchantsCount = useMemo(() => {
+        return users.reduce((acc, u) => acc + (u.userType?.toLowerCase() === "merchant" ? 1 : 0), 0);
+    }, [users]);
+
+    
+    const [orders, setOrders] = useState<Order[]>([]);
+    const getAllOrders = async (): Promise<void> => {
+        const res = await api.get("/api/orders?limit=1000");
+       
+        const ordersList = res.data?.data?.orders || [];
         setOrders(Array.isArray(ordersList) ? ordersList : []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -268,13 +283,9 @@ export function EmployeeDashboard() {
           <h1>لوحة تحكم الموظف</h1>
           <p className="text-muted-foreground">متابعة ومعالجة طلبات الشحن</p>
         </div>
-        {/*<Button className="bg-blue-600 hover:bg-blue-700">*/}
-        {/*  <Plus className="h-4 w-4 mr-2" />*/}
-        {/*  معالجة طلب جديد*/}
-        {/*</Button>*/}
+       
       </div>
 
-      {/* إحصائيات عامة */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -365,7 +376,6 @@ export function EmployeeDashboard() {
         </CardContent>
       </Card>
 
-      {/* الطلبات الحديثة */}
       <Card>
         <CardHeader>
           <CardTitle>الطلبات الحديثة</CardTitle>
@@ -439,13 +449,10 @@ export function EmployeeDashboard() {
             ))}
           </div>
 
-          {/*<div className="mt-4 text-center">*/}
-          {/*  <Button variant="outline">عرض جميع الطلبات</Button>*/}
-          {/*</div>*/}
+        
         </CardContent>
       </Card>
 
-      {/* إجراءات سريعة */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>

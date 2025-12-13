@@ -114,6 +114,21 @@ const AdminDashboard: React.FC = () => {
     const [cities, setCities] = useState([]);
     const [weightSettings, setWeightSettings] = useState([]);
 
+    const fetchOrders = async (): Promise<void> => {
+        // setLoading(true);
+        // setError(null);
+        try {
+            const response = await api.get<GetOrdersResponse>("/api/orders?limit=1000");
+            const ordersList = response.data?.data?.orders || [];
+            setAllOrders(Array.isArray(ordersList) ? ordersList : []);
+        } catch (err) {
+            const error = err as ApiError;
+            console.error("Error fetching orders:", error);
+        } finally {
+            console.log("Orders fetched successfully");
+            // setLoading(false);
+        }
+    };
     useEffect(() => {
       // جلب أنواع الشحن
       api.get("/api/shipping-types").then(res => setShippingTypes(res.data.data));
@@ -159,7 +174,7 @@ const AdminDashboard: React.FC = () => {
         السبت: 0,
       };
 
-      if (safeOrders.length) {
+      if (safeOrde
         const todayNum = new Date().getDay();
         for (const order of safeOrders) {
           if (isDateToday(order.createdAt) === "today") {
