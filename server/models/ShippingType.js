@@ -6,7 +6,7 @@ const shippingTypeSchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, "Shipping type name is required"],
-      unique: true,
+      // إزالة unique عشان نسمح بنفس الاسم لو غير مفعل
       trim: true,
     },
   
@@ -38,5 +38,12 @@ const shippingTypeSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// إضافة compound index: unique على (name + isActive)
+// بحيث يسمح بنفس الاسم لو isActive = false
+shippingTypeSchema.index({ name: 1, isActive: 1 }, { 
+  unique: true,
+  partialFilterExpression: { isActive: true }
+});
 
 module.exports = mongoose.model("ShippingType", shippingTypeSchema);

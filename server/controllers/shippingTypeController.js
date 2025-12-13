@@ -16,6 +16,14 @@ exports.addShippingType = async (req, res) => {
         .json({ message: "Name and adjustment amount are required" });
     }
 
+    // التحقق من وجود نوع شحن بنفس الاسم ومفعل فقط
+    const existingActiveType = await ShippingType.findOne({ name, isActive: true });
+    if (existingActiveType) {
+      return res
+        .status(400)
+        .json({ message: "نوع الشحن بهذا الاسم موجود ومفعل بالفعل" });
+    }
+
     const newType = await ShippingType.create({
       name,
       adjustmentAmount,
@@ -37,9 +45,10 @@ exports.addShippingType = async (req, res) => {
 exports.getAllShippingTypes = async (req, res) => {
   try {
     const { page, limit } = req.query;
+    // عرض كل الأنواع (المفعلة والغير مفعلة)
     const { data: types, meta } = await paginate(
       ShippingType,
-      { isActive: true },
+      {}, // إزالة فلتر isActive عشان نعرض كل الأنواع
       { page, limit, sort: { adjustmentAmount: 1 } }
     );
     res
