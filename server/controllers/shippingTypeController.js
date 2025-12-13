@@ -45,10 +45,10 @@ exports.addShippingType = async (req, res) => {
 exports.getAllShippingTypes = async (req, res) => {
   try {
     const { page, limit } = req.query;
-    // عرض كل الأنواع (المفعلة والغير مفعلة)
+    
     const { data: types, meta } = await paginate(
       ShippingType,
-      {}, // إزالة فلتر isActive عشان نعرض كل الأنواع
+      {}, 
       { page, limit, sort: { adjustmentAmount: 1 } }
     );
     res
