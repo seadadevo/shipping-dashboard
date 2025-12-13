@@ -25,6 +25,7 @@ import {
   MoreHorizontal,
   UserPlus,
   Eye,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -63,6 +64,7 @@ export function UserManagement() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [formErrors, setFormErrors] = useState<{
     fullName?: string;
     email?: string;
@@ -114,10 +116,13 @@ export function UserManagement() {
   // Fetch all users for statistics
   const fetchAllUsersForStats = async () => {
     try {
-      const res = await api.get('/api/users?page=1&limit=10000');
+      setStatsLoading(true);
+      const res = await api.get("/api/users?page=1&limit=10000");
       setAllUsers(res.data?.data?.users || []);
     } catch (err) {
       console.error("Failed to fetch all users for stats:", err);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -301,7 +306,13 @@ export function UserManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{allUsers.length}</div>
+            <div className="text-2xl font-bold">
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                allUsers.length
+              )}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -310,7 +321,11 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {allUsers.filter((user) => user.userType === "admin").length}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+              ) : (
+                allUsers.filter((user) => user.userType === "admin").length
+              )}
             </div>
           </CardContent>
         </Card>
@@ -320,7 +335,11 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {allUsers.filter((user) => user.userType === "employee").length}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+              ) : (
+                allUsers.filter((user) => user.userType === "employee").length
+              )}
             </div>
           </CardContent>
         </Card>
@@ -330,7 +349,11 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {allUsers.filter((user) => user.userType === "merchant").length}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              ) : (
+                allUsers.filter((user) => user.userType === "merchant").length
+              )}
             </div>
           </CardContent>
         </Card>
@@ -342,7 +365,11 @@ export function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {allUsers.filter((user) => user.userType === "courier").length}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+              ) : (
+                allUsers.filter((user) => user.userType === "courier").length
+              )}
             </div>
           </CardContent>
         </Card>

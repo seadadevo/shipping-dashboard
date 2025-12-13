@@ -18,6 +18,7 @@ import { ShippingTypeManagement } from "../components/page/ShippingTypeManagemen
 import { AddUser } from "../components/page/AddUser";
 import { AccountSettings } from "../components/page/AccountSettings";
 import DriverManagement from "../components/page/DriverManagement";
+import AiMode from "../components/page/AiMode";
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -42,12 +43,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Role-based route protection
-const RoleProtectedRoute = ({ 
-  children, 
-  allowedRoles 
-}: { 
-  children: React.ReactNode; 
-  allowedRoles: string[] 
+const RoleProtectedRoute = ({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  allowedRoles: string[];
 }) => {
   const { user, loading } = useAuth();
 
@@ -86,9 +87,9 @@ export function AppRoutes() {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route 
-        path="/login" 
-        element={user ? <Navigate to="/" replace /> : <Login />} 
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/" replace /> : <Login />}
       />
 
       {/* Protected Routes */}
@@ -101,148 +102,155 @@ export function AppRoutes() {
         }
       >
         {/* Dashboard Routes */}
-        <Route index element={
-          user?.userType === 'courier' 
-            ? <Navigate to="/driver-dashboard" replace /> 
-            : <Navigate to={`/${user?.userType}-dashboard`} replace />
-        } />
-        
-        <Route 
-          path="admin-dashboard" 
+        <Route
+          index
+          element={
+            user?.userType === "courier" ? (
+              <Navigate to="/driver-dashboard" replace />
+            ) : (
+              <Navigate to={`/${user?.userType}-dashboard`} replace />
+            )
+          }
+        />
+
+        <Route
+          path="admin-dashboard"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <AdminDashboard />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="employee-dashboard" 
+
+        <Route
+          path="employee-dashboard"
           element={
             <RoleProtectedRoute allowedRoles={["employee"]}>
               <EmployeeDashboard />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="merchant-dashboard" 
+
+        <Route
+          path="merchant-dashboard"
           element={
             <RoleProtectedRoute allowedRoles={["merchant"]}>
               <MerchantDashboard />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="driver-dashboard" 
+
+        <Route
+          path="driver-dashboard"
           element={
             <RoleProtectedRoute allowedRoles={["courier"]}>
               <DriverDashboard />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="my-deliveries" 
+
+        <Route
+          path="my-deliveries"
           element={
             <RoleProtectedRoute allowedRoles={["courier"]}>
               <MyDeliveries />
             </RoleProtectedRoute>
-          } 
+          }
         />
 
         {/* Admin & Employee Routes */}
-        <Route 
-          path="user-management" 
+        <Route
+          path="user-management"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <UserManagement />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="add-user" 
+
+        <Route
+          path="add-user"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <AddUser />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="order-management" 
+
+        <Route
+          path="order-management"
           element={
             <RoleProtectedRoute allowedRoles={["admin", "employee"]}>
               <OrderManagement />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="weight-settings" 
+
+        <Route
+          path="weight-settings"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <WeightSettings />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="user-groups" 
+
+        <Route
+          path="user-groups"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <UserGroups />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="regions-management" 
+
+        <Route
+          path="regions-management"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <RegionsManagement />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="driver-management" 
+
+        <Route
+          path="driver-management"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <DriverManagement />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="shipping-types" 
+
+        <Route
+          path="shipping-types"
           element={
             <RoleProtectedRoute allowedRoles={["admin"]}>
               <ShippingTypeManagement />
             </RoleProtectedRoute>
-          } 
+          }
         />
 
         {/* Merchant & Employee Routes */}
-        <Route 
-          path="create-order" 
+        <Route
+          path="create-order"
           element={
             <RoleProtectedRoute allowedRoles={["merchant", "employee"]}>
               <CreateOrder />
             </RoleProtectedRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="my-orders" 
+
+        <Route
+          path="my-orders"
           element={
             <RoleProtectedRoute allowedRoles={["merchant"]}>
               <MyOrders />
             </RoleProtectedRoute>
-          } 
+          }
         />
+
+        <Route path="ai-mode" element={<AiMode />} />
 
         {/* Common Routes */}
         <Route path="account-settings" element={<AccountSettings />} />
