@@ -41,12 +41,13 @@ async function fetchDynamicSystemContext(userType, userId) {
       updatedAt: -1,
     });
     const kgPrice = weightSettings?.extraKgCost || 0;
+    const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
     
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
-      .map((c) => `${c.cityName} (${c.governorate?.govName}) - رسوم القرية: ${c.villageDeliveryCost || 0} جنيه`)
+      .map((c) => `${c.cityName} (${c.governorate?.govName})`)
       .join(", ");
 
     const governorates = await Governotate.find({ isActive: true });
@@ -149,9 +150,7 @@ async function fetchDynamicSystemContext(userType, userId) {
         ${shippingSummary || "No specific shipping types defined."}
 
         [PRICING]
-        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP
-        - Village delivery cost varies by city (check city details)
-        - Village delivery cost varies by city (check city details)
+        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
 
         [RECENT SYSTEM ACTIVITY]
         ${recentSummary}
@@ -270,8 +269,7 @@ async function fetchDynamicSystemContext(userType, userId) {
     ${shippingSummary || "No specific shipping types defined."}
     
     [PRICING RULES]
-    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP
-    - Village delivery cost varies by city
+    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
     `;
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
