@@ -1,7 +1,6 @@
 const ShippingType = require("../models/ShippingType");
 const { paginate } = require("../utils/pagination");
 
-// 1. إضافة نوع شحن (Admin)
 exports.addShippingType = async (req, res) => {
   try {
     const {
@@ -35,7 +34,6 @@ exports.addShippingType = async (req, res) => {
   }
 };
 
-// 2. جلب كل أنواع الشحن (Any User)
 exports.getAllShippingTypes = async (req, res) => {
   try {
     const { page, limit } = req.query;
@@ -52,7 +50,6 @@ exports.getAllShippingTypes = async (req, res) => {
   }
 };
 
-// 3. تحديث نوع الشحن (Admin)
 exports.updateShippingType = async (req, res) => {
   try {
     const { id } = req.params;

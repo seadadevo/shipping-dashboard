@@ -193,19 +193,18 @@ export function OrderManagement() {
     fetchOrderStats();
   }, []);
 
-  // --- (🚀 تعديل: useEffect الآن يراقب الفلاتر) ---
-  // (⭐ تعديل): هذا الـ useEffect سيقوم بإعادة جلب البيانات عند تغيير البحث أو الحالة
+
   useEffect(() => {
-    // (Debounce) ننتظر 500ms بعد آخر ضغطة زر قبل إرسال الطلب
+   
     const handler = setTimeout(() => {
       fetchOrders();
     }, 500);
 
-    // (Cleanup) إلغاء الـ timeout القديم إذا قام المستخدم بالكتابة مجدداً
+    
     return () => {
       clearTimeout(handler);
     };
-  }, [statusFilter, searchQuery]); // <-- يراقب هذه المتغيرات
+  }, [statusFilter, searchQuery]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -240,14 +239,6 @@ export function OrderManagement() {
         return "bg-gray-100 text-gray-800";
     }
   };
-
-  // --- (🚀 إزالة: filteredOrders) ---
-  // (⭐ إزالة): لم نعد بحاجة للفلترة في الفرونت إند
-  // الباك إند هو المسؤول الآن عن إرجاع البيانات المفلترة
-  // const filteredOrders = allOrders.filter((order) => { ... });
-
-  // (ملحوظة): سنستخدم allOrders مباشرة في الجدول
-
 
 
   const handleViewOrder = (order: Order) => {
@@ -406,7 +397,6 @@ export function OrderManagement() {
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          {/* زر التحديث يحدث الطلبات والإحصائيات */}
           <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -418,7 +408,6 @@ export function OrderManagement() {
         </div>
       </div>
 
-      {/* الإحصائيات السريعة */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
@@ -470,7 +459,6 @@ export function OrderManagement() {
         </Card>
       </div>
 
-      {/* جدول الطلبات */}
       <Card>
         <CardHeader>
           <CardTitle>قائمة الطلبات</CardTitle>
@@ -479,7 +467,6 @@ export function OrderManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* أدوات البحث والتصفية */}
           <div className="flex items-center space-x-4 space-x-reverse mb-4">
             <div className="relative flex-1 max-w-sm ml-2">
               <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -537,7 +524,7 @@ export function OrderManagement() {
                       <p className="text-red-600 mt-2">{error}</p>
                     </TableCell>
                   </TableRow>
-                ) : // --- (🚀 تعديل: نستخدم allOrders بدلاً من filteredOrders) ---
+                ) : 
                 allOrders.length > 0 ? (
                   allOrders.map((order) => (
                     <TableRow key={order._id}>
@@ -551,7 +538,6 @@ export function OrderManagement() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          {/* (⭐ هنا) سيعمل الآن عند جلب البيانات الصحيحة */}
                           <p className="font-medium">{order.customerName}</p>
                           <p className="text-xs text-muted-foreground">
                             {order.customerPhone1}
@@ -591,14 +577,12 @@ export function OrderManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {/* (⭐ وهنا) سيعمل الآن عند جلب البيانات الصحيحة */}
                         {order.orderCost?.toFixed(2) ?? "-"} جنيه
                       </TableCell>
                       <TableCell>
                         {new Date(order.createdAt).toLocaleDateString("ar-EG")}
                       </TableCell>
                       <TableCell>
-                        {/* ... (باقي القائمة المنسدلة كما هي) ... */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -614,7 +598,6 @@ export function OrderManagement() {
                               عرض التفاصيل
                             </DropdownMenuItem>
 
-                            {/* إلغاء الطلب للتاجر */}
                             {(() => {
                               console.log('Debug:', {
                                 userType: user?.userType,
@@ -638,7 +621,6 @@ export function OrderManagement() {
                               </DropdownMenuItem>
                             )}
 
-                            {/* تغيير الحالة للأدمن والموظف */}
                             {user?.userType !== "merchant" && (
                               <DropdownMenuSub>
                                 <DropdownMenuSubTrigger

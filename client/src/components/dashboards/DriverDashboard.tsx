@@ -99,7 +99,7 @@ export const DriverDashboard: React.FC = () => {
     try {
       setLoading(true);
       const params: Record<string, unknown> = {
-        status: statusFilter === 'all' ? 'Processing,On the Way' : statusFilter, // استبعاد Delivered
+        status: statusFilter === 'all' ? 'Processing,On the Way' : statusFilter, 
         page: currentPage,
         limit: 10,
       };
@@ -111,7 +111,6 @@ export const DriverDashboard: React.FC = () => {
       const res = await api.get('/api/drivers/deliveries', { params });
       
       if (res.data.success) {
-        // تصفية إضافية لضمان عدم ظهور الطلبات المكتملة
         const activeOrders = res.data.data.filter((order: Order) => order.status !== 'Delivered');
         setOrders(activeOrders);
         setTotalPages(res.data.meta.totalPages);
@@ -141,7 +140,6 @@ export const DriverDashboard: React.FC = () => {
           'Cancelled': 'ملغي'
         };
         
-        // رسالة خاصة عند التسليم
         if (newStatus === 'Delivered') {
           toast.success('🎉 تم التسليم بنجاح!', {
             description: 'تم نقل الطلب إلى صفحة "توصيلاتي"'

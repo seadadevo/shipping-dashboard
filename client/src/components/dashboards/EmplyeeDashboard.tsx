@@ -25,27 +25,27 @@ import api from "../../lib/api.ts";
 export function EmployeeDashboard() {
     const navigate = useNavigate();
     
-    // get day of last 7 days
+    
     function getDayOfLast7Days(dateString: string): boolean {
         const date = new Date(dateString);
 
-        // Start of today (UTC)
+        
         const start = new Date();
-        start.setUTCHours(0, 0, 0, 0);  // set to start of today UTC
-        start.setUTCDate(start.getUTCDate() - 6); // subtract number of days
+        start.setUTCHours(0, 0, 0, 0);  
+        start.setUTCDate(start.getUTCDate() - 6); 
 
-        // End of today (UTC)
+        
         const end = new Date();
         end.setUTCHours(23, 59, 59, 999);
 
         return date >= start && date <= end;
     }
 
-    // get all users
+    
     const [users, setUsers] = useState<User[]>([]);
     const getUsers = async (): Promise<void> => {
         const res = await api.get("/api/users?limit=1000");
-        // Handle paginated response: { status, results, meta, data: { users } }
+        
         const usersList = res.data?.data?.users || res.data || [];
         setUsers(Array.isArray(usersList) ? usersList : []);
     };
@@ -54,16 +54,16 @@ export function EmployeeDashboard() {
         getUsers().catch(console.error);
     }, []);
 
-    // merchant count derived from users
+   
     const merchantsCount = useMemo(() => {
         return users.reduce((acc, u) => acc + (u.userType?.toLowerCase() === "merchant" ? 1 : 0), 0);
     }, [users]);
 
-    // get all order to processing operations
+    
     const [orders, setOrders] = useState<Order[]>([]);
     const getAllOrders = async (): Promise<void> => {
         const res = await api.get("/api/orders?limit=1000");
-        // Handle paginated response: { status, results, meta, data: { orders } }
+       
         const ordersList = res.data?.data?.orders || [];
         setOrders(Array.isArray(ordersList) ? ordersList : []);
     };
@@ -115,7 +115,7 @@ export function EmployeeDashboard() {
 
         const rate = orders.length ? Math.round((delivered / orders.length) * 100) : 0;
 
-        // Sort recent orders by date desc for stable display
+        
         recent.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         const statuses: StatusSummary[] = [
@@ -239,13 +239,9 @@ export function EmployeeDashboard() {
             متابعة ومعالجة طلبات الشحن
           </p>
         </div>
-        {/*<Button className="bg-blue-600 hover:bg-blue-700">*/}
-        {/*  <Plus className="h-4 w-4 mr-2" />*/}
-        {/*  معالجة طلب جديد*/}
-        {/*</Button>*/}
+       
       </div>
 
-      {/* إحصائيات عامة */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -331,7 +327,6 @@ export function EmployeeDashboard() {
         </CardContent>
       </Card>
 
-      {/* الطلبات الحديثة */}
       <Card>
         <CardHeader>
           <CardTitle>الطلبات الحديثة</CardTitle>
@@ -342,7 +337,7 @@ export function EmployeeDashboard() {
         <CardContent>
           <div className="space-y-4">
             {allRecentOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors">
+              <div key={order._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors">
                 <div className="flex items-center space-x-4 space-x-reverse">
                   <div className="h-10 w-10 ml-3 rounded-full flex items-center justify-center bg-gray-50">
                     {getOrderStatusIcon(order.status)}
@@ -395,13 +390,10 @@ export function EmployeeDashboard() {
             ))}
           </div>
 
-          {/*<div className="mt-4 text-center">*/}
-          {/*  <Button variant="outline">عرض جميع الطلبات</Button>*/}
-          {/*</div>*/}
+        
         </CardContent>
       </Card>
 
-      {/* إجراءات سريعة */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>

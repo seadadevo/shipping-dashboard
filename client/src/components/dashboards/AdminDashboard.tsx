@@ -105,7 +105,6 @@ const AdminDashboard: React.FC = () => {
         } catch (err) {
             const error = err as ApiError;
             console.error("Error fetching orders:", error);
-            // setError(error.response?.data?.message || "فشل في جلب الطلبات.");
         } finally {
             console.log("Orders fetched successfully");
             // setLoading(false);
@@ -177,8 +176,8 @@ const AdminDashboard: React.FC = () => {
             setChartData([]);
         }
 
-        const avgOrders = localTotalOrders / 6 || 0; // average over last 6 days (excluding today)
-        const avgProfit = localTotalProfitAWeek / 6 || 0; // average over last 6 days (excluding today)
+        const avgOrders = localTotalOrders / 6 || 0; 
+        const avgProfit = localTotalProfitAWeek / 6 || 0; 
 
         const localOrdersTodayRelativeToWeek = avgOrders > 0
             ? Math.ceil((localCountOrdersToday / avgOrders) * 100)
