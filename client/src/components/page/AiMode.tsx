@@ -453,11 +453,22 @@ const AiMode = () => {
         }));
         setSessions(sanitizedSessions);
 
-        // AUTO-RESTORE LAST SESSION
-        if (sanitizedSessions.length > 0) {
-          const lastSession = sanitizedSessions[0];
-          setCurrentSessionId(lastSession.id);
-          setMessages(lastSession.messages);
+        // CHECK LAST ACTIVE USER FOR RESTORE LOGIC
+        const LAST_USER_KEY = "ai_last_active_user_id";
+        const lastUserId = localStorage.getItem(LAST_USER_KEY);
+
+        // Only auto-restore if we are returning as the SAME user
+        if (lastUserId === user._id) {
+          if (sanitizedSessions.length > 0) {
+            const lastSession = sanitizedSessions[0];
+            setCurrentSessionId(lastSession.id);
+            setMessages(lastSession.messages);
+          }
+        } else {
+          // New User Login / Switch: Start Fresh
+          localStorage.setItem(LAST_USER_KEY, user._id);
+          setCurrentSessionId(null);
+          setMessages([]);
         }
       } catch (e) {
         console.error("Failed to parse history", e);
