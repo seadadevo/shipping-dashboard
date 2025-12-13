@@ -14,9 +14,7 @@ dotenv.config();
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
-const client = new ChromaClient({
-  path: "http://localhost:8000"
-});
+const client = new ChromaClient();
 const COLLECTION_NAME = "rag_knowledge_base";
 
 
@@ -58,9 +56,11 @@ async function fetchDynamicSystemContext(userType, userId) {
     const shippingSummary = shippingTypes
       .map(
         (s) =>
-          `- Type: ${s.type}, Cost: ${s.cost}, Description: ${
-            s.description || "N/A"
-          }`
+          `- Type: ${s.name}, Cost Adjustment: ${
+            s.adjustmentAmount
+          } EGP, Time: ${s.minDeliveryDays}-${
+            s.maxDeliveryDays
+          } days, Description: ${s.description || "N/A"}`
       )
       .join("\n");
 
@@ -403,7 +403,7 @@ async function processAndStoreDocument(rawText) {
   }
 }
 
-async function generateAnswer(context, query, res = null) {
+async function generateAnswer(context, query, res = null, base64Image = null) {
   const prompt = `
     You are a **Strategic Data Analyst & Logistics Consultant** for a Shipping Company.
     
@@ -441,11 +441,45 @@ async function generateAnswer(context, query, res = null) {
     \`\`\`
     
     ### CONTEXT & QUERY
-    Context:
+    [SYSTEM CONTEXT]:
     ${context}
     
-    User Question: ${query}
+    [USER QUESTION]:
+    ${query}
   `;
+
+  // Construct Messages Payload
+  const messages = [
+    {
+      role: "system",
+      content:
+        "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
+    },
+  ];
+
+  if (base64Image) {
+    // Vision Payload
+    messages.push({
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text:
+            prompt +
+            "\n\n[SYSTEM NOTE: The user has attached an image for analysis. Use your Vision capabilities to analyze it.]",
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: base64Image, // Now checks for full data URI passed from caller
+          },
+        },
+      ],
+    });
+  } else {
+    // Standard Text Payload
+    messages.push({ role: "user", content: prompt });
+  }
 
   try {
     const fetchResponse = await fetch(
@@ -458,14 +492,7 @@ async function generateAnswer(context, query, res = null) {
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
-            },
-            { role: "user", content: prompt },
-          ],
+          messages: messages,
           temperature: 0.2,
           stream: !!res, // Enable streaming if res is active
         }),
@@ -559,12 +586,13 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     }
 
     console.log(
-      `💬 Request: Text="${question || "None"}", File="${
+      `💬 Request: QuestionType=${typeof question}, QuestionValue="${question}", File=${
         file ? file.originalname : "None"
-      }"`
+      }`
     );
 
     let fileContext = "";
+    let base64Image = null;
 
     if (file) {
       console.log(`📂 Processing attached file: ${file.originalname}`);
@@ -583,10 +611,29 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         /\.(jpg|jpeg|png|webp)$/.test(file.originalname.toLowerCase());
 
       try {
+        if (isImage) {
+          // Read image as Base64 for Vision API
+          const imageBuffer = fs.readFileSync(filePath);
+          // Construct full Data URI with correct Mime Type
+          base64Image = `data:${file.mimetype};base64,${imageBuffer.toString(
+            "base64"
+          )}`;
+        }
+
         if (isPdf) {
+          console.log("📄 Detected PDF. Reading file...");
           const dataBuffer = fs.readFileSync(filePath);
-          const data = await pdf(dataBuffer);
-          rawText = data.text;
+          console.log(`📄 PDF Buffer Size: ${dataBuffer.length} bytes`);
+          try {
+            const data = await pdf(dataBuffer);
+            rawText = data.text;
+            console.log(
+              `📄 PDF Extraction Success. Text Length: ${rawText.length}`
+            );
+          } catch (pdfErr) {
+            console.error("❌ PDF Parse Error:", pdfErr);
+            rawText = ""; // Treat as empty if parsing crashes
+          }
         } else if (isCsv) {
           rawText = await parseCSV(filePath);
         } else if (isImage) {
@@ -599,10 +646,31 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           rawText = fs.readFileSync(filePath, "utf-8");
         }
 
-       
-        if (rawText && rawText.trim()) {
-          await processAndStoreDocument(rawText);
-          fileContext = rawText; 
+        console.log(
+          `🔍 Extracted Text Length: ${rawText ? rawText.length : 0} chars`
+        );
+        if (rawText && rawText.length < 200)
+          console.log(`🔍 Preview: ${rawText}`);
+
+        // Index file into Vector DB, preserving Base Document context.
+        // Index file into Vector DB, preserving Base Document context.
+        // ENFORCE MINIMUM CONTENT: Stricter for PDF to catch scanned files. Relaxed for TXT/CSV.
+        const minLength = isPdf ? 5 : 1; // WAS 50. Lowered to 5 to allow simple test PDFs.
+        if (rawText && rawText.trim().length > minLength) {
+          try {
+            await processAndStoreDocument(rawText);
+          } catch (ragErr) {
+            console.warn(
+              "⚠️ RAG Indexing failed (continuing with raw text):",
+              ragErr.message
+            );
+          }
+          fileContext = rawText; // Keep a reference
+        } else {
+          console.log(
+            `⚠️ File text too short (<${minLength} chars), treating as empty/scanned.`
+          );
+          fileContext = ""; // Force empty to trigger the smart error handler
         }
       } catch (fileErr) {
         console.error("Error parsing file:", fileErr);
@@ -621,17 +689,33 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     let finalAnswer = "";
 
     if (file && !question) {
-      if (fileContext) {
+      console.log(
+        `🔍 CASE A TRIGGERED: File Only. ContextLen=${
+          fileContext.length
+        }, hasBase64=${!!base64Image}`
+      );
+      if (fileContext || base64Image) {
         // Ask AI to summarize the new content
         const summaryPrompt =
-          "I just uploaded this file. Please analyze it briefly and give me a summary of what it contains in Arabic.";
+          "I have uploaded a file (content is embedded above/below). Please analyze it and give me a comprehensive summary in Arabic.";
 
-       
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        await generateAnswer(fileContext, summaryPrompt, res);
+        // Explicitly format the context for CASE A so AI knows this IS the file
+        const formattedContext = fileContext
+          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n`
+          : "";
+
+        // Stream the summary
+        res.setHeader("Content-Type", "text/plain; charset=utf-8"); // Optional: Consider Transfer-Encoding chunked
+        await generateAnswer(formattedContext, summaryPrompt, res, base64Image);
       } else {
+        // Smart Error Handling
+        if (isPdf) {
+          return res.json({
+            answer: `⚠️ **عذراً، لم أتمكن من استخراج نص من هذا الملف (PDF).**\n\n- يبدو أن الملف "ممسوح ضوئياً" (Scanned) أو عبارة عن صور.\n- ✨ **الحل:** يرجى التقاط **لقطة شاشة (Screenshot)** للصفحة ورفعها كصورة. سأستخدم "عيوني" الذكية (Vision) لقراءتها فوراً!`,
+          });
+        }
         return res.json({
-          answer: `✅ تم رفع الملف **${file.originalname}** بنجاح. النص فيه غير واضح أو فارغ.`,
+          answer: `✅ تم رفع الملف **${file.originalname}** بنجاح، ولكن لم أتمكن من قراءة النص بوضوح. حاول رفعه كصورة أو ملف نصي.`,
         });
       }
       return; 
@@ -640,10 +724,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     if (question) {
      
       const queryVector = await getEmbedding(question);
-      const collection = await client.getOrCreateCollection({ 
-        name: COLLECTION_NAME,
-        embeddingFunction: null
-      });
+      const collection = await client.getCollection({ name: COLLECTION_NAME });
 
       const result = await collection.query({
         queryEmbeddings: [queryVector],
@@ -663,14 +744,23 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       retrievedContext = `
       ${systemContext}
 
-      ${fileContext ? `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n` : ""}
+      ${
+        fileContext
+          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n(Please analyze the content above)`
+          : ""
+      }
 
       [EXISTING KNOWLEDGE BASE]:
       ${retrievedContext}
       `;
 
-      finalAnswer = await generateAnswer(retrievedContext, question, res);
-      return; 
+      finalAnswer = await generateAnswer(
+        retrievedContext,
+        question,
+        res,
+        base64Image
+      );
+      return; // Response ended by generateAnswer stream
     }
   } catch (error) {
     console.error("❌ Error in /chat:", error);

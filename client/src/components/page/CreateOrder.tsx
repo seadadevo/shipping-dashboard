@@ -734,7 +734,7 @@ export function CreateOrder() {
                 </Dialog>
             </div>
             {/* معلومات الوزن الاساسي والاضافي */}
-            <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p>
+            {/* <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p> */}
         </CardHeader>
         <CardContent>
             {products.length > 0 ? (

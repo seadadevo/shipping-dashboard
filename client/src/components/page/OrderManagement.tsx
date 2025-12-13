@@ -74,7 +74,11 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import { toast } from "sonner";
 import { orderStateService } from "../../lib/orderStateService";
-import { getStatusDropdownOptions, isStatusSelectDisabled, getDisabledSelectTooltip } from "../../lib/orderStateManager";
+import {
+  getStatusDropdownOptions,
+  isStatusSelectDisabled,
+  getDisabledSelectTooltip,
+} from "../../lib/orderStateManager";
 import type { OrderState, UserRole } from "../../types";
 
 const statusLabels: Record<string, string> = {
@@ -100,13 +104,14 @@ export function OrderManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState(() => {
     // Read initial status from URL query parameter
-    const statusParam = searchParams.get('status');
+    const statusParam = searchParams.get("status");
     return statusParam || "all";
   });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -117,28 +122,31 @@ export function OrderManagement() {
     pending: 0,
     processing: 0,
     delivered: 0,
-    cancelled: 0
+    cancelled: 0,
   });
 
   const { user } = useAuth();
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
-  
+
   // Driver assignment states
   const [isDriverDialogOpen, setIsDriverDialogOpen] = useState(false);
-  const [selectedOrderForDriver, setSelectedOrderForDriver] = useState<Order | null>(null);
+  const [selectedOrderForDriver, setSelectedOrderForDriver] =
+    useState<Order | null>(null);
   const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
-  const [selectedDriver, setSelectedDriver] = useState<string>('');
+  const [selectedDriver, setSelectedDriver] = useState<string>("");
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
   const [isAssigningDriver, setIsAssigningDriver] = useState(false);
 
   // Fetch all orders stats (without filters)
   const fetchOrderStats = async () => {
     try {
+      setStatsLoading(true);
       // Use different endpoint based on user role
-      const endpoint = user?.userType === 'merchant' ? '/api/orders/my-orders' : '/api/orders';
-      
+      const endpoint =
+        user?.userType === "merchant" ? "/api/orders/my-orders" : "/api/orders";
+
       const response = await api.get<GetOrdersResponse>(endpoint, {
         params: {
           status: "all",
@@ -156,6 +164,8 @@ export function OrderManagement() {
       });
     } catch (err) {
       console.error("Failed to fetch order stats:", err);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -165,8 +175,9 @@ export function OrderManagement() {
     setError(null);
     try {
       // Use different endpoint based on user role
-      const endpoint = user?.userType === 'merchant' ? '/api/orders/my-orders' : '/api/orders';
-      
+      const endpoint =
+        user?.userType === "merchant" ? "/api/orders/my-orders" : "/api/orders";
+
       const response = await api.get<GetOrdersResponse>(endpoint, {
         params: {
           status: statusFilter,
@@ -178,7 +189,9 @@ export function OrderManagement() {
       setAllOrders(response.data.data.orders);
       setCurrentPage(response.data?.meta?.page || page);
       setTotalPages(response.data?.meta?.totalPages || 1);
-      setTotalItems(response.data?.meta?.total || response.data.data.orders.length);
+      setTotalItems(
+        response.data?.meta?.total || response.data.data.orders.length
+      );
       setItemsPerPage(response.data?.meta?.limit || limit);
     } catch (err) {
       const error = err as ApiError;
@@ -240,6 +253,12 @@ export function OrderManagement() {
     }
   };
 
+  // --- (🚀 إزالة: filteredOrders) ---
+  // (⭐ إزالة): لم نعد بحاجة للفلترة في الفرونت إند
+  // الباك إند هو المسؤول الآن عن إرجاع البيانات المفلترة
+  // const filteredOrders = allOrders.filter((order) => { ... });
+
+  // (ملحوظة): سنستخدم allOrders مباشرة في الجدول
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -269,14 +288,17 @@ export function OrderManagement() {
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
-    const order = allOrders.find(o => o._id === orderId);
+    const order = allOrders.find((o) => o._id === orderId);
     if (!order) {
-      toast.error('الطلب غير موجود');
+      toast.error("الطلب غير موجود");
       return;
     }
 
     // If changing to Processing, show driver selection dialog
-    if (newStatus === 'Processing' && (user?.userType === 'admin' || user?.userType === 'employee')) {
+    if (
+      newStatus === "Processing" &&
+      (user?.userType === "admin" || user?.userType === "employee")
+    ) {
       setSelectedOrderForDriver(order);
       setIsDriverDialogOpen(true);
       // Fetch available drivers for this order's city
@@ -288,9 +310,9 @@ export function OrderManagement() {
     setIsUpdatingStatus(orderId);
     try {
       const previousStatus = order.status;
-      
+
       await api.patch(`/api/orders/${orderId}/status`, { status: newStatus });
-      
+
       // Generate and show notification
       const notification = orderStateService.generateNotificationMessage(
         order,
@@ -298,27 +320,27 @@ export function OrderManagement() {
         newStatus as OrderState,
         user?.userType as UserRole
       );
-      
-      if (notification.type === 'success') {
+
+      if (notification.type === "success") {
         toast.success(notification.title, {
-          description: notification.description
+          description: notification.description,
         });
-      } else if (notification.type === 'warning') {
+      } else if (notification.type === "warning") {
         toast.warning(notification.title, {
-          description: notification.description
+          description: notification.description,
         });
       } else {
         toast.error(notification.title, {
-          description: notification.description
+          description: notification.description,
         });
       }
-      
+
       fetchOrders();
       fetchOrderStats(); // Update stats after status change
     } catch (err) {
       console.error("Failed to update status", err);
-      toast.error('فشل تحديث حالة الطلب', {
-        description: 'حدث خطأ أثناء تحديث حالة الطلب'
+      toast.error("فشل تحديث حالة الطلب", {
+        description: "حدث خطأ أثناء تحديث حالة الطلب",
       });
     } finally {
       setIsUpdatingStatus(null);
@@ -334,11 +356,13 @@ export function OrderManagement() {
   const fetchAvailableDrivers = async (governorate: string, city: string) => {
     setIsLoadingDrivers(true);
     try {
-      const response = await api.get(`/api/drivers/by-city?governorate=${governorate}&city=${city}`);
+      const response = await api.get(
+        `/api/drivers/by-city?governorate=${governorate}&city=${city}`
+      );
       setAvailableDrivers(response.data.data || []);
     } catch (err) {
-      console.error('Failed to fetch drivers:', err);
-      toast.error('فشل في جلب السائقين المتاحين');
+      console.error("Failed to fetch drivers:", err);
+      toast.error("فشل في جلب السائقين المتاحين");
       setAvailableDrivers([]);
     } finally {
       setIsLoadingDrivers(false);
@@ -348,35 +372,38 @@ export function OrderManagement() {
   // Assign driver and update status to Processing
   const handleAssignDriver = async () => {
     if (!selectedOrderForDriver || !selectedDriver) {
-      toast.error('يرجى اختيار سائق');
+      toast.error("يرجى اختيار سائق");
       return;
     }
 
     setIsAssigningDriver(true);
     try {
       const previousStatus = selectedOrderForDriver.status;
-      
+
       // Update order with driver and status
-      await api.patch(`/api/orders/${selectedOrderForDriver._id}/assign-driver`, {
-        driverId: selectedDriver,
-        status: 'Processing'
+      await api.patch(
+        `/api/orders/${selectedOrderForDriver._id}/assign-driver`,
+        {
+          driverId: selectedDriver,
+          status: "Processing",
+        }
+      );
+
+      toast.success("تم تعيين السائق بنجاح", {
+        description: `تم تحويل الطلب إلى قيد المعالجة وتعيين السائق`,
       });
-      
-      toast.success('تم تعيين السائق بنجاح', {
-        description: `تم تحويل الطلب إلى قيد المعالجة وتعيين السائق`
-      });
-      
+
       // Close dialog and refresh
       setIsDriverDialogOpen(false);
       setSelectedOrderForDriver(null);
-      setSelectedDriver('');
+      setSelectedDriver("");
       setAvailableDrivers([]);
-      
+
       fetchOrders();
       fetchOrderStats();
     } catch (err: any) {
-      console.error('Failed to assign driver:', err);
-      const errorMsg = err.response?.data?.message || 'فشل تعيين السائق';
+      console.error("Failed to assign driver:", err);
+      const errorMsg = err.response?.data?.message || "فشل تعيين السائق";
       toast.error(errorMsg);
     } finally {
       setIsAssigningDriver(false);
@@ -393,7 +420,18 @@ export function OrderManagement() {
           </p>
         </div>
         <div className="flex space-x-3 space-x-reverse">
-          <Button variant="outline" className="ml-2" onClick={() => exportOrdersToExcel(allOrders, `طلبات-${new Date().toLocaleDateString('ar-EG').replace(/\//g, '-')}.csv`)}>
+          <Button
+            variant="outline"
+            className="ml-2"
+            onClick={() =>
+              exportOrdersToExcel(
+                allOrders,
+                `طلبات-${new Date()
+                  .toLocaleDateString("ar-EG")
+                  .replace(/\//g, "-")}.csv`
+              )
+            }
+          >
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
@@ -414,7 +452,13 @@ export function OrderManagement() {
             <CardTitle className="text-sm">إجمالي الطلبات</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orderStats.total}</div>
+            <div className="text-2xl font-bold">
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                orderStats.total
+              )}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -423,7 +467,11 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {orderStats.pending}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+              ) : (
+                orderStats.pending
+              )}
             </div>
           </CardContent>
         </Card>
@@ -433,7 +481,11 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {orderStats.processing}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-yellow-600" />
+              ) : (
+                orderStats.processing
+              )}
             </div>
           </CardContent>
         </Card>
@@ -443,7 +495,11 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {orderStats.delivered}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+              ) : (
+                orderStats.delivered
+              )}
             </div>
           </CardContent>
         </Card>
@@ -453,7 +509,11 @@ export function OrderManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {orderStats.cancelled}
+              {statsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+              ) : (
+                orderStats.cancelled
+              )}
             </div>
           </CardContent>
         </Card>
@@ -478,7 +538,11 @@ export function OrderManagement() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter} dir="rtl">
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              dir="rtl"
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="تصفية حسب الحالة" />
               </SelectTrigger>
@@ -589,7 +653,11 @@ export function OrderManagement() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-background" align="end" dir="rtl">
+                          <DropdownMenuContent
+                            className="bg-background"
+                            align="end"
+                            dir="rtl"
+                          >
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() => handleViewOrder(order)}
@@ -599,17 +667,17 @@ export function OrderManagement() {
                             </DropdownMenuItem>
 
                             {(() => {
-                              console.log('Debug:', {
-                                userType: user?.userType,
-                                orderStatus: order.status,
-                                showCancel: user?.userType === "merchant" && (order.status === "Pending" || order.status === "Processing")
-                              });
-                              return user?.userType === "merchant" && 
-                                     (order.status === "Pending" || order.status === "Processing");
+                              return (
+                                user?.userType === "merchant" &&
+                                (order.status === "Pending" ||
+                                  order.status === "Processing")
+                              );
                             })() && (
                               <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
-                                onClick={() => handleStatusChange(order._id, "Cancelled")}
+                                onClick={() =>
+                                  handleStatusChange(order._id, "Cancelled")
+                                }
                                 disabled={isUpdatingStatus === order._id}
                               >
                                 {isUpdatingStatus === order._id ? (
@@ -626,11 +694,20 @@ export function OrderManagement() {
                                 <DropdownMenuSubTrigger
                                   disabled={
                                     isUpdatingStatus === order._id ||
-                                    isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
+                                    isStatusSelectDisabled(
+                                      user?.userType as UserRole,
+                                      order.status as OrderState
+                                    )
                                   }
                                   title={
-                                    isStatusSelectDisabled(user?.userType as UserRole, order.status as OrderState)
-                                      ? getDisabledSelectTooltip(user?.userType as UserRole, order.status as OrderState)
+                                    isStatusSelectDisabled(
+                                      user?.userType as UserRole,
+                                      order.status as OrderState
+                                    )
+                                      ? getDisabledSelectTooltip(
+                                          user?.userType as UserRole,
+                                          order.status as OrderState
+                                        )
                                       : undefined
                                   }
                                 >
@@ -642,28 +719,31 @@ export function OrderManagement() {
                                   تغيير الحالة
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuPortal>
-                                  <DropdownMenuSubContent className="bg-background" dir="rtl">
+                                  <DropdownMenuSubContent
+                                    className="bg-background"
+                                    dir="rtl"
+                                  >
                                     {getStatusDropdownOptions(
                                       user?.userType as UserRole,
                                       order.status as OrderState
                                     ).map((status) => (
-                                        <DropdownMenuItem
-                                          key={status.value}
-                                          onClick={() =>
-                                            !status.disabled && handleStatusChange(
-                                              order._id,
-                                              status.value
-                                            )
-                                          }
-                                          disabled={
-                                            status.disabled ||
-                                            !!isUpdatingStatus
-                                          }
-                                          title={status.reason}
-                                        >
-                                          {status.label}
-                                        </DropdownMenuItem>
-                                      ))}
+                                      <DropdownMenuItem
+                                        key={status.value}
+                                        onClick={() =>
+                                          !status.disabled &&
+                                          handleStatusChange(
+                                            order._id,
+                                            status.value
+                                          )
+                                        }
+                                        disabled={
+                                          status.disabled || !!isUpdatingStatus
+                                        }
+                                        title={status.reason}
+                                      >
+                                        {status.label}
+                                      </DropdownMenuItem>
+                                    ))}
                                   </DropdownMenuSubContent>
                                 </DropdownMenuPortal>
                               </DropdownMenuSub>
@@ -720,17 +800,17 @@ export function OrderManagement() {
         </CardContent>
       </Card>
       {/* ... (نافذة عرض تفاصيل الطلب زي ما هي) ... */}
-      <Dialog  open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className=" bg-background max-w-4xl" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-blue-600">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
-            <DialogDescription> 
+            <DialogDescription>
               عرض جميع تفاصيل الطلب والحالة الحالية
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedOrder && (
             <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
               {/* معلومات أساسية */}
@@ -743,23 +823,39 @@ export function OrderManagement() {
                   </CardHeader>
                   <CardContent className="space-y-2 pt-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">الاسم</span>
-                      <span className="font-medium">{selectedOrder.customerName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        الاسم
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.customerName}
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">الهاتف 1</span>
-                      <span className="font-medium">{selectedOrder.customerPhone1}</span>
+                      <span className="text-xs text-muted-foreground">
+                        الهاتف 1
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.customerPhone1}
+                      </span>
                     </div>
                     {selectedOrder.customerPhone2 && (
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">الهاتف 2</span>
-                        <span className="font-medium">{selectedOrder.customerPhone2}</span>
+                        <span className="text-xs text-muted-foreground">
+                          الهاتف 2
+                        </span>
+                        <span className="font-medium">
+                          {selectedOrder.customerPhone2}
+                        </span>
                       </div>
                     )}
                     {selectedOrder.customerEmail && (
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">البريد الإلكتروني</span>
-                        <span className="font-medium text-sm">{selectedOrder.customerEmail}</span>
+                        <span className="text-xs text-muted-foreground">
+                          البريد الإلكتروني
+                        </span>
+                        <span className="font-medium text-sm">
+                          {selectedOrder.customerEmail}
+                        </span>
                       </div>
                     )}
                   </CardContent>
@@ -773,64 +869,98 @@ export function OrderManagement() {
                   </CardHeader>
                   <CardContent className="space-y-2 pt-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">المحافظة</span>
-                      <span className="font-medium">{selectedOrder.governorate}</span>
+                      <span className="text-xs text-muted-foreground">
+                        المحافظة
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.governorate}
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">المدينة</span>
+                      <span className="text-xs text-muted-foreground">
+                        المدينة
+                      </span>
                       <span className="font-medium">{selectedOrder.city}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">الشارع</span>
-                      <span className="font-medium">{selectedOrder.street}</span>
+                      <span className="text-xs text-muted-foreground">
+                        الشارع
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.street}
+                      </span>
                     </div>
                     {selectedOrder.village && (
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">القرية</span>
-                        <span className="font-medium">{selectedOrder.village}</span>
+                        <span className="text-xs text-muted-foreground">
+                          القرية
+                        </span>
+                        <span className="font-medium">
+                          {selectedOrder.village}
+                        </span>
                       </div>
                     )}
                     {selectedOrder.isVillageDelivery && (
-                      <Badge variant="outline" className="w-fit">توصيل لقرية</Badge>
+                      <Badge variant="outline" className="w-fit">
+                        توصيل لقرية
+                      </Badge>
                     )}
                   </CardContent>
                 </Card>
 
                 <Card className="border-purple-200">
-        <CardHeader className="pb-3 bg-purple-50">
-          <CardTitle className="text-sm flex items-center text-purple-800">
-             <Store className="h-4 w-4 ml-2" /> 
-             بيانات التاجر (المرسل)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="flex flex-col gap-1">
-               <span className="text-xs text-muted-foreground">اسم التاجر/الموظف</span>
-               <span className="font-medium">{selectedOrder.createdBy.fullName}</span>
-               <Badge variant="secondary" className="mt-1 w-fit">{selectedOrder.createdBy.userType}</Badge>
-            </div>
-            
-            <div className="flex flex-col gap-1">
-               <span className="text-xs text-muted-foreground">البريد الإلكتروني</span>
-               <span className="font-medium text-sm break-all">{selectedOrder.createdBy.email}</span>
-            </div>
+                  <CardHeader className="pb-3 bg-purple-50">
+                    <CardTitle className="text-sm flex items-center text-purple-800">
+                      <Store className="h-4 w-4 ml-2" />
+                      بيانات التاجر (المرسل)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          اسم التاجر/الموظف
+                        </span>
+                        <span className="font-medium">
+                          {selectedOrder.createdBy.fullName}
+                        </span>
+                        <Badge variant="secondary" className="mt-1 w-fit">
+                          {selectedOrder.createdBy.userType}
+                        </Badge>
+                      </div>
 
-            <div className="flex flex-col gap-1">
-               <span className="text-xs text-muted-foreground">رقم الهاتف</span>
-               <span className="font-medium">{selectedOrder.createdBy.phone || "غير متوفر"}</span>
-            </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          البريد الإلكتروني
+                        </span>
+                        <span className="font-medium text-sm break-all">
+                          {selectedOrder.createdBy.email}
+                        </span>
+                      </div>
 
-            {/* عرض اسم المتجر لو كان تاجر */}
-            {selectedOrder.createdBy.storeName && (
-              <div className="flex flex-col gap-1">
-                 <span className="text-xs text-muted-foreground">اسم المتجر</span>
-                 <span className="font-medium">{selectedOrder.createdBy.storeName}</span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          رقم الهاتف
+                        </span>
+                        <span className="font-medium">
+                          {selectedOrder.createdBy.phone || "غير متوفر"}
+                        </span>
+                      </div>
+
+                      {/* عرض اسم المتجر لو كان تاجر */}
+                      {selectedOrder.createdBy.storeName && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-muted-foreground">
+                            اسم المتجر
+                          </span>
+                          <span className="font-medium">
+                            {selectedOrder.createdBy.storeName}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* تفاصيل الطلب */}
@@ -844,16 +974,28 @@ export function OrderManagement() {
                   </CardHeader>
                   <CardContent className="space-y-3 pt-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">نوع الطلب</span>
-                      <span className="font-medium">{selectedOrder.orderType}</span>
+                      <span className="text-xs text-muted-foreground">
+                        نوع الطلب
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.orderType}
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">نوع الشحن</span>
-                      <span className="font-medium">{selectedOrder.shippingType}</span>
+                      <span className="text-xs text-muted-foreground">
+                        نوع الشحن
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.shippingType}
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">الفرع</span>
-                      <span className="font-medium">{selectedOrder.branch}</span>
+                      <span className="text-xs text-muted-foreground">
+                        الفرع
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.branch}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -867,16 +1009,28 @@ export function OrderManagement() {
                   </CardHeader>
                   <CardContent className="space-y-3 pt-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">نوع الدفع</span>
-                      <span className="font-medium">{selectedOrder.paymentType}</span>
+                      <span className="text-xs text-muted-foreground">
+                        نوع الدفع
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.paymentType}
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">تكلفة الطلب</span>
-                      <span className="font-medium text-lg">{selectedOrder.orderCost.toFixed(2)} جنيه</span>
+                      <span className="text-xs text-muted-foreground">
+                        تكلفة الطلب
+                      </span>
+                      <span className="font-medium text-lg">
+                        {selectedOrder.orderCost.toFixed(2)} جنيه
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">إجمالي الوزن</span>
-                      <span className="font-medium">{selectedOrder.totalWeight} كجم</span>
+                      <span className="text-xs text-muted-foreground">
+                        إجمالي الوزن
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.totalWeight} كجم
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -890,7 +1044,9 @@ export function OrderManagement() {
                   </CardHeader>
                   <CardContent className="space-y-3 pt-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">حالة الطلب</span>
+                      <span className="text-xs text-muted-foreground">
+                        حالة الطلب
+                      </span>
                       <Badge
                         className={`${getStatusColor(
                           selectedOrder.status
@@ -901,14 +1057,22 @@ export function OrderManagement() {
                       </Badge>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">أنشئ بواسطة</span>
-                      <span className="font-medium">{selectedOrder.createdBy.fullName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        أنشئ بواسطة
+                      </span>
+                      <span className="font-medium">
+                        {selectedOrder.createdBy.fullName}
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">تاريخ الإنشاء</span>
-                      <span className="font-medium text-sm">{new Date(selectedOrder.createdAt).toLocaleString(
-                        "ar-EG"
-                      )}</span>
+                      <span className="text-xs text-muted-foreground">
+                        تاريخ الإنشاء
+                      </span>
+                      <span className="font-medium text-sm">
+                        {new Date(selectedOrder.createdAt).toLocaleString(
+                          "ar-EG"
+                        )}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -927,8 +1091,12 @@ export function OrderManagement() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-secondary">
-                          <TableHead className="text-right font-semibold">اسم المنتج</TableHead>
-                          <TableHead className="text-center font-semibold">الكمية</TableHead>
+                          <TableHead className="text-right font-semibold">
+                            اسم المنتج
+                          </TableHead>
+                          <TableHead className="text-center font-semibold">
+                            الكمية
+                          </TableHead>
                           <TableHead className="text-center font-semibold">
                             الوزن (كجم)
                           </TableHead>
@@ -983,7 +1151,7 @@ export function OrderManagement() {
               إلغاء
             </Button>
             <Button
-            className="text-[red] ml-1 border-2"
+              className="text-[red] ml-1 border-2"
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
@@ -1011,7 +1179,8 @@ export function OrderManagement() {
               اختر السائق المناسب للطلب #{selectedOrderForDriver?._id.slice(-8)}
               <br />
               <span className="text-sm font-medium">
-                {selectedOrderForDriver?.governorate} - {selectedOrderForDriver?.city}
+                {selectedOrderForDriver?.governorate} -{" "}
+                {selectedOrderForDriver?.city}
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -1029,14 +1198,19 @@ export function OrderManagement() {
                   لا يوجد سائقين متاحين لهذه المدينة
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  يرجى إضافة مدينة {selectedOrderForDriver?.city} إلى أحد السائقين
+                  يرجى إضافة مدينة {selectedOrderForDriver?.city} إلى أحد
+                  السائقين
                 </p>
               </div>
             ) : (
               <>
                 <div className="space-y-2">
                   <Label className="text-base">اختر السائق</Label>
-                  <Select value={selectedDriver} onValueChange={setSelectedDriver} dir="rtl">
+                  <Select
+                    value={selectedDriver}
+                    onValueChange={setSelectedDriver}
+                    dir="rtl"
+                  >
                     <SelectTrigger className="h-11">
                       <SelectValue placeholder="اختر سائق من القائمة" />
                     </SelectTrigger>
@@ -1044,7 +1218,9 @@ export function OrderManagement() {
                       {availableDrivers.map((driver) => (
                         <SelectItem key={driver._id} value={driver._id}>
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-medium">{driver.fullName}</span>
+                            <span className="font-medium">
+                              {driver.fullName}
+                            </span>
                             <span className="text-sm text-muted-foreground mr-2">
                               {driver.phoneNumber}
                             </span>
@@ -1060,7 +1236,8 @@ export function OrderManagement() {
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                   <p className="text-sm text-yellow-800">
-                    <strong>ملاحظة:</strong> عند تعيين السائق، سيتم تحويل حالة الطلب إلى "قيد المعالجة" تلقائياً
+                    <strong>ملاحظة:</strong> عند تعيين السائق، سيتم تحويل حالة
+                    الطلب إلى "قيد المعالجة" تلقائياً
                   </p>
                 </div>
               </>
@@ -1073,7 +1250,7 @@ export function OrderManagement() {
               onClick={() => {
                 setIsDriverDialogOpen(false);
                 setSelectedOrderForDriver(null);
-                setSelectedDriver('');
+                setSelectedDriver("");
                 setAvailableDrivers([]);
               }}
               disabled={isAssigningDriver}
@@ -1082,7 +1259,11 @@ export function OrderManagement() {
             </Button>
             <Button
               onClick={handleAssignDriver}
-              disabled={isAssigningDriver || !selectedDriver || availableDrivers.length === 0}
+              disabled={
+                isAssigningDriver ||
+                !selectedDriver ||
+                availableDrivers.length === 0
+              }
             >
               {isAssigningDriver ? (
                 <>

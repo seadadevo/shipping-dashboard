@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+/* eslint-disable react-hooks/rules-of-hooks */
+import React, {useEffect, useState} from "react";
 import {
   Card,
   CardContent,
@@ -20,10 +20,12 @@ import {
   DollarSign,
   TrendingUp,
   Activity,
-  Loader2, 
+  Download,
+  Loader2, // (إضافة)
 } from "lucide-react";
-import api from "../../lib/api";
-import type { Order, GetOrdersResponse, ApiError } from "../../types"; 
+import api from "../../lib/api"; // (إضافة)
+import type { Order, GetOrdersResponse, ApiError } from "../../types"; // (إضافة)
+import { exportMerchantReport } from "../../lib/exportUtils";
 
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
@@ -57,6 +59,31 @@ export function MerchantDashboard() {
   useEffect(() => {
     fetchMyOrders();
   }, []);
+
+
+      const [shippingTypes, setShippingTypes] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [weightSettings, setWeightSettings] = useState([]);
+
+    useEffect(() => {
+      // جلب أنواع الشحن
+      api.get("/api/shipping-types").then(res => setShippingTypes(res.data.data));
+      // جلب المدن
+      api.get("/api/locations/cities")
+      .then(res => setCities(res.data.data || []))
+      .catch(err => {
+          console.error("خطأ في جلب المدن:", err);
+          setCities([]);
+      });
+      // جلب إعدادات الوزن
+      api.get("/api/weight-settings").then(res => {
+        const weightData = Array.isArray(res.data) ? res.data : [res.data];
+        setWeightSettings(weightData);
+      });
+    }, []);
+
+    
+  // --- (نهاية جلب البيانات) ---
 
   const getTotalOrders = () => allOrders.length;
 
@@ -153,13 +180,31 @@ export function MerchantDashboard() {
             متابعة شحناتك وإدارة طلباتك
           </p>
         </div>
-        <Button 
-          className="bg-orange-600 hover:bg-orange-700"
-          onClick={() => navigate('/create-order')}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          إنشاء طلب جديد
-        </Button>
+        <div className="flex space-x-2 space-x-reverse">
+          <Button className="bg-orange-600 hover:bg-orange-700">
+            <Plus className="h-4 w-4 mr-2" />
+            إنشاء طلب جديد
+          </Button>
+          <Button variant="outline" className="mr-2"
+            onClick={() => {
+                exportMerchantReport({
+                  orders: allOrders,
+                  stats: {
+                    "إجمالي الطلبات": getTotalOrders(),
+                    "معدل النجاح": getSuccessRate(),
+                    "الطلبات النشطة": getActiveOrders(),
+                    "إجمالي المبيعات (المكتملة)": getTotalSales().toFixed(2),
+                  },
+                  shippingTypes: shippingTypes,
+                  cities: cities,
+                  weightSettings: weightSettings
+                });
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            تصدير البيانات
+          </Button>
+        </div>            
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

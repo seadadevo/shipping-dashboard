@@ -27,8 +27,8 @@ interface WeightSettings {
 
 export function WeightSettings() {
   const [settings, setSettings] = useState<WeightSettings>({
-    defaultWeightLimit: 10.0,     
-    extraKgCost: 5.0,
+    defaultWeightLimit: 0.0,     
+    extraKgCost: 0.0,
     villageDeliveryCost: 0.0 // --- الإضافة الجديدة ---
   });
 
