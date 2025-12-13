@@ -242,6 +242,7 @@ const InputBox = ({
   selectedFile,
   clearFile,
   showIntroGlow = false,
+  textAreaRef,
 }: {
   question: string;
   setQuestion: (val: string) => void;
@@ -256,14 +257,13 @@ const InputBox = ({
   selectedFile?: File | null;
   clearFile?: () => void;
   showIntroGlow?: boolean;
+  textAreaRef: React.RefObject<HTMLTextAreaElement>;
 }) => {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
     if (centered) {
-      inputRef.current?.focus();
+      textAreaRef.current?.focus();
     }
-  }, [centered]);
+  }, [centered, textAreaRef]);
 
   return (
     <div
@@ -316,7 +316,7 @@ const InputBox = ({
         )}
 
         <textarea
-          ref={inputRef}
+          ref={textAreaRef}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           disabled={false}
@@ -419,9 +419,19 @@ const AiMode = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // Intro Animation State
   const [showIntroGlow, setShowIntroGlow] = useState(true);
+
+  // Listen for 'reset-ai-chat' event from AiButton
+  useEffect(() => {
+    const handleReset = () => {
+      startNewChat();
+    };
+    window.addEventListener("reset-ai-chat", handleReset);
+    return () => window.removeEventListener("reset-ai-chat", handleReset);
+  }, [messages, currentSessionId]); // Dependencies needed for startNewChat context if it relies on them
 
   useEffect(() => {
     // Turn off glow after 5 seconds (adjusted per user request)
@@ -632,6 +642,7 @@ const AiMode = () => {
     // If we are already in a new chat (no messages), just close the history
     if (messages.length === 0) {
       setShowHistory(false);
+      textAreaRef.current?.focus();
       return;
     }
 
@@ -644,6 +655,10 @@ const AiMode = () => {
     setQuestion("");
     setShowHistory(false); // Close history on new chat
     isUserAtBottomRef.current = true; // Reset scroll state
+
+    setTimeout(() => {
+      textAreaRef.current?.focus();
+    }, 100);
   };
 
   const clearAllSessions = () => {
@@ -675,6 +690,10 @@ const AiMode = () => {
     currentSessionIdRef.current = session.id;
     setMessages(session.messages);
     setShowHistory(false); // Close history drawer on selection
+
+    setTimeout(() => {
+      textAreaRef.current?.focus();
+    }, 100);
   };
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
@@ -857,8 +876,13 @@ const AiMode = () => {
               </button>
               <button
                 onClick={clearAllSessions}
-                className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded-lg hover:bg-accent"
-                title="حذف السجل بالكامل"
+                disabled={sessions.length === 0}
+                className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-muted-foreground"
+                title={
+                  sessions.length > 0
+                    ? "حذف السجل بالكامل"
+                    : "لا يوجد سجلات للمسح"
+                }
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -947,6 +971,7 @@ const AiMode = () => {
                   handleSend={handleSend}
                   handleUpload={handleUpload}
                   fileInputRef={fileInputRef}
+                  textAreaRef={textAreaRef}
                   startListening={startListening}
                   stopListening={stopListening}
                   isListening={isListening}
@@ -1053,6 +1078,7 @@ const AiMode = () => {
                 handleSend={handleSend}
                 handleUpload={handleUpload}
                 fileInputRef={fileInputRef}
+                textAreaRef={textAreaRef}
                 startListening={startListening}
                 stopListening={stopListening}
                 isListening={isListening}

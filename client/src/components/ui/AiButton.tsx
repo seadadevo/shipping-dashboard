@@ -15,6 +15,12 @@ const AiButton = () => {
   return (
     <NavLink
       to="/ai-mode"
+      onClick={(e) => {
+        if (isAiMode) {
+          e.preventDefault();
+          window.dispatchEvent(new Event("reset-ai-chat"));
+        }
+      }}
       className="group relative flex items-center justify-center rounded-full transition-all duration-300 ease-out"
     >
       {/* 1. The Glowing Comet Beam (Always visible, PAUSES in AI Mode) */}
