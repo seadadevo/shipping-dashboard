@@ -588,7 +588,7 @@ export function CreateOrder() {
                 />
                 <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
                     هل تريد التوصيل إلى قرية؟ {weightSettings && (
-                        <span className="text-orange-600">(تطبق رسوم توصيل إضافية وقدرها <strong>{weightSettings.villageDeliveryCost} جنيه</strong>)</span>
+                        <span className="text-orange-600">(تطبق رسوم توصيل إضافية وقدرها <strong>{weightSettings.villageDeliveryCost || 0} جنيه</strong>)</span>
                     )}
                 </Label>
             </div>
@@ -801,7 +801,7 @@ export function CreateOrder() {
                           <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
                               <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
                               <span>
-                                  <strong>توصيل القرية:</strong> رسوم إضافية = <strong className="text-amber-700">{weightSettings.villageDeliveryCost} جنيه</strong>
+                                  <strong>توصيل القرية:</strong> رسوم إضافية = <strong className="text-amber-700">{weightSettings.villageDeliveryCost || 0} جنيه</strong>
                               </span>
                           </div>
                       </div>

@@ -122,6 +122,10 @@ export function RegionsManagement() {
   const [newCityGovernorate, setNewCityGovernorate] = useState("");
   const [newCityDeliveryFee, setNewCityDeliveryFee] = useState("");
 
+  // Village delivery cost state
+  const [villageDeliveryCost, setVillageDeliveryCost] = useState<number>(0);
+  const [isSavingVillageCost, setIsSavingVillageCost] = useState(false);
+
   // Error state
   const [error, setError] = useState<string | null>(null);
 
@@ -133,7 +137,29 @@ export function RegionsManagement() {
   useEffect(() => {
     fetchGovernorates();
     fetchCities();
+    fetchVillageDeliveryCost();
   }, []);
+
+  const fetchVillageDeliveryCost = async () => {
+    try {
+      const response = await api.get('/api/weight-settings');
+      setVillageDeliveryCost(response.data.villageDeliveryCost || 0);
+    } catch (err) {
+      console.error('Failed to fetch village delivery cost:', err);
+    }
+  };
+
+  const saveVillageDeliveryCost = async () => {
+    setIsSavingVillageCost(true);
+    try {
+      await api.put('/api/weight-settings', { villageDeliveryCost });
+      toast.success('تم حفظ رسوم توصيل القرية بنجاح');
+    } catch (err) {
+      toast.error('فشل في حفظ رسوم توصيل القرية');
+    } finally {
+      setIsSavingVillageCost(false);
+    }
+  };
 
   const fetchGovernorates = async (
     page = govCurrentPage,
@@ -497,6 +523,49 @@ export function RegionsManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Village Delivery Cost Settings Card */}
+      <Card className="border-green-200 bg-green-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center text-green-800">
+            <MapPin className="h-5 w-5 ml-2" />
+            إعدادات توصيل القرى
+          </CardTitle>
+          <CardDescription>رسوم التوصيل الإضافية للقرى (قيمة موحدة لجميع المدن)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="villageDeliveryCost" className="text-sm font-medium">
+                رسوم توصيل القرية (جنيه)
+              </Label>
+              <Input
+                id="villageDeliveryCost"
+                type="number"
+                min="0"
+                step="1"
+                value={villageDeliveryCost}
+                onChange={(e) => setVillageDeliveryCost(parseFloat(e.target.value) || 0)}
+                className="text-right max-w-xs"
+                placeholder="20"
+              />
+              <p className="text-xs text-muted-foreground">
+                سعر ثابت يُضاف على إجمالي الشحنة إذا تم تحديد "توصيل لقرية"
+              </p>
+            </div>
+            <Button 
+              onClick={saveVillageDeliveryCost}
+              disabled={isSavingVillageCost}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isSavingVillageCost ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : null}
+              حفظ
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
       <Tabs defaultValue="governorates" className="space-y-4" dir="rtl">
