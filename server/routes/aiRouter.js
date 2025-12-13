@@ -57,9 +57,11 @@ async function fetchDynamicSystemContext(userType, userId) {
     const shippingSummary = shippingTypes
       .map(
         (s) =>
-          `- Type: ${s.type}, Cost: ${s.cost}, Description: ${
-            s.description || "N/A"
-          }`
+          `- Type: ${s.name}, Cost Adjustment: ${
+            s.adjustmentAmount
+          } EGP, Time: ${s.minDeliveryDays}-${
+            s.maxDeliveryDays
+          } days, Description: ${s.description || "N/A"}`
       )
       .join("\n");
 
