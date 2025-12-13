@@ -1,9 +1,11 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
 const AiButton = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const isAiMode = location.pathname === "/ai-mode";
 
   // RESTRICT ACCESS: Hide for drivers (couriers) or unauthenticated users
   if (!user || user.userType === "courier") {
@@ -17,14 +19,19 @@ const AiButton = () => {
     >
       {/* 1. The Glowing Comet Beam (Always On) */}
       {/* Adjusted colors to match the image: Blue -> Red -> Yellow -> Green order */}
-      <div className="absolute -inset-[1px] rounded-full opacity-100 overflow-hidden">
-        <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
-      </div>
+      {/* 1. The Glowing Comet Beam (Conditional) */}
+      {!isAiMode && (
+        <>
+          <div className="absolute -inset-[1px] rounded-full opacity-100 overflow-hidden">
+            <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
+          </div>
 
-      {/* 2. Glow Blur Layer (Always On) */}
-      <div className="absolute -inset-[1px] rounded-full opacity-60 blur-sm overflow-hidden">
-        <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
-      </div>
+          {/* 2. Glow Blur Layer */}
+          <div className="absolute -inset-[1px] rounded-full opacity-60 blur-sm overflow-hidden">
+            <div className="absolute inset-[-100%] w-[300%] h-[300%] bg-[conic-gradient(from_0deg,transparent_0_300deg,#4285F4_320deg,#EA4335_335deg,#FBBC04_350deg,#34A853_360deg)] animate-[spin_4s_linear_infinite]" />
+          </div>
+        </>
+      )}
 
       {/* 3. Static Track */}
       <div className="absolute inset-0 rounded-full border border-border/50 transition-colors duration-300" />
