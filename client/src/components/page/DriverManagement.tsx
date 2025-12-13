@@ -1,34 +1,66 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { Checkbox } from '../ui/checkbox';
-import { Switch } from '../ui/switch';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Truck, MapPin, Phone, Mail, Search } from 'lucide-react';
-import { toast } from 'sonner';
-import api from '../../lib/api';
-import type { User, Governorate, City } from '../../types';
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Badge } from "../ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../ui/dialog";
+import { Checkbox } from "../ui/checkbox";
+import { Switch } from "../ui/switch";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Truck, MapPin, Phone, Mail, Search } from "lucide-react";
+import { toast } from "sonner";
+import api from "../../lib/api";
+import type { User, Governorate, City } from "../../types";
 
 interface CitySelection {
   governorate: string;
   city: string;
 }
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
+
 export default function DriverManagement() {
   const [drivers, setDrivers] = useState<User[]>([]);
   const [filteredDrivers, setFilteredDrivers] = useState<User[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "available" | "unavailable"
+  >("all");
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<User | null>(null);
   const [selectedCities, setSelectedCities] = useState<CitySelection[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     fetchDrivers();
@@ -37,44 +69,56 @@ export default function DriverManagement() {
 
   const fetchDrivers = async () => {
     try {
-      const response = await api.get('/api/drivers/all');
+      const response = await api.get("/api/drivers/all");
       setDrivers(response.data.data);
       setFilteredDrivers(response.data.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch drivers');
+      setError(err.response?.data?.message || "Failed to fetch drivers");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredDrivers(drivers);
-    } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = drivers.filter(driver => 
-        driver.fullName.toLowerCase().includes(query) ||
-        driver.phone?.toLowerCase().includes(query) ||
-        driver.email?.toLowerCase().includes(query) ||
-        driver.assignedCities?.some(city => 
-          city.city.toLowerCase().includes(query) ||
-          city.governorate.toLowerCase().includes(query)
-        )
+    let filtered = drivers;
+
+    // Filter by Status
+    if (statusFilter !== "all") {
+      const isAvailable = statusFilter === "available";
+      filtered = filtered.filter(
+        (driver) => driver.isAvailable === isAvailable
       );
-      setFilteredDrivers(filtered);
     }
-  }, [searchQuery, drivers]);
+
+    // Filter by Search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (driver) =>
+          driver.fullName.toLowerCase().includes(query) ||
+          driver.phone?.toLowerCase().includes(query) ||
+          driver.email?.toLowerCase().includes(query) ||
+          driver.assignedCities?.some(
+            (city) =>
+              city.city.toLowerCase().includes(query) ||
+              city.governorate.toLowerCase().includes(query)
+          )
+      );
+    }
+
+    setFilteredDrivers(filtered);
+  }, [searchQuery, drivers, statusFilter]);
 
   const fetchLocations = async () => {
     try {
       const [govRes, cityRes] = await Promise.all([
-        api.get('/api/locations/governorates?limit=100'),
-        api.get('/api/locations/cities?limit=1000')
+        api.get("/api/locations/governorates?limit=100"),
+        api.get("/api/locations/cities?limit=1000"),
       ]);
       setGovernorates(govRes.data.data);
       setCities(cityRes.data.data);
     } catch (err: any) {
-      console.error('Error fetching locations:', err);
+      console.error("Error fetching locations:", err);
     }
   };
 
@@ -82,15 +126,19 @@ export default function DriverManagement() {
     setSelectedDriver(driver);
     setSelectedCities(driver.assignedCities || []);
     setIsDialogOpen(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
   };
 
   const handleCityToggle = (governorate: string, city: string) => {
-    setSelectedCities(prev => {
-      const exists = prev.some(c => c.governorate === governorate && c.city === city);
+    setSelectedCities((prev) => {
+      const exists = prev.some(
+        (c) => c.governorate === governorate && c.city === city
+      );
       if (exists) {
-        return prev.filter(c => !(c.governorate === governorate && c.city === city));
+        return prev.filter(
+          (c) => !(c.governorate === governorate && c.city === city)
+        );
       } else {
         return [...prev, { governorate, city }];
       }
@@ -98,23 +146,25 @@ export default function DriverManagement() {
   };
 
   const isCitySelected = (governorate: string, city: string) => {
-    return selectedCities.some(c => c.governorate === governorate && c.city === city);
+    return selectedCities.some(
+      (c) => c.governorate === governorate && c.city === city
+    );
   };
 
   const handleToggleAvailability = async (driver: User) => {
     try {
       const newStatus = !driver.isAvailable;
       await api.patch(`/api/drivers/${driver._id}/availability`, {
-        isAvailable: newStatus
+        isAvailable: newStatus,
       });
-      
+
       toast.success(
-        newStatus ? 'تم تفعيل السائق بنجاح' : 'تم تعطيل السائق بنجاح'
+        newStatus ? "تم تفعيل السائق بنجاح" : "تم تعطيل السائق بنجاح"
       );
-      
+
       fetchDrivers();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'فشل في تحديث حالة السائق');
+      toast.error(err.response?.data?.message || "فشل في تحديث حالة السائق");
     }
   };
 
@@ -123,16 +173,16 @@ export default function DriverManagement() {
 
     try {
       await api.post(`/api/drivers/${selectedDriver._id}/assign-cities`, {
-        cities: selectedCities
+        cities: selectedCities,
       });
-      setSuccess('تم تعيين المدن بنجاح');
+      setSuccess("تم تعيين المدن بنجاح");
       fetchDrivers();
       setTimeout(() => {
         setIsDialogOpen(false);
-        setSuccess('');
+        setSuccess("");
       }, 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'فشل تعيين المدن');
+      setError(err.response?.data?.message || "فشل تعيين المدن");
     }
   };
 
@@ -163,6 +213,19 @@ export default function DriverManagement() {
             className="pr-10"
           />
         </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(value: any) => setStatusFilter(value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="تصفية حسب الحالة" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">الكل</SelectItem>
+            <SelectItem value="available">متاح</SelectItem>
+            <SelectItem value="unavailable">غير متاح</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {error && (
@@ -173,92 +236,116 @@ export default function DriverManagement() {
 
       {success && (
         <Alert>
-          <AlertDescription className="text-green-600">{success}</AlertDescription>
+          <AlertDescription className="text-green-600">
+            {success}
+          </AlertDescription>
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-4">
         {filteredDrivers.length === 0 ? (
           <div className="col-span-full text-center py-8 text-muted-foreground">
-            {searchQuery ? 'لا توجد نتائج للبحث' : 'لا يوجد سائقين'}
+            {searchQuery ? "لا توجد نتائج للبحث" : "لا يوجد سائقين"}
           </div>
         ) : (
           filteredDrivers.map((driver) => (
-          <Card key={driver._id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">{driver.fullName}</CardTitle>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {driver.isAvailable ? 'متاح' : 'غير متاح'}
-                    </span>
-                    <Switch
-                      checked={driver.isAvailable || false}
-                      onCheckedChange={() => handleToggleAvailability(driver)}
-                    />
+            <Card key={driver._id} className="overflow-hidden">
+              <div className="p-4 flex flex-wrap items-center justify-between gap-4">
+                {/* 1. Driver Info */}
+                <div className="flex items-center gap-3 min-w-[200px]">
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <Truck className="h-5 w-5 text-primary" />
                   </div>
-                  {driver.isAvailable ? (
-                    <Badge variant="default" className="bg-green-500">متاح</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-gray-400">غير متاح</Badge>
-                  )}
-                </div>
-              </div>
-              {/* <CardDescription>
-                <div className="flex items-center gap-1 mt-1">
-                  <Phone className="h-3 w-3" />
-                  <span className="text-sm">{driver.phone}</span>
-                </div>
-                {driver.email && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Mail className="h-3 w-3" />
-                    <span className="text-sm">{driver.email}</span>
-                  </div>
-                )}
-              </CardDescription> */}
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">المدن المعينة:</span>
-                    <Badge variant="outline">
-                      {driver.assignedCities?.length || 0}
-                    </Badge>
-                  </div>
-                  {driver.assignedCities && driver.assignedCities.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {driver.assignedCities.slice(0, 3).map((cityObj, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {cityObj.city}
-                        </Badge>
-                      ))}
-                      {driver.assignedCities.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{driver.assignedCities.length - 3}
-                        </Badge>
+                  <div>
+                    <h3 className="font-semibold text-lg">{driver.fullName}</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {driver.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" /> {driver.phone}
+                        </span>
                       )}
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">لا يوجد مدن معينة</p>
-                  )}
+                  </div>
                 </div>
-                <Button 
+
+                {/* 2. Availability Status */}
+                <div className="flex items-center gap-3 bg-secondary/50 p-2 rounded-lg">
+                  <span className="text-sm font-medium">
+                    {driver.isAvailable ? "متاح للعمل" : "غير متاح"}
+                  </span>
+                  <Switch
+                    checked={driver.isAvailable || false}
+                    onCheckedChange={() => handleToggleAvailability(driver)}
+                  />
+                  <Badge
+                    variant={driver.isAvailable ? "default" : "secondary"}
+                    className={
+                      driver.isAvailable
+                        ? "bg-green-500 hover:bg-green-600"
+                        : "bg-gray-400"
+                    }
+                  >
+                    {driver.isAvailable ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+
+                {/* 3. Assigned Cities (Dropdown) */}
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-9 gap-2 min-w-[140px] justify-between"
+                      >
+                        <span className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {driver.assignedCities?.length || 0} مدن معينة
+                          </span>
+                        </span>
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-[200px] h-60 overflow-y-auto"
+                    >
+                      <DropdownMenuLabel>المدن المغطاة</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {driver.assignedCities &&
+                      driver.assignedCities.length > 0 ? (
+                        driver.assignedCities.map((cityObj, idx) => (
+                          <DropdownMenuItem
+                            key={idx}
+                            className="justify-end cursor-default"
+                          >
+                            {cityObj.city} -{" "}
+                            {typeof cityObj.governorate === "string"
+                              ? ""
+                              : cityObj.governorate}
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-center text-sm text-muted-foreground">
+                          لا يوجد مدن
+                        </div>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* 4. Action Button */}
+                <Button
                   onClick={() => openAssignDialog(driver)}
-                  className="w-full"
-                  variant="outline"
+                  size="sm"
+                  variant="default"
+                  className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
                 >
-                  تعيين المدن
+                  تعديل المدن
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        ))
+            </Card>
+          ))
         )}
       </div>
 
@@ -272,8 +359,11 @@ export default function DriverManagement() {
       )}
 
       {/* Assignment Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} >
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-background" dir='rtl'>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent
+          className="max-w-3xl max-h-[80vh] overflow-y-auto bg-background"
+          dir="rtl"
+        >
           <DialogHeader>
             <DialogTitle className="text-right text-lg font-bold text-blue-600">
               تعيين المدن للسائق: {selectedDriver?.fullName}
@@ -282,25 +372,33 @@ export default function DriverManagement() {
 
           <div className="space-y-4 py-4">
             {governorates.map((gov) => {
-              const govCities = cities.filter(
-                city => typeof city.governorate === 'object' 
-                  ? city.governorate._id === gov._id 
+              const govCities = cities.filter((city) =>
+                typeof city.governorate === "object"
+                  ? city.governorate._id === gov._id
                   : city.governorate === gov._id
               );
 
               if (govCities.length === 0) return null;
 
               return (
-                <div key={gov._id} className="border border-ring rounded-lg p-4 bg-secondary">
+                <div
+                  key={gov._id}
+                  className="border border-ring rounded-lg p-4 bg-secondary"
+                >
                   <h3 className="font-semibold text-lg mb-3">{gov.govName}</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {govCities.map((city) => (
-                      <div key={city._id} className="flex items-center space-x-2 space-x-reverse">
+                      <div
+                        key={city._id}
+                        className="flex items-center space-x-2 space-x-reverse"
+                      >
                         <Checkbox
                           id={`city-${city._id}`}
                           checked={isCitySelected(gov.govName, city.cityName)}
-                          onCheckedChange={() => handleCityToggle(gov.govName, city.cityName)}
-                          className='border border-ring'
+                          onCheckedChange={() =>
+                            handleCityToggle(gov.govName, city.cityName)
+                          }
+                          className="border border-ring"
                         />
                         <label
                           htmlFor={`city-${city._id}`}
