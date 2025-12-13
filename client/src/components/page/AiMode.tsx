@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   MoreVertical,
   X,
+  ArrowDown,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import {
@@ -241,6 +242,7 @@ const InputBox = ({
   selectedFile,
   clearFile,
   showIntroGlow = false,
+  textAreaRef,
 }: {
   question: string;
   setQuestion: (val: string) => void;
@@ -255,14 +257,13 @@ const InputBox = ({
   selectedFile?: File | null;
   clearFile?: () => void;
   showIntroGlow?: boolean;
+  textAreaRef: React.RefObject<HTMLTextAreaElement>;
 }) => {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
     if (centered) {
-      inputRef.current?.focus();
+      textAreaRef.current?.focus();
     }
-  }, [centered]);
+  }, [centered, textAreaRef]);
 
   return (
     <div
@@ -315,7 +316,7 @@ const InputBox = ({
         )}
 
         <textarea
-          ref={inputRef}
+          ref={textAreaRef}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           disabled={false}
@@ -418,9 +419,19 @@ const AiMode = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // Intro Animation State
   const [showIntroGlow, setShowIntroGlow] = useState(true);
+
+  // Listen for 'reset-ai-chat' event from AiButton
+  useEffect(() => {
+    const handleReset = () => {
+      startNewChat();
+    };
+    window.addEventListener("reset-ai-chat", handleReset);
+    return () => window.removeEventListener("reset-ai-chat", handleReset);
+  }, [messages, currentSessionId]); // Dependencies needed for startNewChat context if it relies on them
 
   useEffect(() => {
     // Turn off glow after 5 seconds (adjusted per user request)
@@ -453,11 +464,22 @@ const AiMode = () => {
         }));
         setSessions(sanitizedSessions);
 
-        // AUTO-RESTORE LAST SESSION
-        if (sanitizedSessions.length > 0) {
-          const lastSession = sanitizedSessions[0];
-          setCurrentSessionId(lastSession.id);
-          setMessages(lastSession.messages);
+        // CHECK LAST ACTIVE USER FOR RESTORE LOGIC
+        const LAST_USER_KEY = "ai_last_active_user_id";
+        const lastUserId = localStorage.getItem(LAST_USER_KEY);
+
+        // Only auto-restore if we are returning as the SAME user
+        if (lastUserId === user._id) {
+          if (sanitizedSessions.length > 0) {
+            const lastSession = sanitizedSessions[0];
+            setCurrentSessionId(lastSession.id);
+            setMessages(lastSession.messages);
+          }
+        } else {
+          // New User Login / Switch: Start Fresh
+          localStorage.setItem(LAST_USER_KEY, user._id);
+          setCurrentSessionId(null);
+          setMessages([]);
         }
       } catch (e) {
         console.error("Failed to parse history", e);
@@ -524,9 +546,45 @@ const AiMode = () => {
     });
   }, [messages]);
 
-  useEffect(() => {
+  // Track if user is at bottom *before* updates to decouple logic
+  const isUserAtBottomRef = useRef(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+    // User is "at bottom" if within 100px
+    const isAtBottom = distanceToBottom < 100;
+    isUserAtBottomRef.current = isAtBottom;
+
+    // Show button if NOT at bottom (distance > 300 for better UX)
+    if (distanceToBottom > 300) {
+      setShowScrollButton(true);
+    } else {
+      setShowScrollButton(false);
+    }
+  };
+
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  };
+
+  // Smart Auto-Scroll
+  useEffect(() => {
+    // Only scroll if the user was already at the bottom
+    if (isUserAtBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]); // If messages change (streaming), and we ARE at bottom, keep scrolling.
+
+  // Also force scroll on explicit "loading start" (new query)
+  useEffect(() => {
+    if (loading) {
+      isUserAtBottomRef.current = true; // Reset to true on new chat
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [loading]);
 
   const chatStarted = messages.length > 0;
 
@@ -581,6 +639,13 @@ const AiMode = () => {
   const generateId = () => Date.now().toString();
 
   const startNewChat = () => {
+    // If we are already in a new chat (no messages), just close the history
+    if (messages.length === 0) {
+      setShowHistory(false);
+      textAreaRef.current?.focus();
+      return;
+    }
+
     if (messages.length === 0 && currentSessionId) return;
 
     const newId = generateId();
@@ -588,9 +653,22 @@ const AiMode = () => {
     currentSessionIdRef.current = newId;
     setMessages([]);
     setQuestion("");
-    setMessages([]);
-    setQuestion("");
     setShowHistory(false); // Close history on new chat
+    isUserAtBottomRef.current = true; // Reset scroll state
+
+    setTimeout(() => {
+      textAreaRef.current?.focus();
+    }, 100);
+  };
+
+  const clearAllSessions = () => {
+    if (window.confirm("هل أنت متأكد من حذف جميع المحادثات؟")) {
+      setSessions([]);
+      setMessages([]);
+      setCurrentSessionId(null);
+      currentSessionIdRef.current = null;
+      setShowHistory(false);
+    }
   };
 
   const addMessageSafe = (
@@ -612,6 +690,10 @@ const AiMode = () => {
     currentSessionIdRef.current = session.id;
     setMessages(session.messages);
     setShowHistory(false); // Close history drawer on selection
+
+    setTimeout(() => {
+      textAreaRef.current?.focus();
+    }, 100);
   };
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
@@ -793,10 +875,16 @@ const AiMode = () => {
                 <Edit className="h-4 w-4" />
               </button>
               <button
-                className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-accent"
-                title="القائمة"
+                onClick={clearAllSessions}
+                disabled={sessions.length === 0}
+                className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-muted-foreground"
+                title={
+                  sessions.length > 0
+                    ? "حذف السجل بالكامل"
+                    : "لا يوجد سجلات للمسح"
+                }
               >
-                <MoreVertical className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -860,7 +948,10 @@ const AiMode = () => {
         </div>
 
         {/* Chat Scroll Area */}
-        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+        <div
+          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+          onScroll={handleScroll}
+        >
           {!chatStarted ? (
             <div className="flex min-h-full flex-col items-center justify-center p-4">
               <div className="mb-8 text-center animate-fade-in">
@@ -880,6 +971,7 @@ const AiMode = () => {
                   handleSend={handleSend}
                   handleUpload={handleUpload}
                   fileInputRef={fileInputRef}
+                  textAreaRef={textAreaRef}
                   startListening={startListening}
                   stopListening={stopListening}
                   isListening={isListening}
@@ -964,6 +1056,17 @@ const AiMode = () => {
           )}
         </div>
 
+        {/* Floating Scroll to Bottom Button */}
+        {showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-55 left-1/2 -translate-x-1/2 z-20 p-2 rounded-full bg-secondary/80 text-secondary-foreground border border-border shadow-sm transition-all cursor-pointer"
+            title="Go to bottom"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+        )}
+
         {/* Floating Input (Fixed at Bottom of Chat Area) */}
         {chatStarted && (
           <div className="sticky bottom-0 z-10 w-full bg-gradient-to-t from-background via-background to-transparent pb-6 pt-10">
@@ -975,6 +1078,7 @@ const AiMode = () => {
                 handleSend={handleSend}
                 handleUpload={handleUpload}
                 fileInputRef={fileInputRef}
+                textAreaRef={textAreaRef}
                 startListening={startListening}
                 stopListening={stopListening}
                 isListening={isListening}
