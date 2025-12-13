@@ -14,7 +14,9 @@ dotenv.config();
 // ================= CONFIGURATION =================
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
-const client = new ChromaClient();
+const client = new ChromaClient({
+  path: "http://localhost:8000"
+});
 const COLLECTION_NAME = "rag_knowledge_base";
 
 // Import Models for Dynamic Data
@@ -655,7 +657,10 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     if (question) {
       // RAG Search
       const queryVector = await getEmbedding(question);
-      const collection = await client.getCollection({ name: COLLECTION_NAME });
+      const collection = await client.getOrCreateCollection({ 
+        name: COLLECTION_NAME,
+        embeddingFunction: null
+      });
 
       const result = await collection.query({
         queryEmbeddings: [queryVector],
