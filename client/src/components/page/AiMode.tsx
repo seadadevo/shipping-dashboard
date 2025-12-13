@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   MoreVertical,
   X,
+  ArrowDown,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import {
@@ -535,9 +536,48 @@ const AiMode = () => {
     });
   }, [messages]);
 
-  useEffect(() => {
+  // Track if user is at bottom *before* updates to decouple logic
+  const isUserAtBottomRef = useRef(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+    // User is "at bottom" if within 100px
+    const isAtBottom = distanceToBottom < 100;
+    isUserAtBottomRef.current = isAtBottom;
+
+    // Show button if NOT at bottom (distance > 300 for better UX)
+    if (distanceToBottom > 300) {
+      setShowScrollButton(true);
+    } else {
+      setShowScrollButton(false);
+    }
+  };
+
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+    // Force state update to hide button immediately usually handled by onScroll,
+    // but explicit set feels snappier
+    setShowScrollButton(false);
+  };
+
+  // Smart Auto-Scroll
+  useEffect(() => {
+    // Only scroll if the user was already at the bottom
+    if (isUserAtBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]); // If messages change (streaming), and we ARE at bottom, keep scrolling.
+
+  // Also force scroll on explicit "loading start" (new query)
+  useEffect(() => {
+    if (loading) {
+      isUserAtBottomRef.current = true; // Reset to true on new chat
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [loading]);
 
   const chatStarted = messages.length > 0;
 
@@ -599,9 +639,8 @@ const AiMode = () => {
     currentSessionIdRef.current = newId;
     setMessages([]);
     setQuestion("");
-    setMessages([]);
-    setQuestion("");
     setShowHistory(false); // Close history on new chat
+    isUserAtBottomRef.current = true; // Reset scroll state
   };
 
   const addMessageSafe = (
@@ -871,7 +910,10 @@ const AiMode = () => {
         </div>
 
         {/* Chat Scroll Area */}
-        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+        <div
+          className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+          onScroll={handleScroll}
+        >
           {!chatStarted ? (
             <div className="flex min-h-full flex-col items-center justify-center p-4">
               <div className="mb-8 text-center animate-fade-in">
@@ -974,6 +1016,17 @@ const AiMode = () => {
             </div>
           )}
         </div>
+
+        {/* Floating Scroll to Bottom Button */}
+        {showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-28 left-1/2 -translate-x-1/2 z-20 p-2 rounded-full bg-primary/90 text-primary-foreground shadow-lg hover:bg-primary transition-all animate-bounce"
+            title="Go to bottom"
+          >
+            <ArrowDown className="h-5 w-5" />
+          </button>
+        )}
 
         {/* Floating Input (Fixed at Bottom of Chat Area) */}
         {chatStarted && (

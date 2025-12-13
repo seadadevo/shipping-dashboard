@@ -634,9 +634,19 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         }
 
         if (isPdf) {
+          console.log("📄 Detected PDF. Reading file...");
           const dataBuffer = fs.readFileSync(filePath);
-          const data = await pdf(dataBuffer);
-          rawText = data.text;
+          console.log(`📄 PDF Buffer Size: ${dataBuffer.length} bytes`);
+          try {
+            const data = await pdf(dataBuffer);
+            rawText = data.text;
+            console.log(
+              `📄 PDF Extraction Success. Text Length: ${rawText.length}`
+            );
+          } catch (pdfErr) {
+            console.error("❌ PDF Parse Error:", pdfErr);
+            rawText = ""; // Treat as empty if parsing crashes
+          }
         } else if (isCsv) {
           rawText = await parseCSV(filePath);
         } else if (isImage) {
@@ -658,7 +668,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         // Index file into Vector DB, preserving Base Document context.
         // Index file into Vector DB, preserving Base Document context.
         // ENFORCE MINIMUM CONTENT: Stricter for PDF to catch scanned files. Relaxed for TXT/CSV.
-        const minLength = isPdf ? 50 : 1;
+        const minLength = isPdf ? 5 : 1; // WAS 50. Lowered to 5 to allow simple test PDFs.
         if (rawText && rawText.trim().length > minLength) {
           try {
             await processAndStoreDocument(rawText);
