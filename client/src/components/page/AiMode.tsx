@@ -11,7 +11,6 @@ import {
   Clock,
   StopCircle,
   ChevronLeft,
-  MoreVertical,
   X,
   ArrowDown,
 } from "lucide-react";
@@ -28,6 +27,21 @@ import {
   Line,
   Legend,
 } from "recharts";
+
+// --- Speech Recognition Interfaces ---
+interface SpeechRecognitionEvent {
+  results: {
+    [key: number]: {
+      [key: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
 
 const API_URL = "http://localhost:5000/api/ai";
 
@@ -149,59 +163,6 @@ const ChartRenderer = ({ jsonString }: { jsonString: string }) => {
   } catch {
     return <div className="text-red-500 text-sm">Error rendering chart.</div>;
   }
-};
-
-// --- Component: Typewriter ---
-const Typewriter = ({
-  text,
-  onComplete,
-}: {
-  text: string;
-  onComplete?: () => void;
-}) => {
-  const [displayedText, setDisplayedText] = useState("");
-  const indexRef = useRef(0);
-
-  useEffect(() => {
-    // If text is empty, just complete immediately
-    if (!text) {
-      if (onComplete) onComplete();
-      return;
-    }
-
-    indexRef.current = 0;
-    setDisplayedText("");
-
-    const intervalId = setInterval(() => {
-      // Add multiple chars per tick for speed (adjustable)
-      const chunkSize = 5;
-      const nextIndex = Math.min(indexRef.current + chunkSize, text.length);
-
-      setDisplayedText(text.slice(0, nextIndex));
-      indexRef.current = nextIndex;
-
-      if (indexRef.current >= text.length) {
-        clearInterval(intervalId);
-        if (onComplete) onComplete();
-      }
-    }, 15); // Speed in ms
-
-    return () => clearInterval(intervalId);
-  }, [text]); // Re-run if text content changes completely (should happen once per msg)
-
-  // Use the parent's render logic for the partial text
-  // We need to pass this back up or replicate the render logic?
-  // Easier: Just return the content using the logic directly here or via a render prop?
-  // Let's use a render prop approach or just duplicate the renderMessageContent call if accessible?
-  // Since Typewriter is defined outside AiMode, it doesn't have access to renderMessageContent easily unless passed or moved.
-  // I will move renderMessageContent to be a helper outside or pass it.
-
-  // Actually, I can render standard text here. But renderMessageContent handles Charts.
-  // Let's assume Typewriter is used *inside* AiMode where renderMessageContent is available?
-  // No, I'm defining it outside. I'll move renderMessageContent outside or duplicate relevant logic.
-  // Actually, standardizing: The ChartRenderer is receiving a string.
-  // Let's make `renderMessageContent` a standalone helper outside AiMode.
-  return <>{renderMessageContent(displayedText)}</>;
 };
 
 // Helper function wrapper for external usage if needed
@@ -599,7 +560,10 @@ const AiMode = () => {
     }
 
     const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).SpeechRecognition ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
     recognition.continuous = false;
@@ -610,12 +574,12 @@ const AiMode = () => {
       setIsListening(true);
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       setQuestion((prev) => prev + (prev ? " " : "") + transcript);
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
     };
@@ -787,17 +751,22 @@ const AiMode = () => {
           });
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Chat Error:", err);
       // If we already started streaming, appending error might be weird, but okay
       setMessages((prev) => {
         const newMsgs = [...prev];
         const lastIdx = newMsgs.length - 1;
+        const errorMessage =
+          err instanceof Error ? err.message : "حدث خطأ غير متوقع";
         if (lastIdx >= 0 && newMsgs[lastIdx].sender === "ai") {
-          newMsgs[lastIdx].text += `\n⚠️ حدث خطأ: ${err.message}`;
+          newMsgs[lastIdx].text += `\n⚠️ حدث خطأ: ${errorMessage}`;
         } else {
           // If failed before start
-          newMsgs.push({ sender: "ai", text: `⚠️ حدث خطأ: ${err.message}` });
+          newMsgs.push({
+            sender: "ai",
+            text: `⚠️ حدث خطأ: ${errorMessage}`,
+          });
         }
         return newMsgs;
       });

@@ -134,7 +134,7 @@ export function OrderManagement() {
   const [isDriverDialogOpen, setIsDriverDialogOpen] = useState(false);
   const [selectedOrderForDriver, setSelectedOrderForDriver] =
     useState<Order | null>(null);
-  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<User[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string>("");
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
   const [isAssigningDriver, setIsAssigningDriver] = useState(false);
@@ -379,8 +379,6 @@ export function OrderManagement() {
 
     setIsAssigningDriver(true);
     try {
-      const previousStatus = selectedOrderForDriver.status;
-
       // Update order with driver and status
       await api.patch(
         `/api/orders/${selectedOrderForDriver._id}/assign-driver`,
@@ -402,9 +400,10 @@ export function OrderManagement() {
 
       fetchOrders();
       fetchOrderStats();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to assign driver:", err);
-      const errorMsg = err.response?.data?.message || "فشل تعيين السائق";
+      const errorMsg =
+        (err as any).response?.data?.message || "فشل تعيين السائق";
       toast.error(errorMsg);
     } finally {
       setIsAssigningDriver(false);
@@ -627,10 +626,10 @@ export function OrderManagement() {
                       <TableCell>
                         <div>
                           <p className="font-medium">
-                            {order.createdBy.fullName}
+                            {/* {order.createdBy.fullName} */}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {order.createdBy.userType}
+                            {/* {order.createdBy.userType} */}
                           </p>
                         </div>
                       </TableCell>

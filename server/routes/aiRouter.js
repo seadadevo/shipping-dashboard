@@ -8,8 +8,7 @@ const tesseract = require("tesseract.js");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
 const { ChromaClient } = require("chromadb");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const dotenv = require("dotenv");
-dotenv.config();
+const mongoose = require("mongoose");
 
 // ================= CONFIGURATION =================
 const router = express.Router();
@@ -103,7 +102,6 @@ async function fetchDynamicSystemContext(userType, userId) {
 
       let deliveredProfit = 0;
       let pendingProfit = 0;
-      const mongoose = require("mongoose"); // Ensure mongoose is available or use implicit if global (better to be safe, but file likely has it or we rely on model imports. Wait, aiRouter didn't import mongoose. I should add it or check imports. Models use it.)
 
       profitStats.forEach((stat) => {
         if (stat._id === "Delivered") {
@@ -165,8 +163,6 @@ async function fetchDynamicSystemContext(userType, userId) {
       if (!userId) return "[Merchant Data Error: No ID]";
 
       // Need mongoose for ObjectId casting if stored as ObjectId
-      const mongoose = require("mongoose");
-
       const myOrdersCount = await Order.countDocuments({ createdBy: userId });
       const myPending = await Order.countDocuments({
         createdBy: userId,
@@ -289,10 +285,11 @@ async function resetCollection() {
     await client.deleteCollection({ name: COLLECTION_NAME });
     console.log(`✅ Collection '${COLLECTION_NAME}' deleted.`);
   } catch (e) {
-    // Ignore if it doesn't exist
-    console.log(
-      `ℹ️ Collection '${COLLECTION_NAME}' did not exist or could not be deleted.`
-    );
+    if (e.code === "ECONNREFUSED" || e.message.includes("fetch failed")) {
+      console.warn(`⚠️ ChromaDB not reachable. RAG features will be disabled.`);
+    } else {
+      console.log(`ℹ️ Collection '${COLLECTION_NAME}' status: ${e.message}`);
+    }
   }
 }
 // Fire and forget on startup

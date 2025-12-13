@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Package,
@@ -114,7 +114,7 @@ const AdminDashboard: React.FC = () => {
   const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] =
     useState<number>(0);
 
-  const fetchOrders = async (): Promise<void> => {
+  const fetchOrders = useCallback(async (): Promise<void> => {
     try {
       const response = await api.get<GetOrdersResponse>(
         "/api/orders?limit=1000"
@@ -208,11 +208,11 @@ const AdminDashboard: React.FC = () => {
       console.log("Orders fetched successfully");
       setOrdersLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   ///////////////////////////////////////////////////////////////////////
   return (

@@ -375,7 +375,7 @@ export function EmployeeDashboard() {
           <div className="space-y-4">
             {allRecentOrders.map((order) => (
               <div
-                key={order.id}
+                key={order._id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors"
               >
                 <div className="flex items-center space-x-4 space-x-reverse">
