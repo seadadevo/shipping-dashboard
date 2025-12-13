@@ -154,7 +154,7 @@ export const DriverDashboard: React.FC = () => {
 
         // رسالة خاصة عند التسليم
         if (newStatus === "Delivered") {
-          toast.success("🎉 تم التسليم بنجاح!", {
+          toast.success(" تم التسليم بنجاح!", {
             description: 'تم نقل الطلب إلى صفحة "توصيلاتي"',
           });
         } else if (newStatus === "Cancelled") {
