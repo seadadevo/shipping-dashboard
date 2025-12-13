@@ -19,7 +19,18 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { Switch } from "../ui/switch";
 import { Alert, AlertDescription } from "../ui/alert";
-import { Truck, MapPin, Phone, Mail, Search } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Plus,
+  Loader2,
+  Search,
+  Truck,
+  MapPin,
+  Phone,
+  Mail,
+} from "lucide-react";
 import { toast } from "sonner";
 import api from "../../lib/api";
 import type { User, Governorate, City } from "../../types";
@@ -198,7 +209,7 @@ export default function DriverManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">جاري التحميل...</div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }

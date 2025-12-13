@@ -676,14 +676,6 @@ export function OrderManagement() {
 
                             {/* إلغاء الطلب للتاجر */}
                             {(() => {
-                              console.log("Debug:", {
-                                userType: user?.userType,
-                                orderStatus: order.status,
-                                showCancel:
-                                  user?.userType === "merchant" &&
-                                  (order.status === "Pending" ||
-                                    order.status === "Processing"),
-                              });
                               return (
                                 user?.userType === "merchant" &&
                                 (order.status === "Pending" ||
