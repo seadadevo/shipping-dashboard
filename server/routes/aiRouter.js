@@ -407,7 +407,7 @@ async function processAndStoreDocument(rawText) {
   }
 }
 
-async function generateAnswer(context, query, res = null) {
+async function generateAnswer(context, query, res = null, base64Image = null) {
   const prompt = `
     You are a **Strategic Data Analyst & Logistics Consultant** for a Shipping Company.
     
@@ -445,11 +445,45 @@ async function generateAnswer(context, query, res = null) {
     \`\`\`
     
     ### CONTEXT & QUERY
-    Context:
+    [SYSTEM CONTEXT]:
     ${context}
     
-    User Question: ${query}
+    [USER QUESTION]:
+    ${query}
   `;
+
+  // Construct Messages Payload
+  const messages = [
+    {
+      role: "system",
+      content:
+        "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
+    },
+  ];
+
+  if (base64Image) {
+    // Vision Payload
+    messages.push({
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text:
+            prompt +
+            "\n\n[SYSTEM NOTE: The user has attached an image for analysis. Use your Vision capabilities to analyze it.]",
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: base64Image, // Now checks for full data URI passed from caller
+          },
+        },
+      ],
+    });
+  } else {
+    // Standard Text Payload
+    messages.push({ role: "user", content: prompt });
+  }
 
   try {
     const fetchResponse = await fetch(
@@ -462,14 +496,7 @@ async function generateAnswer(context, query, res = null) {
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a helpful assistant that ALWAYS answers in Arabic. You have access to LIVE shipping data.",
-            },
-            { role: "user", content: prompt },
-          ],
+          messages: messages,
           temperature: 0.2,
           stream: !!res, // Enable streaming if res is active
         }),
@@ -571,13 +598,14 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     }
 
     console.log(
-      `💬 Request: Text="${question || "None"}", File="${
+      `💬 Request: QuestionType=${typeof question}, QuestionValue="${question}", File=${
         file ? file.originalname : "None"
-      }"`
+      }`
     );
 
     // --- 1. PROCESS FILE (If attached) ---
     let fileContext = "";
+    let base64Image = null;
 
     if (file) {
       console.log(`📂 Processing attached file: ${file.originalname}`);
@@ -596,6 +624,15 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         /\.(jpg|jpeg|png|webp)$/.test(file.originalname.toLowerCase());
 
       try {
+        if (isImage) {
+          // Read image as Base64 for Vision API
+          const imageBuffer = fs.readFileSync(filePath);
+          // Construct full Data URI with correct Mime Type
+          base64Image = `data:${file.mimetype};base64,${imageBuffer.toString(
+            "base64"
+          )}`;
+        }
+
         if (isPdf) {
           const dataBuffer = fs.readFileSync(filePath);
           const data = await pdf(dataBuffer);
@@ -612,10 +649,31 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           rawText = fs.readFileSync(filePath, "utf-8");
         }
 
+        console.log(
+          `🔍 Extracted Text Length: ${rawText ? rawText.length : 0} chars`
+        );
+        if (rawText && rawText.length < 200)
+          console.log(`🔍 Preview: ${rawText}`);
+
         // Index file into Vector DB, preserving Base Document context.
-        if (rawText && rawText.trim()) {
-          await processAndStoreDocument(rawText);
+        // Index file into Vector DB, preserving Base Document context.
+        // ENFORCE MINIMUM CONTENT: Stricter for PDF to catch scanned files. Relaxed for TXT/CSV.
+        const minLength = isPdf ? 50 : 1;
+        if (rawText && rawText.trim().length > minLength) {
+          try {
+            await processAndStoreDocument(rawText);
+          } catch (ragErr) {
+            console.warn(
+              "⚠️ RAG Indexing failed (continuing with raw text):",
+              ragErr.message
+            );
+          }
           fileContext = rawText; // Keep a reference
+        } else {
+          console.log(
+            `⚠️ File text too short (<${minLength} chars), treating as empty/scanned.`
+          );
+          fileContext = ""; // Force empty to trigger the smart error handler
         }
       } catch (fileErr) {
         console.error("Error parsing file:", fileErr);
@@ -636,17 +694,33 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     // CASE A: File ONLY (No question)
     // -> Provide a summary or confirmation
     if (file && !question) {
-      if (fileContext) {
+      console.log(
+        `🔍 CASE A TRIGGERED: File Only. ContextLen=${
+          fileContext.length
+        }, hasBase64=${!!base64Image}`
+      );
+      if (fileContext || base64Image) {
         // Ask AI to summarize the new content
         const summaryPrompt =
-          "I just uploaded this file. Please analyze it briefly and give me a summary of what it contains in Arabic.";
+          "I have uploaded a file (content is embedded above/below). Please analyze it and give me a comprehensive summary in Arabic.";
+
+        // Explicitly format the context for CASE A so AI knows this IS the file
+        const formattedContext = fileContext
+          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n`
+          : "";
 
         // Stream the summary
         res.setHeader("Content-Type", "text/plain; charset=utf-8"); // Optional: Consider Transfer-Encoding chunked
-        await generateAnswer(fileContext, summaryPrompt, res);
+        await generateAnswer(formattedContext, summaryPrompt, res, base64Image);
       } else {
+        // Smart Error Handling
+        if (isPdf) {
+          return res.json({
+            answer: `⚠️ **عذراً، لم أتمكن من استخراج نص من هذا الملف (PDF).**\n\n- يبدو أن الملف "ممسوح ضوئياً" (Scanned) أو عبارة عن صور.\n- ✨ **الحل:** يرجى التقاط **لقطة شاشة (Screenshot)** للصفحة ورفعها كصورة. سأستخدم "عيوني" الذكية (Vision) لقراءتها فوراً!`,
+          });
+        }
         return res.json({
-          answer: `✅ تم رفع الملف **${file.originalname}** بنجاح. النص فيه غير واضح أو فارغ.`,
+          answer: `✅ تم رفع الملف **${file.originalname}** بنجاح، ولكن لم أتمكن من قراءة النص بوضوح. حاول رفعه كصورة أو ملف نصي.`,
         });
       }
       return; // End response handled by stream or fast return
@@ -678,13 +752,22 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       retrievedContext = `
       ${systemContext}
 
-      ${fileContext ? `[FRESHLY UPLOADED FILE CONTENT]:\n${fileContext}\n` : ""}
+      ${
+        fileContext
+          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n(Please analyze the content above)`
+          : ""
+      }
 
       [EXISTING KNOWLEDGE BASE]:
       ${retrievedContext}
       `;
 
-      finalAnswer = await generateAnswer(retrievedContext, question, res);
+      finalAnswer = await generateAnswer(
+        retrievedContext,
+        question,
+        res,
+        base64Image
+      );
       return; // Response ended by generateAnswer stream
     }
   } catch (error) {
