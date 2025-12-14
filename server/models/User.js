@@ -2,59 +2,64 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const validator = require("validator");
 
-const userSchema = new mongoose.Schema({
-	userType: {
-		type: String,
-		enum: ["admin", "employee", "courier", "merchant"],
-		required: true,
-	},
-	fullName: {
-		type: String,
-		required: true,
-		unique: true,
-		trim: true,
-	},
-	email: {
-		type: String,
-		required: true,
-		unique: true,
-		lowercase: true,
-		validate: [validator.isEmail, "Invalid email format"],
-	},
-	password: {
-		type: String,
-		required: true,
-		minlength: [8, "Password must be at least 8 characters long"],
-	},
-	phone: {
-		type: String,
-		required: true,
-	},
-	address: String,
-	governorate: String,
-	city: String,
-	storeName: {
-		type: String,
-		required: function () {
-			return this.userType === "merchant";
-		},
-	},
-	// Driver-specific fields
-	assignedCities: {
-		type: [{
-			governorate: String,
-			city: String
-		}],
-		default: [],
-		required: function() {
-			return this.userType === "courier";
-		}
-	},
-	isAvailable: {
-		type: Boolean,
-		default: true
-	}
-});
+const userSchema = new mongoose.Schema(
+  {
+    userType: {
+      type: String,
+      enum: ["admin", "employee", "courier", "merchant"],
+      required: true,
+    },
+    fullName: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      validate: [validator.isEmail, "Invalid email format"],
+    },
+    password: {
+      type: String,
+      required: true,
+      minlength: [8, "Password must be at least 8 characters long"],
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
+    address: String,
+    governorate: String,
+    city: String,
+    storeName: {
+      type: String,
+      required: function () {
+        return this.userType === "merchant";
+      },
+    },
+    // Driver-specific fields
+    assignedCities: {
+      type: [
+        {
+          governorate: String,
+          city: String,
+        },
+      ],
+      default: [],
+      required: function () {
+        return this.userType === "courier";
+      },
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { timestamps: true }
+);
 
 // Hash password before saving
 userSchema.pre("save", async function (next) {
