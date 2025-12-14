@@ -288,14 +288,24 @@ exports.deleteCity = async (req, res) => {
 exports.getCitiesByGovernorate = async (req, res) => {
   try {
     const { govId } = req.params;
+    console.log('🔍 getCitiesByGovernorate called with govId:', govId);
+    
     if (!govId) {
        return res.status(400).json({ message: "معرف المحافظة مطلوب" });
     }
+    
+    // First, let's check if cities exist for this governorate
+    const totalCities = await City.countDocuments({ governorate: govId });
+    const activeCities = await City.countDocuments({ governorate: govId, isActive: true });
+    console.log(`📊 Found ${totalCities} total cities, ${activeCities} active cities for govId: ${govId}`);
+    
     const { page, limit } = req.query;
     const { data: cities, meta } = await paginate(City, { governorate: govId, isActive: true }, { page, limit, populate: { path: 'governorate', select: 'govName govCode' }, sort: { cityName: 1 } });
 
+    console.log('✅ Returning cities:', cities.length);
     res.status(200).json({ status: "success", results: cities.length, meta, data: cities });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error('❌ Error in getCitiesByGovernorate:', error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

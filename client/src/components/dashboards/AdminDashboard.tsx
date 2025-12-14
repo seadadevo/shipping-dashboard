@@ -110,25 +110,13 @@ const AdminDashboard: React.FC = () => {
     const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState<number>(0);
     const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState<number>(0);
 
-    const [shippingTypes, setShippingTypes] = useState([]);
-    const [cities, setCities] = useState([]);
-    const [weightSettings, setWeightSettings] = useState([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [shippingTypes, setShippingTypes] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [cities, setCities] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [weightSettings, setWeightSettings] = useState<any[]>([]);
 
-    const fetchOrders = async (): Promise<void> => {
-        // setLoading(true);
-        // setError(null);
-        try {
-            const response = await api.get<GetOrdersResponse>("/api/orders?limit=1000");
-            const ordersList = response.data?.data?.orders || [];
-            setAllOrders(Array.isArray(ordersList) ? ordersList : []);
-        } catch (err) {
-            const error = err as ApiError;
-            console.error("Error fetching orders:", error);
-        } finally {
-            console.log("Orders fetched successfully");
-            // setLoading(false);
-        }
-    };
     useEffect(() => {
       // جلب أنواع الشحن
       api.get("/api/shipping-types").then(res => setShippingTypes(res.data.data));
@@ -174,8 +162,9 @@ const AdminDashboard: React.FC = () => {
         السبت: 0,
       };
 
-      if (safeOrde
-        const todayNum = new Date().getDay();
+      const todayNum = new Date().getDay();
+      
+      if (safeOrders.length > 0) {
         for (const order of safeOrders) {
           if (isDateToday(order.createdAt) === "today") {
             localCountOrdersToday += 1;
@@ -244,6 +233,7 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   ///////////////////////////////////////////////////////////////////////

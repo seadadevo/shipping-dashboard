@@ -66,21 +66,6 @@ export function EmployeeDashboard() {
         setUsers(Array.isArray(usersList) ? usersList : []);
 
         const ordersList = ordersRes.data?.data?.orders || [];
-    useEffect(() => {
-        getUsers().catch(console.error);
-    }, []);
-
-   
-    const merchantsCount = useMemo(() => {
-        return users.reduce((acc, u) => acc + (u.userType?.toLowerCase() === "merchant" ? 1 : 0), 0);
-    }, [users]);
-
-    
-    const [orders, setOrders] = useState<Order[]>([]);
-    const getAllOrders = async (): Promise<void> => {
-        const res = await api.get("/api/orders?limit=1000");
-       
-        const ordersList = res.data?.data?.orders || [];
         setOrders(Array.isArray(ordersList) ? ordersList : []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -88,6 +73,7 @@ export function EmployeeDashboard() {
         setLoading(false);
       }
     };
+    
     fetchData();
   }, []);
 
@@ -385,7 +371,7 @@ export function EmployeeDashboard() {
           <div className="space-y-4">
             {allRecentOrders.map((order) => (
               <div
-                key={order.id}
+                key={order._id || order.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors"
               >
                 <div className="flex items-center space-x-4 space-x-reverse">

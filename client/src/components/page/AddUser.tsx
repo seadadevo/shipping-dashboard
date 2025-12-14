@@ -234,19 +234,19 @@ export function AddUser({ onSave }: AddUserProps) {
 					<Button
 						className="ml-3 cursor-pointer"
 						variant="outline"
-						onClick={() => onBack?.()}
+						onClick={() => navigate('/user-management')}
 					>
 						<ArrowRight className="h-4 w-4 mr-2" />
 						العودة
 					</Button>
 					<div>
 						<h1 className="text-2xl font-bold">
-							إضافة {userType === "merchant" ? "تاجر" : "مندوب"}{" "}
+							إضافة {userType === "merchant" ? "تاجر" : userType === "courier" ? "مندوب" : "عامل"}{" "}
 							جديد
 						</h1>
 						<p className="text-sm text-muted-foreground">
 							أدخل بيانات{" "}
-							{userType === "merchant" ? "التاجر" : "المندوب"}{" "}
+							{userType === "merchant" ? "التاجر" : userType === "courier" ? "المندوب" : "العامل"}{" "}
 							الجديد لإنشاء حساب في النظام
 						</p>
 					</div>
