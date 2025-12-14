@@ -134,7 +134,7 @@ export function OrderManagement() {
   const [isDriverDialogOpen, setIsDriverDialogOpen] = useState(false);
   const [selectedOrderForDriver, setSelectedOrderForDriver] =
     useState<Order | null>(null);
-  const [availableDrivers, setAvailableDrivers] = useState<User[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<string>("");
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
   const [isAssigningDriver, setIsAssigningDriver] = useState(false);
@@ -169,7 +169,7 @@ export function OrderManagement() {
     }
   };
 
-  // --- ( تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
+  // --- (🚀 تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
   const fetchOrders = async (page = currentPage, limit = itemsPerPage) => {
     setLoading(true);
     setError(null);
@@ -206,19 +206,18 @@ export function OrderManagement() {
     fetchOrderStats();
   }, []);
 
-  // --- (🚀 تعديل: useEffect الآن يراقب الفلاتر) ---
-  // (⭐ تعديل): هذا الـ useEffect سيقوم بإعادة جلب البيانات عند تغيير البحث أو الحالة
+
   useEffect(() => {
-    // (Debounce) ننتظر 500ms بعد آخر ضغطة زر قبل إرسال الطلب
+   
     const handler = setTimeout(() => {
       fetchOrders();
     }, 500);
 
-    // (Cleanup) إلغاء الـ timeout القديم إذا قام المستخدم بالكتابة مجدداً
+    
     return () => {
       clearTimeout(handler);
     };
-  }, [statusFilter, searchQuery]); // <-- يراقب هذه المتغيرات
+  }, [statusFilter, searchQuery]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -254,8 +253,8 @@ export function OrderManagement() {
     }
   };
 
-  // --- ( إزالة: filteredOrders) ---
-  // ( إزالة): لم نعد بحاجة للفلترة في الفرونت إند
+  // --- (🚀 إزالة: filteredOrders) ---
+  // (⭐ إزالة): لم نعد بحاجة للفلترة في الفرونت إند
   // الباك إند هو المسؤول الآن عن إرجاع البيانات المفلترة
   // const filteredOrders = allOrders.filter((order) => { ... });
 
@@ -402,10 +401,9 @@ export function OrderManagement() {
 
       fetchOrders();
       fetchOrderStats();
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Failed to assign driver:", err);
-      const errorMsg =
-        (err as any).response?.data?.message || "فشل تعيين السائق";
+      const errorMsg = err.response?.data?.message || "فشل تعيين السائق";
       toast.error(errorMsg);
     } finally {
       setIsAssigningDriver(false);
@@ -437,7 +435,6 @@ export function OrderManagement() {
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          {/* زر التحديث يحدث الطلبات والإحصائيات */}
           <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -449,7 +446,6 @@ export function OrderManagement() {
         </div>
       </div>
 
-      {/* الإحصائيات السريعة */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
@@ -523,7 +519,6 @@ export function OrderManagement() {
         </Card>
       </div>
 
-      {/* جدول الطلبات */}
       <Card>
         <CardHeader>
           <CardTitle>قائمة الطلبات</CardTitle>
@@ -532,7 +527,6 @@ export function OrderManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* أدوات البحث والتصفية */}
           <div className="flex items-center space-x-4 space-x-reverse mb-4">
             <div className="relative flex-1 max-w-sm ml-2">
               <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -572,7 +566,6 @@ export function OrderManagement() {
                   <TableHead className="text-right">الوجهة</TableHead>
                   <TableHead className="text-right">الموظف/التاجر</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right">نوع الشحن</TableHead>
                   <TableHead className="text-right">التكلفة</TableHead>
                   <TableHead className="text-right">تاريخ الإنشاء</TableHead>
                   <TableHead className="text-right">الإجراءات</TableHead>
@@ -595,7 +588,7 @@ export function OrderManagement() {
                       <p className="text-red-600 mt-2">{error}</p>
                     </TableCell>
                   </TableRow>
-                ) : // --- (🚀 تعديل: نستخدم allOrders بدلاً من filteredOrders) ---
+                ) : 
                 allOrders.length > 0 ? (
                   allOrders.map((order) => (
                     <TableRow key={order._id}>
@@ -609,7 +602,6 @@ export function OrderManagement() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          {/* (⭐ هنا) سيعمل الآن عند جلب البيانات الصحيحة */}
                           <p className="font-medium">{order.customerName}</p>
                           <p className="text-xs text-muted-foreground">
                             {order.customerPhone1}
@@ -629,10 +621,10 @@ export function OrderManagement() {
                       <TableCell>
                         <div>
                           <p className="font-medium">
-                            {order.createdBy.fullName}
+                            {order.createdBy?.fullName || 'غير معروف'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {order.createdBy.userType}
+                            {order.createdBy?.userType || '-'}
                           </p>
                         </div>
                       </TableCell>
@@ -648,16 +640,13 @@ export function OrderManagement() {
                           </span>
                         </Badge>
                       </TableCell>
-                      <TableCell>{order.shippingType}</TableCell>
                       <TableCell className="font-medium">
-                        {/* (⭐ وهنا) سيعمل الآن عند جلب البيانات الصحيحة */}
                         {order.orderCost?.toFixed(2) ?? "-"} جنيه
                       </TableCell>
                       <TableCell>
                         {new Date(order.createdAt).toLocaleDateString("ar-EG")}
                       </TableCell>
                       <TableCell>
-                        {/* ... (باقي القائمة المنسدلة كما هي) ... */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -677,7 +666,6 @@ export function OrderManagement() {
                               عرض التفاصيل
                             </DropdownMenuItem>
 
-                            {/* إلغاء الطلب للتاجر */}
                             {(() => {
                               return (
                                 user?.userType === "merchant" &&
@@ -701,7 +689,6 @@ export function OrderManagement() {
                               </DropdownMenuItem>
                             )}
 
-                            {/* تغيير الحالة للأدمن والموظف */}
                             {user?.userType !== "merchant" && (
                               <DropdownMenuSub>
                                 <DropdownMenuSubTrigger
@@ -816,10 +803,10 @@ export function OrderManagement() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className=" bg-background max-w-4xl" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-blue-600 text-right">
+            <DialogTitle className="text-blue-600">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
-            <DialogDescription className=" text-right">
+            <DialogDescription>
               عرض جميع تفاصيل الطلب والحالة الحالية
             </DialogDescription>
           </DialogHeader>
@@ -1144,10 +1131,10 @@ export function OrderManagement() {
         open={!!orderToDelete}
         onOpenChange={(isOpen) => !isOpen && setOrderToDelete(null)}
       >
-        <DialogContent className="bg-background text-right" dir="rtl">
+        <DialogContent className="bg-blue-50">
           <DialogHeader>
-            <DialogTitle className="text-blue-600 text-right">تأكيد الحذف</DialogTitle>
-            <DialogDescription  className="text-primary text-right">
+            <DialogTitle>تأكيد الحذف</DialogTitle>
+            <DialogDescription>
               هل أنت متأكد أنك تريد حذف الطلب رقم #
               {orderToDelete?._id.slice(-8)}؟
               <br />
@@ -1164,7 +1151,7 @@ export function OrderManagement() {
               إلغاء
             </Button>
             <Button
-              className="text-[white] ml-1 border-2  mr-2"
+              className="text-[red] ml-1 border-2"
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={isDeleting}

@@ -8,15 +8,16 @@ const tesseract = require("tesseract.js");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
 const { ChromaClient } = require("chromadb");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+dotenv.config();
 
-// ================= CONFIGURATION =================
+
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 const client = new ChromaClient();
 const COLLECTION_NAME = "rag_knowledge_base";
 
-// Import Models for Dynamic Data
+
 const Order = require("../models/Order");
 const WeightSetting = require("../models/WeightSetting");
 const User = require("../models/User");
@@ -24,17 +25,16 @@ const City = require("../models/City");
 const ShippingType = require("../models/ShippingType");
 const Governotate = require("../models/Governotate");
 
-// Access your API key as an environment variable
+
 const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-// ================= HELPER FUNCTIONS =================
 
-// --- DYNAMIC SYSTEM CONTEXT (Fetch from DB) ---
+
+
 async function fetchDynamicSystemContext(userType, userId) {
   try {
-    // ---------------- COMMON DATA ----------------
-    // Fetch Weight Settings (Everyone sees pricing)
+    
     const weightSettings = await WeightSetting.findOne().sort({
       updatedAt: -1,
     });
@@ -42,7 +42,7 @@ async function fetchDynamicSystemContext(userType, userId) {
     const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
-    // 4. Fetch Served Areas (Cities & Governorates)
+    
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
       .map((c) => `${c.cityName} (${c.governorate?.govName})`)
@@ -51,7 +51,7 @@ async function fetchDynamicSystemContext(userType, userId) {
     const governorates = await Governotate.find({ isActive: true });
     const govList = governorates.map((g) => g.govName).join(", ");
 
-    // 5. Fetch Shipping Types
+   
     const shippingTypes = await ShippingType.find();
     const shippingSummary = shippingTypes
       .map(
@@ -64,347 +64,96 @@ async function fetchDynamicSystemContext(userType, userId) {
       )
       .join("\n");
 
-    // ---------------- ADMIN CONTEXT ----------------
+   
     if (userType === "admin") {
-      const currentUser = await User.findById(userId);
-      // --- A. KEY METRICS ---
       const totalOrders = await Order.countDocuments();
+      const pendingOrders = await Order.countDocuments({ status: "Pending" });
+      const deliveredOrders = await Order.countDocuments({
+        status: "Delivered",
+      });
       const totalUsers = await User.countDocuments();
 
-      const statusCounts = await Order.aggregate([
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-      ]);
-      const statusMap = statusCounts.reduce((acc, curr) => {
-        acc[curr._id] = curr.count;
-        return acc;
-      }, {});
-
-      // --- B. FINANCIALS DEEP DIVE (Corrected for Local Day) ---
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const financialStats = await Order.aggregate([
-        {
-          $group: {
-            _id: { status: "$status", payment: "$paymentType" },
-            total: { $sum: "$orderCost" },
-            count: { $sum: 1 },
-          },
-        },
-      ]);
-
-      // Daily Financials
-      const todayFinancials = await Order.aggregate([
-        { $match: { createdAt: { $gte: startOfDay } } },
-        {
-          $group: {
-            _id: { status: "$status" },
-            total: { $sum: "$orderCost" },
-          },
-        },
-      ]);
-
-      let todayRealized = 0;
-      let todayPotential = 0;
-      todayFinancials.forEach((t) => {
-        if (t._id.status === "Delivered") todayRealized += t.total;
-        else if (["Pending", "Processing", "On the Way"].includes(t._id.status))
-          todayPotential += t.total;
-      });
-
-      // All Time Financials
-      let revenueCOD = 0;
-      let revenuePrepaid = 0;
-      let totalRealizedRevenue = 0;
-
-      financialStats.forEach((stat) => {
-        const { status, payment } = stat._id;
-        if (status === "Delivered") {
-          totalRealizedRevenue += stat.total;
-        }
-
-        if (payment === "واجبة التحصيل" || payment === "طرد مقابل طرد") {
-          revenueCOD += stat.total;
-        } else {
-          revenuePrepaid += stat.total;
-        }
-      });
-
-      // --- G. BUSINESS TIMELINE (FULL HISTORY) ---
-
-      // 1. Get Monthly Order Stats (All Time - Broken down by Status)
-      const monthlyOrders = await Order.aggregate([
-        {
-          $group: {
-            _id: {
-              month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-              status: "$status",
-            },
-            revenue: { $sum: "$orderCost" },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { "_id.month": 1 } },
-      ]);
-
-      // 2. Get Monthly User Growth (All Time)
-      const monthlyUsers = await User.aggregate([
-        {
-          $group: {
-            _id: {
-              month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-              type: "$userType",
-            },
-            count: { $sum: 1 },
-          },
-        },
-      ]);
-
-      // 3. Merge & Format Timeline
-      const timelineMap = new Map();
-
-      // Seed with Order Months
-      monthlyOrders.forEach((m) => {
-        const month = m._id.month;
-        const status = m._id.status;
-
-        if (!timelineMap.has(month)) {
-          timelineMap.set(month, {
-            totalOrderCount: 0,
-            deliveredCount: 0,
-            pendingCount: 0,
-            cancelledCount: 0,
-            realizedRevenue: 0,
-            potentialRevenue: 0,
-            newUsers: [],
-          });
-        }
-
-        const entry = timelineMap.get(month);
-        entry.totalOrderCount += m.count;
-
-        if (status === "Delivered") {
-          entry.deliveredCount += m.count;
-          entry.realizedRevenue += m.revenue;
-        } else if (status === "Cancelled") {
-          entry.cancelledCount += m.count;
-        } else {
-          // Pending, Processing, On the Way, etc.
-          entry.pendingCount += m.count;
-          entry.potentialRevenue += m.revenue;
-        }
-      });
-
-      // Merge User Data
-      monthlyUsers.forEach((u) => {
-        const month = u._id.month;
-        const type = u._id.type;
-        const count = u.count;
-
-        if (!timelineMap.has(month)) {
-          timelineMap.set(month, {
-            totalOrderCount: 0,
-            deliveredCount: 0,
-            pendingCount: 0,
-            cancelledCount: 0,
-            realizedRevenue: 0,
-            potentialRevenue: 0,
-            newUsers: [],
-          });
-        }
-        const entry = timelineMap.get(month);
-        entry.newUsers.push(
-          `${count} ${type === "courier" ? "Drivers" : type + "s"}`
-        );
-      });
-
-      // Sort keys (Months) Descending for display (Newest First)
-      const sortedMonths = Array.from(timelineMap.keys()).sort().reverse();
-
-      const fullTimeline = sortedMonths
-        .map((month) => {
-          const data = timelineMap.get(month);
-          const userGrowthStr =
-            data.newUsers.length > 0
-              ? ` | Added: +${data.newUsers.join(", +")}`
-              : "";
-
-          return `> [${month}]: ${data.totalOrderCount} Total Orders (${data.realizedRevenue} EGP Realized)
-           - Breakout: ${data.deliveredCount} Delivered, ${data.pendingCount} Pending, ${data.cancelledCount} Cancelled${userGrowthStr}`;
-        })
-        .join("\n");
-
-      // --- C. FULL PERSONNEL LISTS (No Limits) ---
-      // 1. Merchants
-      const merchants = await User.find({ userType: "merchant" }).select(
-        "fullName phone storeName email"
-      );
-      const merchantList = merchants
-        .map((m) => `- ${m.storeName || m.fullName} (${m.phone})`)
-        .join("\n");
-
-      // 2. Employees
-      const employees = await User.find({ userType: "employee" }).select(
-        "fullName phone email"
-      );
-      const employeeList = employees
-        .map((e) => `- ${e.fullName} (${e.phone})`)
-        .join("\n");
-
-      // 3. Drivers (With Delivered Count)
       const drivers = await User.find({ userType: "courier" }).select(
         "fullName phone isAvailable assignedCities"
       );
-      // Aggregate detailed delivery counts for each driver
-      const driverPerformance = await Order.aggregate([
-        { $match: { status: "Delivered", assignedDriver: { $exists: true } } },
-        { $group: { _id: "$assignedDriver", count: { $sum: 1 } } },
+      const driverSummary = drivers
+        .map(
+          (d) =>
+            `- ${d.fullName} (${d.phone}) [${
+              d.isAvailable ? "Available" : "Busy"
+            }]`
+        )
+        .join("\n");
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const profitStats = await Order.aggregate([
+        { $match: { createdAt: { $gte: startOfDay } } },
+        {
+          $group: {
+            _id: "$status",
+            totalCost: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
       ]);
-      const driverMap = {};
-      driverPerformance.forEach((d) => {
-        driverMap[d._id.toString()] = d.count;
+
+      let deliveredProfit = 0;
+      let pendingProfit = 0;
+      const mongoose = require("mongoose"); 
+
+      profitStats.forEach((stat) => {
+        if (stat._id === "Delivered") {
+          deliveredProfit = stat.totalCost;
+        } else if (["Pending", "Processing", "On the Way"].includes(stat._id)) {
+          pendingProfit += stat.totalCost;
+        }
       });
 
-      const driverList = drivers
-        .map((d) => {
-          const count = driverMap[d._id.toString()] || 0;
-          return `- ${d.fullName} (${d.phone}) [${
-            d.isAvailable ? "Available" : "Busy"
-          }]: ${count} Delivered`;
-        })
-        .join("\n");
-
-      // --- D. FULL AREA COVERAGE ---
-      const governorates = await Governotate.find({ isActive: true });
-      const cities = await City.find({ isActive: true });
-
-      const areaCoverage = governorates
-        .map((gov) => {
-          const govCities = cities.filter(
-            (c) =>
-              c.governorate && c.governorate.toString() === gov._id.toString()
-          );
-          const cityNames = govCities.map((c) => c.cityName).join(", ");
-          return `- ${gov.govName}: [${cityNames}]`;
-        })
-        .join("\n");
-
-      // --- E. SHIPPING & WEIGHT CONFIG ---
-      const weightSettingsAdmin = await WeightSetting.findOne();
-      const shippingTypesAdmin = await ShippingType.find({ isActive: true });
-
-      const shippingConfigStr = weightSettingsAdmin
-        ? `
-      - Default Weight Limit: ${weightSettingsAdmin.defaultWeightLimit}kg
-      - Extra Kg Cost: ${weightSettingsAdmin.extraKgCost} EGP
-      - Village Delivery Fee: ${weightSettingsAdmin.villageDeliveryCost} EGP
-      > Active Services:
-      ${shippingTypesAdmin
-        .map((s) => `- ${s.name}: +${s.adjustmentAmount} EGP`)
-        .join("\n")}
-      `
-        : "Weight settings not configured.";
-
-      // --- F. OPERATIONAL INSIGHTS ---
-      // Cancellations
-      const cancelledOrders = await Order.find({ status: "Cancelled" })
-        .sort({ updatedAt: -1 })
-        .limit(5)
-        .select("orderNumber changeReason notes");
-
-      const cancelSummary = cancelledOrders
+      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
+      const recentSummary = recentOrders
         .map(
           (o) =>
-            `- ${o.orderNumber}: ${
-              o.changeReason || o.notes || "No reason logged"
-            }`
+            `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}, to ${o.city}`
         )
         .join("\n");
 
-      // --- H. RECENT GLOBAL ACTIVITY & DETAILED STATUS ---
-
-      // Detailed Status Breakdown
-      const detailedStatusList = Object.entries(statusMap)
-        .map(([status, count]) => `- ${status}: ${count}`)
-        .join("\n");
-
-      // Recent Global Orders (Stream)
-      const recentGlobalOrders = await Order.find()
-        .sort({ updatedAt: -1 })
-        .limit(15)
-        .select("orderNumber status orderCost city paymentType");
-
-      const recentGlobalSummary = recentGlobalOrders
-        .map(
-          (o) =>
-            `- #${o.orderNumber} (${o.status}) to ${o.city}: ${o.orderCost} EGP [${o.paymentType}]`
-        )
-        .join("\n");
-
-      // KPI Calculations
-      const deliverySuccessRate =
-        totalOrders > 0
-          ? (((statusMap["Delivered"] || 0) / totalOrders) * 100).toFixed(1)
-          : "0";
+      // Fetch Current Admin Info
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email"
+      );
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Admin"}
-        - Role: Super Admin
-        - Email: ${currentUser?.email || "N/A"}
+        - Role: Admin
         - Phone: ${currentUser?.phone || "N/A"}
-        - Member Since: ${
-          currentUser?.createdAt || currentUser?._id?.getTimestamp()
-            ? new Date(
-                currentUser.createdAt || currentUser._id.getTimestamp()
-              ).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-              })
-            : "Unknown"
-        }
-        
-        [EXECUTIVE DASHBOARD]
+
+        [ADMIN DASHBOARD - FULL ACCESS]
         - Total Orders: ${totalOrders}
+        - Pending: ${pendingOrders} | Delivered: ${deliveredOrders}
         - Total Users: ${totalUsers}
-        - Current Success Rate: ${deliverySuccessRate}%
-        
-        [DETAILED ORDER STATUS BREAKDOWN]
-        ${detailedStatusList || "No orders found."}
-        
-        [RECENT GLOBAL ORDER STREAM (LAST 15)]
-        ${recentGlobalSummary || "No recent activity."}
-        
-        [FINANCIAL REPORT (TODAY)]
-        - **Realized Profit (Delivered): ${todayRealized} EGP** (Since 00:00 Local)
-        - Pipeline Value (Pending): ${todayPotential} EGP
-        
-        [BUSINESS TIMELINE (FULL HISTORY)]
-        ${fullTimeline || "No history available yet."}
-        
-        [FINANCIAL REPORT (ALL TIME)]
-        - Total Realized Revenue: ${totalRealizedRevenue} EGP
-        - COD Volume: ${revenueCOD} EGP
-        - Prepaid Volume: ${revenuePrepaid} EGP
 
-        [SHIPPING CONFIGURATION]
-        ${shippingConfigStr}
+        [FINANCIALS (Today)]
+        - Realized (Delivered): ${deliveredProfit} EGP
+        - Potential (Pending): ${pendingProfit} EGP
+        - Total Today: ${deliveredProfit + pendingProfit} EGP
 
-        [FULL PERSONNEL DIRECTORY]
-        > Employees:
-        ${employeeList || "No employees found."}
-        
-        > Merchants:
-        ${merchantList || "No merchants found."}
-        
-        > Drivers (Stats):
-        ${driverList || "No drivers found."}
+        [DRIVERS]
+        ${driverSummary || "No drivers."}
 
-        [SERVICE AREA COVERAGE]
-        ${areaCoverage || "No active areas."}
+        [AREAS]
+        - Cities: ${cityList || "No active cities found."}
+        - Governorates: ${govList || "No active governorates."}
 
-        [PROBLEM AREAS - RECENT CANCELLATIONS]
-        ${cancelSummary || "None"}
+        [SHIPPING TYPES & SERVICES]
+        ${shippingSummary || "No specific shipping types defined."}
+
+        [PRICING]
+        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+
+        [RECENT SYSTEM ACTIVITY]
+        ${recentSummary}
         `;
     }
 
@@ -412,11 +161,17 @@ async function fetchDynamicSystemContext(userType, userId) {
     if (userType === "merchant") {
       if (!userId) return "[Merchant Data Error: No ID]";
 
+<<<<<<< HEAD
       const currentUser = await User.findById(userId).select(
         "fullName phone email storeName createdAt"
       );
 
       // 1. Core Counts
+=======
+      // Need mongoose for ObjectId casting if stored as ObjectId
+      const mongoose = require("mongoose");
+
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
       const myOrdersCount = await Order.countDocuments({ createdBy: userId });
       const myPending = await Order.countDocuments({
         createdBy: userId,
@@ -469,6 +224,7 @@ async function fetchDynamicSystemContext(userType, userId) {
         { $sort: { "_id.month": -1 } },
       ]);
 
+<<<<<<< HEAD
       const myTimelineMap = new Map();
       myMonthlyStats.forEach((m) => {
         const month = m._id.month;
@@ -497,17 +253,28 @@ async function fetchDynamicSystemContext(userType, userId) {
           } EGP Realized) | Status: ${d.distinctStatuses.join(", ")}`;
         })
         .join("\n");
+=======
+      // Fetch Current Merchant Info
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email companyName"
+      );
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Merchant"}
         - Role: Merchant
+<<<<<<< HEAD
         - Store: ${currentUser?.storeName || "N/A"}
         - Member Since: ${
           currentUser?.createdAt
             ? new Date(currentUser.createdAt).toLocaleDateString()
             : "Unknown"
         }
+=======
+        - Company: ${currentUser?.companyName || "N/A"}
+        - Phone: ${currentUser?.phone || "N/A"}
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
 
         [MERCHANT DASHBOARD]
         - Total Orders: ${myOrdersCount}
@@ -527,6 +294,7 @@ async function fetchDynamicSystemContext(userType, userId) {
     }
 
     // ---------------- EMPLOYEE CONTEXT ----------------
+<<<<<<< HEAD
     if (userType === "employee") {
       const currentUser = await User.findById(userId).select(
         "fullName phone email createdAt"
@@ -623,6 +391,34 @@ async function fetchDynamicSystemContext(userType, userId) {
         ${shippingSummary}
         `;
     }
+=======
+    // Fetch Current Employee Info
+    const currentUser = await User.findById(userId).select(
+      "fullName phone email"
+    );
+
+    return `
+    [CURRENT USER PROFILE]
+    - Name: ${currentUser?.fullName || "Employee"}
+    - Role: Employee
+    - Phone: ${currentUser?.phone || "N/A"}
+
+    [EMPLOYEE VIEW]
+    - Access to General Shipping Rules.
+    - No Financial Access.
+    - No Driver List Access.
+    
+    [SERVED AREAS]
+    - Cities: ${cityList || "No active cities found."}
+    - Governorates: ${govList || "No active governorates."}
+
+    [SHIPPING TYPES & SERVICES]
+    ${shippingSummary || "No specific shipping types defined."}
+    
+    [PRICING RULES]
+    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+    `;
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
     return "[System Data Unavailable]";
@@ -638,19 +434,17 @@ async function resetCollection() {
     await client.deleteCollection({ name: COLLECTION_NAME });
     console.log(`✅ Collection '${COLLECTION_NAME}' deleted.`);
   } catch (e) {
-    if (e.code === "ECONNREFUSED" || e.message.includes("fetch failed")) {
-      console.warn(`⚠️ ChromaDB not reachable. RAG features will be disabled.`);
-    } else {
-      console.log(`ℹ️ Collection '${COLLECTION_NAME}' status: ${e.message}`);
-    }
+    // Ignore if it doesn't exist
+    console.log(
+      `ℹ️ Collection '${COLLECTION_NAME}' did not exist or could not be deleted.`
+    );
   }
 }
 // Fire and forget on startup
 resetCollection();
 
 async function getEmbedding(text) {
-  // Use OpenRouter for embeddings for consistency if specific model needed,
-  // or use a local one. Here we use OpenRouter as per original code.
+  
   const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
     headers: {
@@ -765,6 +559,7 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     1. **LANGUAGE**: Your response must be in **Professional Business Arabic** (العربية الفصحى المهنية).
     2. **ROLE**: Act as a senior consultant. Don't just read numbers; explain *why* they matter.
     3. **NO GENERICS**: Avoid phrases like "Perform better". Instead say "Increase delivery efficiency by 15% using...".
+<<<<<<< HEAD
 
     ### SYSTEM EXPERT PROTOCOL
     You are the **Master Controller** and **Chief Analyst** of this Shipping System.
@@ -787,6 +582,8 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     - "How much money did we make?" (YES)
     - "List all employees." (YES)
     - "What is the status of order #123?" (YES)
+=======
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
     
     ### ANALYSIS FRAMEWORK
     When analyzing data (CSV/PDF/Image):
@@ -881,23 +678,16 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
       return data.choices?.[0]?.message?.content || "No response.";
     }
 
-    // --- STREAMING HANDLER ---
-    // We expect OpenRouter/OpenAI SSE format: "data: {...}"
     const reader = fetchResponse.body.getReader();
     const decoder = new TextDecoder("utf-8");
-    let fullText = ""; // Keep for logging or fallback
+    let fullText = ""; 
 
-    // Set headers for streaming if not already set by caller?
-    // Usually caller shouldn't set json content-type if we are streaming text/plain or SSE.
-    // We'll trust the caller (route handler) to manage headers or we do it here?
-    // Route handler should've handled it. We just write to res.
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
       const chunk = decoder.decode(value, { stream: true });
-      // OpenRouter sends SSE lines: data: {"id":..., "choices":[{"delta":{"content":"..."}}]}
 
       const lines = chunk.split("\n").filter((line) => line.trim() !== "");
       for (const line of lines) {
@@ -930,7 +720,7 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
   }
 }
 
-// ================= INITIALIZATION =================
+
 const DEFAULT_DOC_PATH = path.join(__dirname, "../../client/document.txt");
 
 async function initDefaultDocument() {
@@ -950,6 +740,7 @@ async function initDefaultDocument() {
   }
 }
 
+<<<<<<< HEAD
 async function indexDatabaseContent() {
   try {
     console.log("📚 Starting Database Deep Study (Indexing)...");
@@ -1007,8 +798,11 @@ async function indexDatabaseContent() {
   await initDefaultDocument();
   await indexDatabaseContent();
 })();
+=======
 
-// ================= API ENDPOINTS =================
+initDefaultDocument();
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
+
 
 router.post("/chat", upload.single("file"), async (req, res) => {
   try {
@@ -1030,7 +824,6 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       }`
     );
 
-    // --- 1. PROCESS FILE (If attached) ---
     let fileContext = "";
     let base64Image = null;
 
@@ -1077,7 +870,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         } else if (isCsv) {
           rawText = await parseCSV(filePath);
         } else if (isImage) {
-          // For images, we just use OCR text as context
+       
           const {
             data: { text },
           } = await tesseract.recognize(filePath, "ara+eng");
@@ -1114,22 +907,20 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         }
       } catch (fileErr) {
         console.error("Error parsing file:", fileErr);
-        // Continue even if file fails? Or throw? Let's inform user.
+      
         return res
           .status(400)
           .json({ error: `Failed to process file: ${fileErr.message}` });
       } finally {
-        // Cleanup temp file
+        
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
     }
 
-    // --- 2. DETERMINE RESPONSE STRATEGY ---
+  
 
     let finalAnswer = "";
 
-    // CASE A: File ONLY (No question)
-    // -> Provide a summary or confirmation
     if (file && !question) {
       console.log(
         `🔍 CASE A TRIGGERED: File Only. ContextLen=${
@@ -1160,16 +951,20 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           answer: `✅ تم رفع الملف **${file.originalname}** بنجاح، ولكن لم أتمكن من قراءة النص بوضوح. حاول رفعه كصورة أو ملف نصي.`,
         });
       }
-      return; // End response handled by stream or fast return
+      return; 
     }
 
-    // CASE B: Question (with or without File)
-    // -> RAG Search + Answer
     if (question) {
+<<<<<<< HEAD
       // RAG Search
       let ragContext = "";
       try {
         const queryVector = await getEmbedding(question);
+=======
+     
+      const queryVector = await getEmbedding(question);
+      const collection = await client.getCollection({ name: COLLECTION_NAME });
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
 
         let collection;
         try {
@@ -1187,6 +982,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           nResults: 5, // Top 5 relevant facts
         });
 
+<<<<<<< HEAD
         if (
           results.metadatas &&
           results.metadatas[0] &&
@@ -1208,6 +1004,20 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         }
       } catch (ragErr) {
         console.warn("⚠️ Vector Search warning:", ragErr.message);
+=======
+    
+
+      // --- INJECT DYNAMIC SYSTEM DATA ---
+      const systemContext = await fetchDynamicSystemContext(userType, userId);
+
+      retrievedContext = `
+      ${systemContext}
+
+      ${
+        fileContext
+          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n(Please analyze the content above)`
+          : ""
+>>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
       }
 
       // --- 3. FETCH DYNAMIC CONTEXT (Live Stats) ---
