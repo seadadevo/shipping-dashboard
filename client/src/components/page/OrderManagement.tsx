@@ -626,17 +626,10 @@ export function OrderManagement() {
                       <TableCell>
                         <div>
                           <p className="font-medium">
-<<<<<<< HEAD
                             {order.createdBy.fullName}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {order.createdBy.userType}
-=======
-                            {order.createdBy?.fullName || 'غير معروف'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {order.createdBy?.userType || '-'}
->>>>>>> 0e3770d5c8feb3fc6883d34cd991b1340a1ea6ff
                           </p>
                         </div>
                       </TableCell>

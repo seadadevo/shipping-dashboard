@@ -114,35 +114,7 @@ const AdminDashboard: React.FC = () => {
   const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] =
     useState<number>(0);
 
-<<<<<<< HEAD
   const fetchOrders = useCallback(async (): Promise<void> => {
-=======
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [shippingTypes, setShippingTypes] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [cities, setCities] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [weightSettings, setWeightSettings] = useState<any[]>([]);
-
-    useEffect(() => {
-      // جلب أنواع الشحن
-      api.get("/api/shipping-types").then(res => setShippingTypes(res.data.data));
-      // جلب المدن
-      api.get("/api/locations/cities")
-      .then(res => setCities(res.data.data || []))
-      .catch(err => {
-          console.error("خطأ في جلب المدن:", err);
-          setCities([]);
-      });
-      // جلب إعدادات الوزن
-      api.get("/api/weight-settings").then(res => {
-        const weightData = Array.isArray(res.data) ? res.data : [res.data];
-        setWeightSettings(weightData);
-      });
-    }, []);
-
-  const fetchOrders = async (): Promise<void> => {
->>>>>>> 0e3770d5c8feb3fc6883d34cd991b1340a1ea6ff
     try {
       const response = await api.get<GetOrdersResponse>(
         "/api/orders?limit=1000"
@@ -170,14 +142,8 @@ const AdminDashboard: React.FC = () => {
         السبت: 0,
       };
 
-<<<<<<< HEAD
       if (safeOrders.length) {
         const todayNum = new Date().getDay();
-=======
-      const todayNum = new Date().getDay();
-      
-      if (safeOrders.length > 0) {
->>>>>>> 0e3770d5c8feb3fc6883d34cd991b1340a1ea6ff
         for (const order of safeOrders) {
           if (isDateToday(order.createdAt) === "today") {
             localCountOrdersToday += 1;
@@ -246,12 +212,7 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchOrders();
-<<<<<<< HEAD
   }, [fetchOrders]);
-=======
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
->>>>>>> 0e3770d5c8feb3fc6883d34cd991b1340a1ea6ff
 
   ///////////////////////////////////////////////////////////////////////
   return (

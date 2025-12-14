@@ -73,7 +73,6 @@ export function EmployeeDashboard() {
         setLoading(false);
       }
     };
-    
     fetchData();
   }, []);
 
@@ -376,11 +375,7 @@ export function EmployeeDashboard() {
           <div className="space-y-4">
             {allRecentOrders.map((order) => (
               <div
-<<<<<<< HEAD
                 key={order._id}
-=======
-                key={order._id || order.id}
->>>>>>> 0e3770d5c8feb3fc6883d34cd991b1340a1ea6ff
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors"
               >
                 <div className="flex items-center space-x-4 space-x-reverse">
