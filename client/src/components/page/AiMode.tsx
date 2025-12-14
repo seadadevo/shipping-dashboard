@@ -819,14 +819,6 @@ const AiMode = () => {
         </button>
       </div>
 
-      {/* OVERLAY: Click outside to close history */}
-      {showHistory && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
-          onClick={() => setShowHistory(false)}
-        />
-      )}
-
       {/* 
           2. SLIDING DRAWER
           Sitting next to the rail. Width 0 -> 64 (16rem).
