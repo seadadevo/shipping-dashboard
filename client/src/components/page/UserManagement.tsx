@@ -48,7 +48,7 @@ import api from "../../lib/api";
 import { toast } from "sonner";
 import type { User } from "../../types";
 import { Pagination } from "../ui/pagination";
-// import validator from "validator";
+import validator from "validator";
 
 export function UserManagement() {
   const navigate = useNavigate();
@@ -77,35 +77,61 @@ export function UserManagement() {
   ) => {
     try {
       setLoading(true);
-      // When filtering by role, fetch ALL users first, then paginate client-side
-      const fetchLimit = role !== "all" ? 1000 : limit;
-      let url = `/api/users?page=1&limit=${fetchLimit}`;
-
-      // Add search query if provided
-      if (searchQuery.trim()) {
-        url += `&q=${encodeURIComponent(searchQuery)}`;
+      
+      // If filtering by role or searching, fetch all users and paginate client-side
+      // Otherwise, use server-side pagination
+      const useClientSidePagination = role !== "all" || searchQuery.trim();
+      
+      let url: string;
+      if (useClientSidePagination) {
+        // Fetch all users for client-side filtering
+        url = `/api/users?page=1&limit=10000`;
+      } else {
+        // Use server-side pagination
+        url = `/api/users?page=${page}&limit=${limit}`;
       }
+
       const res = await api.get(url);
       // response shape: { status, results, meta, data: { users }}
       let fetchedUsers = res.data?.data?.users || [];
+      const serverMeta = res.data?.meta;
 
-      // Apply role filter if not "all"
-      if (role !== "all") {
-        fetchedUsers = fetchedUsers.filter((u: User) => u.userType === role);
+      if (useClientSidePagination) {
+        // Apply role filter if not "all"
+        if (role !== "all") {
+          fetchedUsers = fetchedUsers.filter((u: User) => u.userType === role);
+        }
+        
+        // Apply search filter
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase();
+          fetchedUsers = fetchedUsers.filter((u: User) => 
+            u.fullName?.toLowerCase().includes(query) ||
+            u.email?.toLowerCase().includes(query) ||
+            u.phone?.includes(query)
+          );
+        }
+
+        // Apply client-side pagination
+        const total = fetchedUsers.length;
+        const totalPagesCalc = Math.ceil(total / limit) || 1;
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedUsers = fetchedUsers.slice(startIndex, endIndex);
+
+        setUsers(paginatedUsers);
+        setCurrentPage(page);
+        setTotalPages(totalPagesCalc);
+        setTotalItems(total);
+        setItemsPerPage(limit);
+      } else {
+        // Use server pagination data
+        setUsers(fetchedUsers);
+        setCurrentPage(serverMeta?.page || page);
+        setTotalPages(serverMeta?.totalPages || 1);
+        setTotalItems(serverMeta?.total || fetchedUsers.length);
+        setItemsPerPage(serverMeta?.limit || limit);
       }
-
-      // Apply client-side pagination
-      const total = fetchedUsers.length;
-      const totalPagesCalc = Math.ceil(total / limit);
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedUsers = fetchedUsers.slice(startIndex, endIndex);
-
-      setUsers(paginatedUsers);
-      setCurrentPage(page);
-      setTotalPages(totalPagesCalc);
-      setTotalItems(total);
-      setItemsPerPage(limit);
     } catch (err) {
       console.error(err);
     } finally {

@@ -441,17 +441,19 @@ export function RegionsManagement() {
     }
   };
 
-  // Statistics
-  const totalGovs = governorates.length;
-  const totalCities = cities.length;
+  // Statistics - use total items from API for accurate counts
+  const totalGovs = govTotalItems;
+  const totalCities = cityTotalItems;
+  // Note: avgDeliveryFee and maxDeliveryFee are calculated from current page data
+  // For accurate stats, you may need a separate API call to get all cities
   const avgDeliveryFee =
-    totalCities > 0
+    cities.length > 0
       ? Math.round(
-          cities.reduce((sum, city) => sum + city.shippingCost, 0) / totalCities
+          cities.reduce((sum, city) => sum + city.shippingCost, 0) / cities.length
         )
       : 0;
   const maxDeliveryFee =
-    totalCities > 0 ? Math.max(...cities.map((city) => city.shippingCost)) : 0;
+    cities.length > 0 ? Math.max(...cities.map((city) => city.shippingCost)) : 0;
 
   return (
     <div className="space-y-6">
