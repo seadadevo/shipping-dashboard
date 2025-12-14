@@ -8,14 +8,15 @@ const tesseract = require("tesseract.js");
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
 const { ChromaClient } = require("chromadb");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const dotenv = require("dotenv");
-dotenv.config();
+const mongoose = require("mongoose");
 
+// ================= CONFIGURATION =================
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 const client = new ChromaClient();
 const COLLECTION_NAME = "rag_knowledge_base";
 
+// Import Models for Dynamic Data
 const Order = require("../models/Order");
 const WeightSetting = require("../models/WeightSetting");
 const User = require("../models/User");
@@ -23,11 +24,17 @@ const City = require("../models/City");
 const ShippingType = require("../models/ShippingType");
 const Governotate = require("../models/Governotate");
 
+// Access your API key as an environment variable
 const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
+// ================= HELPER FUNCTIONS =================
+
+// --- DYNAMIC SYSTEM CONTEXT (Fetch from DB) ---
 async function fetchDynamicSystemContext(userType, userId) {
   try {
+    // ---------------- COMMON DATA ----------------
+    // Fetch Weight Settings (Everyone sees pricing)
     const weightSettings = await WeightSetting.findOne().sort({
       updatedAt: -1,
     });
@@ -35,6 +42,7 @@ async function fetchDynamicSystemContext(userType, userId) {
     const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
+    // 4. Fetch Served Areas (Cities & Governorates)
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
       .map((c) => `${c.cityName} (${c.governorate?.govName})`)
@@ -43,6 +51,7 @@ async function fetchDynamicSystemContext(userType, userId) {
     const governorates = await Governotate.find({ isActive: true });
     const govList = governorates.map((g) => g.govName).join(", ");
 
+    // 5. Fetch Shipping Types
     const shippingTypes = await ShippingType.find();
     const shippingSummary = shippingTypes
       .map(
@@ -55,146 +64,76 @@ async function fetchDynamicSystemContext(userType, userId) {
       )
       .join("\n");
 
+    // ---------------- ADMIN CONTEXT ----------------
     if (userType === "admin") {
+      const currentUser = await User.findById(userId);
+      // --- A. KEY METRICS ---
       const totalOrders = await Order.countDocuments();
-      const pendingOrders = await Order.countDocuments({ status: "Pending" });
-      const deliveredOrders = await Order.countDocuments({
-        status: "Delivered",
-      });
       const totalUsers = await User.countDocuments();
 
-      const drivers = await User.find({ userType: "courier" }).select(
-        "fullName phone isAvailable assignedCities"
-      );
-      const driverSummary = drivers
-        .map(
-          (d) =>
-            `- ${d.fullName} (${d.phone}) [${
-              d.isAvailable ? "Available" : "Busy"
-            }]`
-        )
-        .join("\n");
+      const statusCounts = await Order.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]);
+      const statusMap = statusCounts.reduce((acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {});
 
+      // --- B. FINANCIALS DEEP DIVE (Corrected for Local Day) ---
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-      const profitStats = await Order.aggregate([
+
+      const financialStats = await Order.aggregate([
+        {
+          $group: {
+            _id: { status: "$status", payment: "$paymentType" },
+            total: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // Daily Financials
+      const todayFinancials = await Order.aggregate([
         { $match: { createdAt: { $gte: startOfDay } } },
         {
           $group: {
-            _id: "$status",
-            totalCost: { $sum: "$orderCost" },
-            count: { $sum: 1 },
+            _id: { status: "$status" },
+            total: { $sum: "$orderCost" },
           },
         },
       ]);
 
-      let deliveredProfit = 0;
-      let pendingProfit = 0;
-      const mongoose = require("mongoose");
+      let todayRealized = 0;
+      let todayPotential = 0;
+      todayFinancials.forEach((t) => {
+        if (t._id.status === "Delivered") todayRealized += t.total;
+        else if (["Pending", "Processing", "On the Way"].includes(t._id.status))
+          todayPotential += t.total;
+      });
 
-      profitStats.forEach((stat) => {
-        if (stat._id === "Delivered") {
-          deliveredProfit = stat.totalCost;
-        } else if (["Pending", "Processing", "On the Way"].includes(stat._id)) {
-          pendingProfit += stat.totalCost;
+      // All Time Financials
+      let revenueCOD = 0;
+      let revenuePrepaid = 0;
+      let totalRealizedRevenue = 0;
+
+      financialStats.forEach((stat) => {
+        const { status, payment } = stat._id;
+        if (status === "Delivered") {
+          totalRealizedRevenue += stat.total;
+        }
+
+        if (payment === "واجبة التحصيل" || payment === "طرد مقابل طرد") {
+          revenueCOD += stat.total;
+        } else {
+          revenuePrepaid += stat.total;
         }
       });
 
-      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
-      const recentSummary = recentOrders
-        .map(
-          (o) =>
-            `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}, to ${o.city}`
-        )
-        .join("\n");
+      // --- G. BUSINESS TIMELINE (FULL HISTORY) ---
 
-      // Fetch Current Admin Info
-      const currentUser = await User.findById(userId).select(
-        "fullName phone email"
-      );
-
-      return `
-        [CURRENT USER PROFILE]
-        - Name: ${currentUser?.fullName || "Admin"}
-        - Role: Admin
-        - Phone: ${currentUser?.phone || "N/A"}
-
-        [ADMIN DASHBOARD - FULL ACCESS]
-        - Total Orders: ${totalOrders}
-        - Pending: ${pendingOrders} | Delivered: ${deliveredOrders}
-        - Total Users: ${totalUsers}
-
-        [FINANCIALS (Today)]
-        - Realized (Delivered): ${deliveredProfit} EGP
-        - Potential (Pending): ${pendingProfit} EGP
-        - Total Today: ${deliveredProfit + pendingProfit} EGP
-
-        [DRIVERS]
-        ${driverSummary || "No drivers."}
-
-        [AREAS]
-        - Cities: ${cityList || "No active cities found."}
-        - Governorates: ${govList || "No active governorates."}
-
-        [SHIPPING TYPES & SERVICES]
-        ${shippingSummary || "No specific shipping types defined."}
-
-        [PRICING]
-        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
-
-        [RECENT SYSTEM ACTIVITY]
-        ${recentSummary}
-        `;
-    }
-
-    // ---------------- MERCHANT CONTEXT ----------------
-    if (userType === "merchant") {
-      if (!userId) return "[Merchant Data Error: No ID]";
-
-      const currentUser = await User.findById(userId).select(
-        "fullName phone email storeName createdAt"
-      );
-
-      // 1. Core Counts
-      const myOrdersCount = await Order.countDocuments({ createdBy: userId });
-      const myPending = await Order.countDocuments({
-        createdBy: userId,
-        status: "Pending",
-      });
-      const myDelivered = await Order.countDocuments({
-        createdBy: userId,
-        status: "Delivered",
-      });
-
-      // 2. Today's Financials
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const myStats = await Order.aggregate([
-        {
-          $match: {
-            createdBy: new mongoose.Types.ObjectId(userId),
-            createdAt: { $gte: startOfDay },
-          },
-        },
-        {
-          $group: {
-            _id: "$status",
-            totalCost: { $sum: "$orderCost" },
-            count: { $sum: 1 },
-          },
-        },
-      ]);
-      let myRealized = 0,
-        myPotential = 0;
-      myStats.forEach((stat) => {
-        if (stat._id === "Delivered") myRealized = stat.totalCost;
-        else if (["Pending", "Processing", "On the Way"].includes(stat._id))
-          myPotential += stat.totalCost;
-      });
-
-      // 3. Merchant Timeline (My Orders Only)
-      const myMonthlyStats = await Order.aggregate([
-        { $match: { createdBy: new mongoose.Types.ObjectId(userId) } },
+      // 1. Get Monthly Order Stats (All Time - Broken down by Status)
+      const monthlyOrders = await Order.aggregate([
         {
           $group: {
             _id: {
@@ -205,110 +144,118 @@ async function fetchDynamicSystemContext(userType, userId) {
             count: { $sum: 1 },
           },
         },
-        { $sort: { "_id.month": -1 } },
+        { $sort: { "_id.month": 1 } },
       ]);
 
-      const myTimelineMap = new Map();
-      myMonthlyStats.forEach((m) => {
-        const month = m._id.month;
-        if (!myTimelineMap.has(month))
-          myTimelineMap.set(month, {
-            total: 0,
-            revenue: 0,
-            delivered: 0,
-            distinctStatuses: [],
-          });
-
-        const entry = myTimelineMap.get(month);
-        entry.total += m.count;
-        entry.distinctStatuses.push(`${m._id.status}: ${m.count}`);
-        if (m._id.status === "Delivered") {
-          entry.delivered += m.count;
-          entry.revenue += m.revenue;
-        }
-      });
-
-      const myTimelineStr = Array.from(myTimelineMap.keys())
-        .map((month) => {
-          const d = myTimelineMap.get(month);
-          return `> [${month}]: ${d.total} Orders (${
-            d.revenue
-          } EGP Realized) | Status: ${d.distinctStatuses.join(", ")}`;
-        })
-        .join("\n");
-
-      return `
-        [CURRENT USER PROFILE]
-        - Name: ${currentUser?.fullName || "Merchant"}
-        - Role: Merchant
-        - Store: ${currentUser?.storeName || "N/A"}
-        - Member Since: ${
-          currentUser?.createdAt
-            ? new Date(currentUser.createdAt).toLocaleDateString()
-            : "Unknown"
-        }
-
-        [MERCHANT DASHBOARD]
-        - Total Orders: ${myOrdersCount}
-        - Pending: ${myPending} | Delivered: ${myDelivered}
-        
-        [FINANCIALS (Today)]
-        - Realized: ${myRealized} EGP
-        - Potential: ${myPotential} EGP
-
-        [MY BUSINESS TIMELINE (Sales History)]
-        ${myTimelineStr || "No history yet."}
-        
-        [SHIPPING CONFIG]
-        - Weight Limit: ${limitWeight}kg | Extra: ${kgPrice}EGP | Village: ${villagePrice}EGP
-        ${shippingSummary}
-        `;
-    }
-
-    // ---------------- EMPLOYEE CONTEXT ----------------
-    if (userType === "employee") {
-      const currentUser = await User.findById(userId).select(
-        "fullName phone email createdAt"
-      );
-
-      // 1. Global Counts
-      const totalOrders = await Order.countDocuments();
-      const pendingOrders = await Order.countDocuments({ status: "Pending" });
-      const deliveredOrders = await Order.countDocuments({
-        status: "Delivered",
-      });
-
-      // 2. Operational Timeline (System Wide)
-      const opsMonthlyStats = await Order.aggregate([
+      // 2. Get Monthly User Growth (All Time)
+      const monthlyUsers = await User.aggregate([
         {
           $group: {
             _id: {
               month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-              status: "$status",
+              type: "$userType",
             },
             count: { $sum: 1 },
           },
         },
-        { $sort: { "_id.month": -1 } },
       ]);
 
-      const opsTimelineMap = new Map();
-      opsMonthlyStats.forEach((m) => {
+      // 3. Merge & Format Timeline
+      const timelineMap = new Map();
+
+      // Seed with Order Months
+      monthlyOrders.forEach((m) => {
         const month = m._id.month;
-        if (!opsTimelineMap.has(month)) opsTimelineMap.set(month, []);
-        opsTimelineMap.get(month).push(`${m._id.status}: ${m.count}`);
+        const status = m._id.status;
+
+        if (!timelineMap.has(month)) {
+          timelineMap.set(month, {
+            totalOrderCount: 0,
+            deliveredCount: 0,
+            pendingCount: 0,
+            cancelledCount: 0,
+            realizedRevenue: 0,
+            potentialRevenue: 0,
+            newUsers: [],
+          });
+        }
+
+        const entry = timelineMap.get(month);
+        entry.totalOrderCount += m.count;
+
+        if (status === "Delivered") {
+          entry.deliveredCount += m.count;
+          entry.realizedRevenue += m.revenue;
+        } else if (status === "Cancelled") {
+          entry.cancelledCount += m.count;
+        } else {
+          // Pending, Processing, On the Way, etc.
+          entry.pendingCount += m.count;
+          entry.potentialRevenue += m.revenue;
+        }
       });
 
-      const opsTimelineStr = Array.from(opsTimelineMap.keys())
+      // Merge User Data
+      monthlyUsers.forEach((u) => {
+        const month = u._id.month;
+        const type = u._id.type;
+        const count = u.count;
+
+        if (!timelineMap.has(month)) {
+          timelineMap.set(month, {
+            totalOrderCount: 0,
+            deliveredCount: 0,
+            pendingCount: 0,
+            cancelledCount: 0,
+            realizedRevenue: 0,
+            potentialRevenue: 0,
+            newUsers: [],
+          });
+        }
+        const entry = timelineMap.get(month);
+        entry.newUsers.push(
+          `${count} ${type === "courier" ? "Drivers" : type + "s"}`
+        );
+      });
+
+      // Sort keys (Months) Descending for display (Newest First)
+      const sortedMonths = Array.from(timelineMap.keys()).sort().reverse();
+
+      const fullTimeline = sortedMonths
         .map((month) => {
-          return `> [${month}]: ${opsTimelineMap.get(month).join(", ")}`;
+          const data = timelineMap.get(month);
+          const userGrowthStr =
+            data.newUsers.length > 0
+              ? ` | Added: +${data.newUsers.join(", +")}`
+              : "";
+
+          return `> [${month}]: ${data.totalOrderCount} Total Orders (${data.realizedRevenue} EGP Realized)
+           - Breakout: ${data.deliveredCount} Delivered, ${data.pendingCount} Pending, ${data.cancelledCount} Cancelled${userGrowthStr}`;
         })
         .join("\n");
 
-      // 3. Driver Roster (Key for Employees)
+      // --- C. FULL PERSONNEL LISTS (No Limits) ---
+      // 1. Merchants
+      const merchants = await User.find({ userType: "merchant" }).select(
+        "fullName phone storeName email"
+      );
+      const merchantList = merchants
+        .map((m) => `- ${m.storeName || m.fullName} (${m.phone})`)
+        .join("\n");
+
+      // 2. Employees
+      const employees = await User.find({ userType: "employee" }).select(
+        "fullName phone email"
+      );
+      const employeeList = employees
+        .map((e) => `- ${e.fullName} (${e.phone})`)
+        .join("\n");
+
+      // 3. Drivers (With Delivered Count)
       const drivers = await User.find({ userType: "courier" }).select(
         "fullName phone isAvailable assignedCities"
       );
+      // Aggregate detailed delivery counts for each driver
       const driverPerformance = await Order.aggregate([
         { $match: { status: "Delivered", assignedDriver: { $exists: true } } },
         { $group: { _id: "$assignedDriver", count: { $sum: 1 } } },
@@ -327,36 +274,291 @@ async function fetchDynamicSystemContext(userType, userId) {
         })
         .join("\n");
 
-      // 4. Merchant Directory (New Addition)
-      const merchants = await User.find({ userType: "merchant" }).select(
-        "fullName phone storeName email"
+      // --- D. FULL AREA COVERAGE ---
+      const governorates = await Governotate.find({ isActive: true });
+      const cities = await City.find({ isActive: true });
+
+      const areaCoverage = governorates
+        .map((gov) => {
+          const govCities = cities.filter(
+            (c) =>
+              c.governorate && c.governorate.toString() === gov._id.toString()
+          );
+          const cityNames = govCities.map((c) => c.cityName).join(", ");
+          return `- ${gov.govName}: [${cityNames}]`;
+        })
+        .join("\n");
+
+      // --- E. SHIPPING & WEIGHT CONFIG ---
+      const weightSettingsAdmin = await WeightSetting.findOne();
+      const shippingTypesAdmin = await ShippingType.find({ isActive: true });
+
+      const shippingConfigStr = weightSettingsAdmin
+        ? `
+      - Default Weight Limit: ${weightSettingsAdmin.defaultWeightLimit}kg
+      - Extra Kg Cost: ${weightSettingsAdmin.extraKgCost} EGP
+      - Village Delivery Fee: ${weightSettingsAdmin.villageDeliveryCost} EGP
+      > Active Services:
+      ${shippingTypesAdmin
+        .map((s) => `- ${s.name}: +${s.adjustmentAmount} EGP`)
+        .join("\n")}
+      `
+        : "Weight settings not configured.";
+
+      // --- F. OPERATIONAL INSIGHTS ---
+      // Cancellations
+      const cancelledOrders = await Order.find({ status: "Cancelled" })
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .select("orderNumber changeReason notes");
+
+      const cancelSummary = cancelledOrders
+        .map(
+          (o) =>
+            `- ${o.orderNumber}: ${
+              o.changeReason || o.notes || "No reason logged"
+            }`
+        )
+        .join("\n");
+
+      // --- H. RECENT GLOBAL ACTIVITY & DETAILED STATUS ---
+
+      // Detailed Status Breakdown
+      const detailedStatusList = Object.entries(statusMap)
+        .map(([status, count]) => `- ${status}: ${count}`)
+        .join("\n");
+
+      // Recent Global Orders (Stream)
+      const recentGlobalOrders = await Order.find()
+        .sort({ updatedAt: -1 })
+        .limit(15)
+        .select("orderNumber status orderCost city paymentType");
+
+      const recentGlobalSummary = recentGlobalOrders
+        .map(
+          (o) =>
+            `- #${o.orderNumber} (${o.status}) to ${o.city}: ${o.orderCost} EGP [${o.paymentType}]`
+        )
+        .join("\n");
+
+      // KPI Calculations
+      const deliverySuccessRate =
+        totalOrders > 0
+          ? (((statusMap["Delivered"] || 0) / totalOrders) * 100).toFixed(1)
+          : "0";
+
+      return `
+        [CURRENT USER PROFILE]
+        - Name: ${currentUser?.fullName || "Admin"}
+        - Role: Super Admin
+        - Email: ${currentUser?.email || "N/A"}
+        - Phone: ${currentUser?.phone || "N/A"}
+        - Member Since: ${
+          currentUser?.createdAt || currentUser?._id?.getTimestamp()
+            ? new Date(
+                currentUser.createdAt || currentUser._id.getTimestamp()
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+              })
+            : "Unknown"
+        }
+        
+        [EXECUTIVE DASHBOARD]
+        - Total Orders: ${totalOrders}
+        - Total Users: ${totalUsers}
+        - Current Success Rate: ${deliverySuccessRate}%
+        
+        [DETAILED ORDER STATUS BREAKDOWN]
+        ${detailedStatusList || "No orders found."}
+        
+        [RECENT GLOBAL ORDER STREAM (LAST 15)]
+        ${recentGlobalSummary || "No recent activity."}
+        
+        [FINANCIAL REPORT (TODAY)]
+        - **Realized Profit (Delivered): ${todayRealized} EGP** (Since 00:00 Local)
+        - Pipeline Value (Pending): ${todayPotential} EGP
+        
+        [BUSINESS TIMELINE (FULL HISTORY)]
+        ${fullTimeline || "No history available yet."}
+        
+        [FINANCIAL REPORT (ALL TIME)]
+        - Total Realized Revenue: ${totalRealizedRevenue} EGP
+        - COD Volume: ${revenueCOD} EGP
+        - Prepaid Volume: ${revenuePrepaid} EGP
+
+        [SHIPPING CONFIGURATION]
+        ${shippingConfigStr}
+
+        [FULL PERSONNEL DIRECTORY]
+        > Employees:
+        ${employeeList || "No employees found."}
+        
+        > Merchants:
+        ${merchantList || "No merchants found."}
+        
+        > Drivers (Stats):
+        ${driverList || "No drivers found."}
+
+        [SERVICE AREA COVERAGE]
+        ${areaCoverage || "No active areas."}
+
+        [PROBLEM AREAS - RECENT CANCELLATIONS]
+        ${cancelSummary || "None"}
+        `;
+    }
+
+    // ---------------- MERCHANT CONTEXT ----------------
+    if (userType === "merchant") {
+      if (!userId) return "[Merchant Data Error: No ID]";
+
+      // Need mongoose for ObjectId casting if stored as ObjectId
+      const myOrdersCount = await Order.countDocuments({ createdBy: userId });
+      const myPending = await Order.countDocuments({
+        createdBy: userId,
+        status: "Pending",
+      });
+      const myDelivered = await Order.countDocuments({
+        createdBy: userId,
+        status: "Delivered",
+      });
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const myStats = await Order.aggregate([
+        {
+          $match: {
+            createdBy: new mongoose.Types.ObjectId(userId),
+            createdAt: { $gte: startOfDay },
+          },
+        },
+        {
+          $group: {
+            _id: "$status",
+            totalCost: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      let myRealized = 0;
+      let myPotential = 0;
+      myStats.forEach((stat) => {
+        if (stat._id === "Delivered") myRealized = stat.totalCost;
+        else if (["Pending", "Processing", "On the Way"].includes(stat._id))
+          myPotential += stat.totalCost;
+      });
+
+      const myRecent = await Order.find({ createdBy: userId })
+        .sort({ createdAt: -1 })
+        .limit(5);
+      const myRecentSummary = myRecent
+        .map(
+          (o) => `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}`
+        )
+        .join("\n");
+
+      // Fetch Current Merchant Info
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email storeName"
       );
-      const merchantList = merchants
-        .map((m) => `- ${m.storeName || m.fullName} (${m.phone})`)
+
+      return `
+        [CURRENT USER PROFILE]
+        - Name: ${currentUser?.fullName || "Merchant"}
+        - Role: Merchant
+        - Company: ${currentUser?.storeName || "N/A"}
+        - Phone: ${currentUser?.phone || "N/A"}
+
+        [MERCHANT DASHBOARD - PERSONALIZED]
+        - Your Total Orders: ${myOrdersCount}
+        - Your Pending: ${myPending} | Delivered: ${myDelivered}
+        
+        [YOUR FINANCIALS (Today)]
+        - Realized: ${myRealized} EGP
+        - Potential: ${myPotential} EGP
+        
+        [AREAS SERVED]
+        - Cities: ${cityList || "No active cities found."}
+        - Governorates: ${govList || "No active governorates."}
+
+        [SHIPPING TYPES & SERVICES]
+        ${shippingSummary || "No specific shipping types defined."}
+
+        [PRICING RULES]
+        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
+
+        [YOUR RECENT ACTIVITY]
+        ${myRecentSummary}
+        `;
+    }
+
+    // ---------------- EMPLOYEE CONTEXT ----------------
+    if (userType === "employee") {
+      // 1. Fetch Current Employee Info
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email"
+      );
+
+      // 2. Order Statistics (Full Access)
+      const totalOrders = await Order.countDocuments();
+      const pendingOrders = await Order.countDocuments({ status: "Pending" });
+      const deliveredOrders = await Order.countDocuments({
+        status: "Delivered",
+      });
+
+      // 3. Financials (Order Values)
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const profitStats = await Order.aggregate([
+        { $match: { createdAt: { $gte: startOfDay } } },
+        {
+          $group: {
+            _id: "$status",
+            totalCost: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      let deliveredVal = 0;
+      let pendingVal = 0;
+      profitStats.forEach((stat) => {
+        if (stat._id === "Delivered") deliveredVal = stat.totalCost;
+        else if (["Pending", "Processing", "On the Way"].includes(stat._id))
+          pendingVal += stat.totalCost;
+      });
+
+      // 4. Recent Orders
+      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
+      const recentSummary = recentOrders
+        .map(
+          (o) =>
+            `- Order ${o.orderNumber}: ${o.status}, Val: ${o.orderCost}, to ${o.city}`
+        )
         .join("\n");
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Employee"}
         - Role: Employee
-        - Member Since: ${
-          currentUser?.createdAt
-            ? new Date(currentUser.createdAt).toLocaleDateString()
-            : "Unknown"
-        }
+        - Phone: ${currentUser?.phone || "N/A"}
 
-        [OPERATIONAL DASHBOARD]
+        [ORDER MANAGEMENT DASHBOARD]
         - Total Orders: ${totalOrders}
-        - Pending: ${pendingOrders} | Delivered: ${deliveredOrders}
+        - Pending/Processing: ${pendingOrders}
+        - Delivered: ${deliveredOrders}
         
-        [OPERATIONAL TIMELINE (Monthly Volume)]
-        ${opsTimelineStr || "No history."}
+        [ORDER FINANCIALS (Today)]
+        - Realized Value (Delivered): ${deliveredVal} EGP
+        - Pipeline Value (Pending): ${pendingVal} EGP
         
-        [DRIVER ROSTER & PERFORMANCE]
-        ${driverList || "No drivers."}
-
-        [MERCHANT DIRECTORY]
-        ${merchantList || "No merchants found."}
+        [RECENT ORDERS]
+        ${recentSummary}
+        
+        [SERVED AREAS & RULES]
+        - Cities: ${cityList || "No active cities."}
+        - Pricing: Limit ${limitWeight}Kg, Extra ${kgPrice}EGP, Village ${villagePrice}EGP
         
         [SHIPPING SERVICES]
         ${shippingSummary}
@@ -377,16 +579,19 @@ async function resetCollection() {
     await client.deleteCollection({ name: COLLECTION_NAME });
     console.log(`✅ Collection '${COLLECTION_NAME}' deleted.`);
   } catch (e) {
-    // Ignore if it doesn't exist
-    console.log(
-      `ℹ️ Collection '${COLLECTION_NAME}' did not exist or could not be deleted.`
-    );
+    if (e.code === "ECONNREFUSED" || e.message.includes("fetch failed")) {
+      console.warn(`⚠️ ChromaDB not reachable. RAG features will be disabled.`);
+    } else {
+      console.log(`ℹ️ Collection '${COLLECTION_NAME}' status: ${e.message}`);
+    }
   }
 }
 // Fire and forget on startup
 resetCollection();
 
 async function getEmbedding(text) {
+  // Use OpenRouter for embeddings for consistency if specific model needed,
+  // or use a local one. Here we use OpenRouter as per original code.
   const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
     headers: {
@@ -461,12 +666,21 @@ async function processAndStoreDocument(rawText) {
 
     const embeddings = [];
     for (let i = 0; i < docs.length; i++) {
-      const vector = await getEmbedding(docs[i]);
-      embeddings.push({
-        id: `doc-${Date.now()}-${i}`,
-        text: docs[i],
-        embedding: vector,
-      });
+      try {
+        const vector = await getEmbedding(docs[i]);
+        embeddings.push({
+          id: `doc-${Date.now()}-${i}`,
+          text: docs[i],
+          embedding: vector,
+        });
+        // Throttle to avoid 429 errors from OpenRouter
+        await new Promise((r) => setTimeout(r, 200));
+      } catch (embErr) {
+        console.warn(
+          `⚠️ Skipped chunk ${i} due to embedding error:`,
+          embErr.message
+        );
+      }
     }
 
     const collection = await client.getOrCreateCollection({
@@ -502,27 +716,15 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     2. **ROLE**: Act as a senior consultant. Don't just read numbers; explain *why* they matter.
     3. **NO GENERICS**: Avoid phrases like "Perform better". Instead say "Increase delivery efficiency by 15% using...".
 
-    ### SYSTEM EXPERT PROTOCOL
-    You are the **Master Controller** and **Chief Analyst** of this Shipping System.
-    
-    **YOUR KNOWLEDGE BASE:**
-    - You know **ALL** Orders (Pending, Delivered, Cancelled).
-    - You know **ALL** Users (Merchants, Employees, Drivers).
-    - You know **ALL** Financials (Revenue, Profit, Pricing).
-    - You know **ALL** Rules (Shipping Types, Cities, Weight Limits).
-
-    **INSTRUCTIONS:**
-    1. **ANSWER FREELY**: If the user asks about people, money, boxes, cities, or time -> **ANSWER IT**.
-    2. **BE DIRECT**: Don't say "I will check". Say "Here is the data: ...".
-    3. **REFUSAL POLICY (Lenient)**: 
-       - ONLY refuse if the user asks about something **completely unrelated** to business (e.g., "How to bake a cake", "Who won the World Cup").
-       - If you refuse, say: "أنا هنا فقط لمساعدتك في إدارة أعمالك ونظام الشحن."
-    
-    **EXAMPLES OF ALLOWED QUESTIONS:**
-    - "Who are the merchants?" (YES)
-    - "How much money did we make?" (YES)
-    - "List all employees." (YES)
-    - "What is the status of order #123?" (YES)
+    ### STRICT SCOPE & REFUSAL PROTOCOL
+    1. **DOMAIN**: You are ONLY allowed to answer questions about:
+       - Shipping, Logistics, Orders, Deliveries.
+       - Dashboard Data (Finance, Users, Charts).
+       - Using this System.
+    2. **REFUSAL**: If the user asks about ANYTHING else (e.g., General Knowledge, Cooking, Coding external apps, Life advice, Religion, Politics), you MUST Refuse.
+    3. **REFUSAL MESSAGE**: Return EXACTLY this Arabic message:
+       "عذرًا، أنا مساعد لوجستي فقط في هذا النظام ولا يمكنني الإجابة على أسئلة عامة خارج نطاق العمل."
+    4. **NO EXCEPTIONS**: Do not be helpful for out-of-scope topics.
     
     ### ANALYSIS FRAMEWORK
     When analyzing data (CSV/PDF/Image):
@@ -617,15 +819,23 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
       return data.choices?.[0]?.message?.content || "No response.";
     }
 
+    // --- STREAMING HANDLER ---
+    // We expect OpenRouter/OpenAI SSE format: "data: {...}"
     const reader = fetchResponse.body.getReader();
     const decoder = new TextDecoder("utf-8");
-    let fullText = "";
+    let fullText = ""; // Keep for logging or fallback
+
+    // Set headers for streaming if not already set by caller?
+    // Usually caller shouldn't set json content-type if we are streaming text/plain or SSE.
+    // We'll trust the caller (route handler) to manage headers or we do it here?
+    // Route handler should've handled it. We just write to res.
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
       const chunk = decoder.decode(value, { stream: true });
+      // OpenRouter sends SSE lines: data: {"id":..., "choices":[{"delta":{"content":"..."}}]}
 
       const lines = chunk.split("\n").filter((line) => line.trim() !== "");
       for (const line of lines) {
@@ -658,6 +868,7 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
   }
 }
 
+// ================= INITIALIZATION =================
 const DEFAULT_DOC_PATH = path.join(__dirname, "../../client/document.txt");
 
 async function initDefaultDocument() {
@@ -677,13 +888,23 @@ async function initDefaultDocument() {
   }
 }
 
+// Run init on start
+// --- RESTORED: Deep Study Feature (Indexing Orders & Users) ---
 async function indexDatabaseContent() {
   try {
     console.log("📚 Starting Database Deep Study (Indexing)...");
 
-    // 1. Index Orders
+    // Check if collection is ready/reachable
+    try {
+      await client.heartbeat();
+    } catch (e) {
+      console.warn("⚠️ ChromaDB Heartbeat failed. Skipping indexing.");
+      return;
+    }
+
+    // 1. Index Orders (Limit 300 for performance/safety on startup)
     const orders = await Order.find()
-      .limit(2000)
+      .limit(300)
       .select(
         "orderNumber status orderCost city paymentType changeReason notes createdAt"
       );
@@ -729,11 +950,23 @@ async function indexDatabaseContent() {
   }
 }
 
-// Run init on start
+// --- STARTUP ORCHESTRATION ---
 (async () => {
-  await initDefaultDocument();
-  await indexDatabaseContent();
+  try {
+    console.log("🚀 Starting Server Initialization...");
+    // 1. Reset DB to clear old/duplicate data
+    await resetCollection();
+    // 2. Load Default Doc
+    await initDefaultDocument();
+    // 3. Index Database Data (Deep Study)
+    await indexDatabaseContent();
+    console.log("✅ Server Initialization Complete. AI is ready.");
+  } catch (err) {
+    console.error("❌ Server Initialization Failed:", err);
+  }
 })();
+
+// ================= API ENDPOINTS =================
 
 router.post("/chat", upload.single("file"), async (req, res) => {
   try {
@@ -755,6 +988,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       }`
     );
 
+    // --- 1. PROCESS FILE (If attached) ---
     let fileContext = "";
     let base64Image = null;
 
@@ -801,6 +1035,7 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         } else if (isCsv) {
           rawText = await parseCSV(filePath);
         } else if (isImage) {
+          // For images, we just use OCR text as context
           const {
             data: { text },
           } = await tesseract.recognize(filePath, "ara+eng");
@@ -837,17 +1072,22 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         }
       } catch (fileErr) {
         console.error("Error parsing file:", fileErr);
-
+        // Continue even if file fails? Or throw? Let's inform user.
         return res
           .status(400)
           .json({ error: `Failed to process file: ${fileErr.message}` });
       } finally {
+        // Cleanup temp file
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
     }
 
+    // --- 2. DETERMINE RESPONSE STRATEGY ---
+
     let finalAnswer = "";
 
+    // CASE A: File ONLY (No question)
+    // -> Provide a summary or confirmation
     if (file && !question) {
       console.log(
         `🔍 CASE A TRIGGERED: File Only. ContextLen=${
@@ -878,81 +1118,61 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           answer: `✅ تم رفع الملف **${file.originalname}** بنجاح، ولكن لم أتمكن من قراءة النص بوضوح. حاول رفعه كصورة أو ملف نصي.`,
         });
       }
-      return;
+      return; // End response handled by stream or fast return
     }
 
+    // CASE B: Question (with or without File)
+    // -> RAG Search + Answer
     if (question) {
       // RAG Search
-      let ragContext = "";
-      try {
-        const queryVector = await getEmbedding(question);
+      const queryVector = await getEmbedding(question);
+      const collection = await client.getCollection({ name: COLLECTION_NAME });
 
-        let collection;
-        try {
-          collection = await client.getCollection({ name: COLLECTION_NAME });
-        } catch (e) {
-          // Collection might not exist if just cleared or empty
-          collection = await client.getOrCreateCollection({
-            name: COLLECTION_NAME,
-            embeddingFunction: null,
-          });
-        }
+      const result = await collection.query({
+        queryEmbeddings: [queryVector],
+        nResults: 3,
+      });
 
-        const results = await collection.query({
-          queryEmbeddings: [queryVector],
-          nResults: 5, // Top 5 relevant facts
-        });
+      let retrievedContext =
+        result.metadatas && result.metadatas[0]
+          ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
+          : "";
 
-        if (
-          results.metadatas &&
-          results.metadatas[0] &&
-          results.metadatas[0].length > 0
-        ) {
-          // Extract text and join
-          const validFacts = results.metadatas[0]
-            .map((m) => m.text)
-            .filter((t) => t && t.length > 5);
-          if (validFacts.length > 0) {
-            ragContext = `
-              [RELEVANT DATABASE RECORDS (DEEP STUDY FACTS)]
-              ${validFacts.join("\n\n")}
-              `;
-            console.log(
-              `✅ Found ${validFacts.length} relevant facts via RAG.`
-            );
-          }
-        }
-      } catch (ragErr) {
-        console.warn("⚠️ Vector Search warning:", ragErr.message);
+      // If we just uploaded a file, prioritize its context if RAG didn't find it yet
+      // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
+
+      // --- INJECT DYNAMIC SYSTEM DATA ---
+      const systemContext = await fetchDynamicSystemContext(userType, userId);
+
+      retrievedContext = `
+      ${systemContext}
+
+      ${
+        fileContext
+          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n(Please analyze the content above)`
+          : ""
       }
 
-      // --- 3. FETCH DYNAMIC CONTEXT (Live Stats) ---
-      const dynamicContext = await fetchDynamicSystemContext(userType, userId);
-
-      // --- 4. ASSEMBLE PROMPT CONTEXT ---
-      const context = `
-      ${dynamicContext}
-      
-      ${ragContext}
-      
-      ${fileContext ? `[ATTACHED FILE CONTENT]:\n${fileContext}` : ""}
+      [EXISTING KNOWLEDGE BASE]:
+      ${retrievedContext}
       `;
-      // --- 5. GENERATE ANSWER ---
-      // Streaming Response
+
+      // Streaming Response Headers
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      await generateAnswer(context, question, res, base64Image);
-      return;
+      finalAnswer = await generateAnswer(
+        retrievedContext,
+        question,
+        res,
+        base64Image
+      );
+      return; // Response ended by generateAnswer stream
     }
-
-    // Default Fallback
-    res.json({ answer: "No question provided." });
   } catch (error) {
-    console.error("Router Error:", error);
-    if (!res.headersSent)
-      res.status(500).json({ error: "Internal Server Error" });
+    console.error("❌ Error in /chat:", error);
+    res.status(500).json({ error: "Failed to process request." });
   }
 });
 
