@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const Order = require('../models/Order');
 
-// Get all drivers with their assigned cities
+// Get all drivers 
 exports.getAllDrivers = async (req, res) => {
 	try {
 		const drivers = await User.find({ userType: 'courier' })
@@ -23,13 +23,13 @@ exports.getAllDrivers = async (req, res) => {
 	}
 };
 
-// Assign cities to a driver
+
 exports.assignCitiesToDriver = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { cities } = req.body; // Array of { governorate, city }
+		const { cities } = req.body; 
 
-		// Validate driver exists and is courier type
+		
 		const driver = await User.findById(id);
 		if (!driver) {
 			return res.status(404).json({
@@ -64,7 +64,7 @@ exports.assignCitiesToDriver = async (req, res) => {
 	}
 };
 
-// Get drivers available for a specific city
+
 exports.getDriversByCity = async (req, res) => {
 	try {
 		const { governorate, city } = req.query;
@@ -102,16 +102,16 @@ exports.getDriversByCity = async (req, res) => {
 	}
 };
 
-// Get driver's deliveries
+
 exports.getDriverDeliveries = async (req, res) => {
 	try {
 		const driverId = req.user.id;
 		const { status, page = 1, limit = 10, q } = req.query;
 
-		// Build query
+		
 		let query = { assignedDriver: driverId };
 		if (status && status !== 'all') {
-			// Handle multiple statuses separated by comma
+			
 			const statusArray = status.split(',');
 			query.status = statusArray.length > 1 ? { $in: statusArray } : status;
 		}

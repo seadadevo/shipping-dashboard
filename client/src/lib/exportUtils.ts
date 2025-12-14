@@ -2,7 +2,7 @@
  * Export utility functions for generating reports in various formats
  */
 
-import type { Order, User } from "../types";
+import type { Order, User, ShippingType, City, WeightSetting } from "../types";
 
 /**
  * Convert data to CSV format
@@ -100,10 +100,39 @@ export function exportOrdersToExcel(orders: Order[], filename: string = 'orders.
 }
 
 /**
- * Export users to CSV
+ * Export data to CSV
  */
-export function exportUsersToCSV(users: User[], filename: string = 'users.csv') {
-  const data = users.map(user => ({
+export function generateAdminReportCSV(data: {
+  orders: Order[];
+  users: User[];
+  stats: any;
+}) {
+  const timestamp = new Date().toLocaleDateString('ar-EG').replace(/\//g, '-');
+
+  // تصدير Orders
+  const ordersData = data.orders.map(order => ({
+    'رقم الطلب': order._id,
+    'اسم العميل': order.customerName,
+    'رقم الهاتف': order.customerPhone1,
+    'البريد الإلكتروني': order.customerEmail || '',
+    'المحافظة': order.governorate,
+    'المدينة': order.city,
+    'الشارع': order.street,
+    'نوع الطلب': order.orderType,
+    'نوع الشحن': order.shippingType,
+    'نوع الدفع': order.paymentType,
+    'الوزن الكلي': order.totalWeight,
+    'تكلفة الطلب': order.orderCost,
+    'الحالة': order.status,
+    'تاريخ الإنشاء': new Date(order.createdAt).toLocaleDateString('ar-EG'),
+    'الفرع': order.branch || '',
+    'توصيل قرية': order.isVillageDelivery ? 'نعم' : 'لا',
+  }));
+  const ordersCSV = convertToCSV(ordersData, Object.keys(ordersData[0] || {}));
+  downloadFile(ordersCSV, `Orders-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+
+  // تصدير Users
+  const usersData = data.users.map(user => ({
     'رقم المستخدم': user._id,
     'الاسم الكامل': user.fullName,
     'البريد الإلكتروني': user.email,
@@ -114,10 +143,250 @@ export function exportUsersToCSV(users: User[], filename: string = 'users.csv') 
     'المدينة': user.city || '',
     'اسم المتجر': user.storeName || '',
   }));
-  
-  const headers = Object.keys(data[0] || {});
-  const csv = convertToCSV(data, headers);
-  downloadFile(csv, filename, 'text/csv;charset=utf-8;');
+  const usersCSV = convertToCSV(usersData, Object.keys(usersData[0] || {}));
+  downloadFile(usersCSV, `Users-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+
+  // تصدير Stats
+  const statsData = Object.entries(data.stats).map(([key, value]) => ({
+    'الإحصائية': key,
+    'القيمة': value
+  }));
+  const statsCSV = convertToCSV(statsData, ['الإحصائية', 'القيمة']);
+  downloadFile(statsCSV, `Stats-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+
+  return {
+    ordersCSV,
+    usersCSV,
+    statsCSV
+  };
+}
+
+// ======================= Export all data to CSV in a single file =======================
+export function generateAdminReportCSVSingleFile(data: {
+  orders: Order[];
+  users: User[];
+  stats: any;
+  shippingTypes?: any[];
+  cities?: any[];
+  weightSettings?: any[];
+}) {
+  const timestamp = new Date().toLocaleDateString('ar-EG').replace(/\//g, '-');
+
+  let combinedCSV = '';
+
+  // =======================
+  // 1️⃣ Stats
+  // =======================
+  combinedCSV += 'ملخص النظام\n';
+  const statsData = Object.entries(data.stats).map(([key, value]) => ({
+    'الإحصائية': key,
+    'القيمة': value
+  }));
+  combinedCSV += convertToCSV(statsData, ['الإحصائية', 'القيمة']);
+  combinedCSV += '\n\n';
+
+  // =======================
+  // 2️⃣ Orders
+  // =======================
+  combinedCSV += 'بيانات الطلبات\n';
+  const ordersData = data.orders.map(order => ({
+    'رقم الطلب': order._id,
+    'اسم العميل': order.customerName,
+    'رقم الهاتف': order.customerPhone1,
+    'البريد الإلكتروني': order.customerEmail || '',
+    'المحافظة': order.governorate,
+    'المدينة': order.city,
+    'الشارع': order.street,
+    'نوع الطلب': order.orderType,
+    'نوع الشحن': order.shippingType,
+    'نوع الدفع': order.paymentType,
+    'الوزن الكلي': order.totalWeight,
+    'تكلفة الطلب': order.orderCost,
+    'الحالة': order.status,
+    'تاريخ الإنشاء': new Date(order.createdAt).toLocaleDateString('ar-EG'),
+    'الفرع': order.branch || '',
+    'توصيل قرية': order.isVillageDelivery ? 'نعم' : 'لا',
+  }));
+  combinedCSV += convertToCSV(ordersData, Object.keys(ordersData[0] || {}));
+  combinedCSV += '\n\n';
+
+  // =======================
+  // 3️⃣ Users
+  // =======================
+  combinedCSV += 'بيانات المستخدمين\n';
+  const usersData = data.users.map(user => ({
+    'رقم المستخدم': user._id,
+    'الاسم الكامل': user.fullName,
+    'البريد الإلكتروني': user.email,
+    'رقم الهاتف': user.phone,
+    'نوع المستخدم': user.userType,
+    'العنوان': user.address || '',
+    'المحافظة': user.governorate || '',
+    'المدينة': user.city || '',
+    'اسم المتجر': user.storeName || '',
+  }));
+  combinedCSV += convertToCSV(usersData, Object.keys(usersData[0] || {}));
+  combinedCSV += '\n\n';
+
+  // =======================
+  // 4️⃣ Shipping Types
+  // =======================
+  if (data.shippingTypes && data.shippingTypes.length) {
+    combinedCSV += 'أنواع الشحن\n';
+    const shippingData = data.shippingTypes.map(st => ({
+      'اسم نوع الشحن': st.name,
+      'قيمة التعديل': st.adjustmentAmount,
+      'الحد الأدنى لأيام التوصيل': st.minDeliveryDays,
+      'الحد الأقصى لأيام التوصيل': st.maxDeliveryDays,
+      'الوصف': st.description || '',
+      'نشط': st.isActive ? 'نعم' : 'لا',
+    }));
+    combinedCSV += convertToCSV(shippingData, Object.keys(shippingData[0]));
+    combinedCSV += '\n\n';
+  }
+
+  // =======================
+  // 5️⃣ Cities / إدارة المناطق
+  // =======================
+  if (data.cities && data.cities.length) {
+    combinedCSV += 'إدارة المناطق (المدن)\n';
+    const citiesData = data.cities.map(c => ({
+      'اسم المدينة': c.cityName,
+      'المحافظة': c.governorate?.govName || '', // اسم المحافظة مباشرة
+      'سعر الشحن': c.shippingCost,
+      'نشط': c.isActive ? 'نعم' : 'لا',
+    }));
+    combinedCSV += convertToCSV(citiesData, Object.keys(citiesData[0]));
+    combinedCSV += '\n\n';
+  }
+
+  // =======================
+  // 6️⃣ Weight Settings / إعدادات الوزن والتكلفة
+  // =======================
+  if (data.weightSettings && data.weightSettings.length) {
+    combinedCSV += 'إعدادات الوزن والتكلفة\n';
+    const weightData = data.weightSettings.map(w => ({
+      'الوزن الأقصى المشمول': w.defaultWeightLimit,
+      'سعر الكيلو الإضافي': w.extraKgCost,
+      'سعر التوصيل للقرى': w.villageDeliveryCost,
+      'آخر تحديث': new Date(w.updatedAt).toLocaleString('ar-EG'),
+    }));
+    combinedCSV += convertToCSV(weightData, Object.keys(weightData[0]));
+    combinedCSV += '\n\n';
+  }
+
+  // =======================
+  // تنزيل الملف
+  // =======================
+  downloadFile(combinedCSV, `تقرير-شامل-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+
+  return combinedCSV;
+}
+
+
+// ======================= Export merchant data to CSV in a single file =======================
+/**
+ * Export merchant-specific report
+ */
+export function exportMerchantReport(data: {
+  orders: any[];
+  stats: Record<string, any>;
+  shippingTypes?: any[];
+  cities?: any[];
+  weightSettings?: any[];
+}) {
+  const timestamp = new Date().toLocaleDateString("ar-EG").replace(/\//g, "-");
+  let combinedCSV = "";
+
+  // =======================
+  // 1️⃣ إحصائيات التاجر
+  // =======================
+  combinedCSV += "إحصائيات التاجر\n";
+  const statsData = Object.entries(data.stats).map(([key, value]) => ({
+    "الإحصائية": key,
+    "القيمة": value
+  }));
+  combinedCSV += convertToCSV(statsData, ["الإحصائية", "القيمة"]);
+  combinedCSV += "\n\n";
+
+  // =======================
+  // 2️⃣ الطلبات الخاصة بالتاجر
+  // =======================
+  combinedCSV += "الطلبات الخاصة بالتاجر\n";
+  const ordersData = data.orders.map(order => ({
+    "رقم الطلب": order._id,
+    "اسم العميل": order.customerName,
+    "رقم الهاتف": order.customerPhone1,
+    "البريد الإلكتروني": order.customerEmail || "",
+    "المحافظة": order.governorate,
+    "المدينة": order.city,
+    "الشارع": order.street,
+    "نوع الطلب": order.orderType,
+    "نوع الشحن": order.shippingType,
+    "نوع الدفع": order.paymentType,
+    "الوزن الكلي": order.totalWeight,
+    "تكلفة الطلب": order.orderCost,
+    "الحالة": order.status,
+    "تاريخ الإنشاء": new Date(order.createdAt).toLocaleDateString("ar-EG"),
+    "الفرع": order.branch || "",
+    "توصيل قرية": order.isVillageDelivery ? "نعم" : "لا",
+  }));
+  combinedCSV += convertToCSV(ordersData, Object.keys(ordersData[0] || {}));
+  combinedCSV += "\n\n";
+
+  // =======================
+  // 3️⃣ أنواع الشحن
+  // =======================
+  if (data.shippingTypes && data.shippingTypes.length) {
+    combinedCSV += "أنواع الشحن\n";
+    const shippingData = data.shippingTypes.map(st => ({
+      "اسم نوع الشحن": st.name,
+      "قيمة التعديل": st.adjustmentAmount,
+      "الحد الأدنى لأيام التوصيل": st.minDeliveryDays,
+      "الحد الأقصى لأيام التوصيل": st.maxDeliveryDays,
+      "الوصف": st.description || "",
+      "نشط": st.isActive ? "نعم" : "لا",
+    }));
+    combinedCSV += convertToCSV(shippingData, Object.keys(shippingData[0]));
+    combinedCSV += "\n\n";
+  }
+
+  // =======================
+  // 4️⃣ المدن / إدارة المناطق
+  // =======================
+  if (data.cities && data.cities.length) {
+    combinedCSV += "إدارة المناطق (المدن)\n";
+    const citiesData = data.cities.map(c => ({
+      "اسم المدينة": c.cityName,
+      "المحافظة": c.governorate?.govName || "",
+      "سعر الشحن": c.shippingCost,
+      "نشط": c.isActive ? "نعم" : "لا",
+    }));
+    combinedCSV += convertToCSV(citiesData, Object.keys(citiesData[0]));
+    combinedCSV += "\n\n";
+  }
+
+  // =======================
+  // 5️⃣ إعدادات الوزن والتكلفة
+  // =======================
+  if (data.weightSettings && data.weightSettings.length) {
+    combinedCSV += "إعدادات الوزن والتكلفة\n";
+    const weightData = data.weightSettings.map(w => ({
+      "الوزن الأقصى المشمول": w.defaultWeightLimit,
+      "سعر الكيلو الإضافي": w.extraKgCost,
+      "سعر التوصيل للقرى": w.villageDeliveryCost,
+      "آخر تحديث": new Date(w.updatedAt).toLocaleString("ar-EG"),
+    }));
+    combinedCSV += convertToCSV(weightData, Object.keys(weightData[0]));
+    combinedCSV += "\n\n";
+  }
+
+  // =======================
+  // تنزيل الملف
+  // =======================
+  downloadFile(combinedCSV, `تقرير-التاجر-${timestamp}.csv`, "text/csv;charset=utf-8;");
+
+  return combinedCSV;
 }
 
 /**

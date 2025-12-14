@@ -51,7 +51,7 @@ const orderSchema = new mongoose.Schema(
       lowercase: true,
       validate: {
         validator: function(v) {
-          // Allow empty string or valid email
+          
           return !v || validator.isEmail(v);
         },
         message: "Invalid email format"
@@ -121,7 +121,7 @@ const orderSchema = new mongoose.Schema(
       default: "Pending",
     },
     
-    // Order state history for tracking changes
+   
     stateHistory: [{
       previousState: { type: String },
       newState: { type: String },
@@ -137,7 +137,7 @@ const orderSchema = new mongoose.Schema(
       required: true
     },
     
-    // Driver assignment
+   
     assignedDriver: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
@@ -153,7 +153,6 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Generate unique order number before saving
 orderSchema.pre('save', async function(next) {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();

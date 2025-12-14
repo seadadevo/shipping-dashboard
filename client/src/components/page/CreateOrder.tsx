@@ -120,6 +120,14 @@ export function CreateOrder() {
   const [newProduct, setNewProduct] = useState({ name: '', quantity: 1, weight: 0 });
   const [calculatedCost, setCalculatedCost] = useState<number | null>(null);
   const [isCalculatingCost, setIsCalculatingCost] = useState(false);
+  const [costBreakdown, setCostBreakdown] = useState<{
+    baseCost: number;
+    extraWeightCost: number;
+    shippingTypeAdjustment: number;
+    villageCost: number;
+    total: number;
+    details: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -132,7 +140,9 @@ export function CreateOrder() {
         ]);
         setGovernoratesList(govRes.data.data.filter((g: Governorate) => g.isActive));
         setShippingTypesList(shipRes.data.data.filter((s: ShippingTypeData) => s.isActive));
-        setWeightSettings(weightRes.data.data);
+        // Weight settings response is directly in data, not data.data
+        setWeightSettings(weightRes.data);
+        console.log('✅ Weight settings loaded:', weightRes.data);
       } catch (err) {
         setError('فشل في تحميل البيانات الأساسية.');
       } finally {
@@ -189,6 +199,7 @@ export function CreateOrder() {
     const totalWeight = calculateTotalWeight();
     if (!formData.governorateName || !formData.cityName || !formData.shippingType || totalWeight <= 0) {
       setCalculatedCost(null);
+      setCostBreakdown(null);
       return;
     }
 
@@ -202,9 +213,55 @@ export function CreateOrder() {
         isVillageDelivery: formData.villageDelivery
       });
       setCalculatedCost(response.data.data.calculatedCost);
+      
+      // حساب التفاصيل يدوياً
+      const selectedCity = availableCities.find(c => c.cityName === formData.cityName);
+      const selectedShippingType = shippingTypesList.find(st => st.name === formData.shippingType);
+      
+      console.log(' Cost Breakdown :', {
+        selectedCity,
+        selectedShippingType,
+        weightSettings,
+        availableCities,
+        shippingTypesList,
+        cityName: formData.cityName,
+        shippingType: formData.shippingType
+      });
+      
+      if (selectedCity && selectedShippingType && weightSettings) {
+        const baseCost = selectedCity.shippingCost || 0;
+        const extraWeight = Math.max(0, totalWeight - weightSettings.defaultWeightLimit);
+        const extraWeightCost = Math.round(extraWeight * weightSettings.extraKgCost * 100) / 100;
+        const shippingTypeAdjustment = selectedShippingType.adjustmentAmount || 0;
+        const villageCost = formData.villageDelivery ? weightSettings.villageDeliveryCost : 0;
+        
+        setCostBreakdown({
+          baseCost,
+          extraWeightCost,
+          shippingTypeAdjustment,
+          villageCost,
+          total: response.data.data.calculatedCost,
+          details: `${baseCost} + ${extraWeightCost} + ${shippingTypeAdjustment} + ${villageCost}`
+        });
+        
+        console.log('✅ Cost Breakdown Set:', {
+          baseCost,
+          extraWeightCost,
+          shippingTypeAdjustment,
+          villageCost,
+          total: response.data.data.calculatedCost
+        });
+      } else {
+        console.warn('⚠️ Cost breakdown not set - missing data:', {
+          hasCity: !!selectedCity,
+          hasShippingType: !!selectedShippingType,
+          hasWeightSettings: !!weightSettings
+        });
+      }
     } catch (error) {
       console.error('Failed to calculate cost:', error);
       setCalculatedCost(null);
+      setCostBreakdown(null);
     } finally {
       setIsCalculatingCost(false);
     }
@@ -530,7 +587,9 @@ export function CreateOrder() {
                     onCheckedChange={(c) => handleInputChange('villageDelivery', c as boolean)} 
                 />
                 <Label htmlFor="villageDelivery" className="cursor-pointer font-medium text-orange-800">
-                    هل تريد التوصيل الي قرية؟ (تطبق رسوم توصيل إضافية وقدرها ... )
+                    هل تريد التوصيل إلى قرية؟ {weightSettings && (
+                        <span className="text-orange-600">(تطبق رسوم توصيل إضافية وقدرها <strong>{weightSettings.villageDeliveryCost || 0} جنيه</strong>)</span>
+                    )}
                 </Label>
             </div>
 
@@ -608,43 +667,6 @@ export function CreateOrder() {
                     </Select>
                 </div>
             </div>
-
-            {/* معلومات الأسعار والإعدادات */}
-            {weightSettings && (
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                        <div className="bg-amber-100 p-2 rounded-lg">
-                            <Info className="h-5 w-5 text-amber-700" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-bold text-amber-900 mb-2 text-base">📋 إعدادات التسعير:</p>
-                            <div className="grid gap-2 text-sm text-amber-900">
-                                <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
-                                    <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
-                                    <span>
-                                        <strong>الوزن الافتراضي:</strong> حتى {weightSettings.defaultWeightLimit} كجم = سعر المدينة
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
-                                    <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
-                                    <span>
-                                        <strong>الوزن الزائد:</strong> كل كيلو إضافي = <strong className="text-amber-700">{weightSettings.extraKgCost} جنيه</strong>
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
-                                    <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
-                                    <span>
-                                        <strong>توصيل القرية:</strong> رسوم إضافية = <strong className="text-amber-700">{weightSettings.villageDeliveryCost} جنيه</strong>
-                                    </span>
-                                </div>
-                            </div>
-                            <p className="text-xs text-amber-700 mt-2 italic">
-                                💡 التكلفة النهائية = سعر المدينة + الوزن الزائد + نوع الشحن + رسوم القرية (إن وجدت)
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
             
             <div className='space-y-2'>
                 <Label className="text-base">ملاحظات إضافية</Label>
@@ -712,7 +734,7 @@ export function CreateOrder() {
                 </Dialog>
             </div>
             {/* معلومات الوزن الاساسي والاضافي */}
-            <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p>
+            {/* <p className="text-xs text-muted-foreground mb-2">الوزن الأساسي هو ... كجم - وتكلفة كل كجم إضافي هي ... جنيه</p> */}
         </CardHeader>
         <CardContent>
             {products.length > 0 ? (
@@ -753,6 +775,43 @@ export function CreateOrder() {
             )}
         </CardContent>
       </Card>
+
+      {/* معلومات الأسعار والإعدادات */}
+      {weightSettings && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4 shadow-md">
+              <div className="flex items-start gap-3">
+                  <div className="bg-amber-100 p-2 rounded-lg">
+                      <Info className="h-5 w-5 text-amber-700" />
+                  </div>
+                  <div className="flex-1">
+                      <p className="font-bold text-amber-900 mb-2 text-base">📋 إعدادات التسعير:</p>
+                      <div className="grid gap-2 text-sm text-amber-900">
+                          <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
+                              <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
+                              <span>
+                                  <strong>الوزن الافتراضي:</strong> حتى {weightSettings.defaultWeightLimit} كجم = سعر المدينة
+                              </span>
+                          </div>
+                          <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
+                              <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
+                              <span>
+                                  <strong>الوزن الزائد:</strong> كل كيلو إضافي = <strong className="text-amber-700">{weightSettings.extraKgCost} جنيه</strong>
+                              </span>
+                          </div>
+                          <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
+                              <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
+                              <span>
+                                  <strong>توصيل القرية:</strong> رسوم إضافية = <strong className="text-amber-700">{weightSettings.villageDeliveryCost || 0} جنيه</strong>
+                              </span>
+                          </div>
+                      </div>
+                      <p className="text-xs text-amber-700 mt-2 italic">
+                          💡 التكلفة النهائية = سعر المدينة + الوزن الزائد + نوع الشحن + رسوم القرية (إن وجدت)
+                      </p>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* 6. ملخص التكلفة والوزن */}
       <Card className="shadow-2xl border-2 border-purple-200 bg-background from-purple-50 via-blue-50 to-indigo-50 overflow-hidden">
@@ -903,6 +962,102 @@ export function CreateOrder() {
             )}
         </CardContent>
       </Card>
+
+      {/* جدول تفصيل التكلفة */}
+      {costBreakdown && calculatedCost !== null && (
+        <Card className="shadow-lg border-2 border-green-200">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-green-200">
+            <CardTitle className="flex items-center text-lg text-green-800">
+              <DollarSign className="h-6 w-6 mx-2 text-green-600" />
+              تفاصيل حساب التكلفة
+            </CardTitle>
+            <CardDescription className="text-green-700">
+              شرح كامل لكيفية حساب تكلفة الشحن
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="overflow-hidden rounded-lg border border-green-200">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-green-50 hover:bg-green-50">
+                    <TableHead className="text-right font-bold text-green-900">البند</TableHead>
+                    <TableHead className="text-right font-bold text-green-900">التفاصيل</TableHead>
+                    <TableHead className="text-right font-bold text-green-900">القيمة</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow className="hover:bg-green-50/50">
+                    <TableCell className="font-medium">تكلفة الشحن الأساسية</TableCell>
+                    <TableCell className="text-gray-600">
+                      سعر الشحن من <strong>{formData.governorateName}</strong> إلى <strong>{formData.cityName}</strong>
+                    </TableCell>
+                    <TableCell className="font-bold text-green-700">{costBreakdown.baseCost} جنيه</TableCell>
+                  </TableRow>
+
+                  <TableRow className="hover:bg-green-50/50">
+                    <TableCell className="font-medium">تكلفة الوزن الزائد</TableCell>
+                    <TableCell className="text-gray-600">
+                      {weightSettings && (
+                        <>
+                          الوزن الإجمالي: <strong>{calculateTotalWeight()} كجم</strong>
+                          {calculateTotalWeight() > weightSettings.defaultWeightLimit ? (
+                            <>
+                              <br />
+                              الوزن الزائد: <strong>{(calculateTotalWeight() - weightSettings.defaultWeightLimit).toFixed(2)} كجم</strong> × {weightSettings.extraKgCost} جنيه/كجم
+                            </>
+                          ) : (
+                            <span className="text-green-600"> (ضمن الحد المسموح {weightSettings.defaultWeightLimit} كجم)</span>
+                          )}
+                        </>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-bold text-green-700">
+                      {costBreakdown.extraWeightCost > 0 ? `${costBreakdown.extraWeightCost} جنيه` : 'لا يوجد'}
+                    </TableCell>
+                  </TableRow>
+
+                  <TableRow className="hover:bg-green-50/50">
+                    <TableCell className="font-medium">تعديل نوع الشحن</TableCell>
+                    <TableCell className="text-gray-600">
+                      نوع الشحن المختار: <strong>{formData.shippingType}</strong>
+                      {costBreakdown.shippingTypeAdjustment > 0 && ' (تكلفة إضافية)'}
+                      {costBreakdown.shippingTypeAdjustment < 0 && ' (خصم)'}
+                    </TableCell>
+                    <TableCell className="font-bold" style={{ color: costBreakdown.shippingTypeAdjustment >= 0 ? '#15803d' : '#dc2626' }}>
+                      {costBreakdown.shippingTypeAdjustment > 0 ? '+' : ''}{costBreakdown.shippingTypeAdjustment} جنيه
+                    </TableCell>
+                  </TableRow>
+
+                  {formData.villageDelivery && (
+                    <TableRow className="hover:bg-green-50/50">
+                      <TableCell className="font-medium">رسوم توصيل القرية</TableCell>
+                      <TableCell className="text-gray-600">
+                        رسوم إضافية للتوصيل إلى القرية: <strong>{formData.village || 'غير محدد'}</strong>
+                      </TableCell>
+                      <TableCell className="font-bold text-orange-700">+{costBreakdown.villageCost} جنيه</TableCell>
+                    </TableRow>
+                  )}
+
+                  <TableRow className="bg-green-100 hover:bg-green-100 border-t-2 border-green-300">
+                    <TableCell className="font-bold text-lg text-green-900">الإجمالي النهائي</TableCell>
+                    <TableCell className="text-sm text-gray-700 italic">
+                      {costBreakdown.baseCost} + {costBreakdown.extraWeightCost} + {costBreakdown.shippingTypeAdjustment} + {costBreakdown.villageCost}
+                    </TableCell>
+                    <TableCell className="font-bold text-xl text-green-800">{calculatedCost} جنيه</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-blue-800">
+                <strong>ملاحظة:</strong> التكلفة المعروضة هي تكلفة الشحن فقط. سيتم إضافة قيمة المنتجات (إن وجدت) عند التسليم حسب نوع الدفع المختار.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       
       <Card className="bg-secondary border-t bottom-4 shadow-lg ">
