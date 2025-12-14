@@ -234,6 +234,49 @@ async function fetchDynamicSystemContext(userType, userId) {
         })
         .join("\n");
 
+      // --- H. PREDICTION DATA (Last 3 Months Trend) ---
+      const last3Months = sortedMonths.slice(-3);
+      let predictionText = "";
+
+      if (last3Months.length >= 2) {
+        const trendsData = last3Months.map((m) => timelineMap.get(m));
+        const avgOrders =
+          trendsData.reduce((sum, d) => sum + d.totalOrderCount, 0) /
+          trendsData.length;
+        const avgRevenue =
+          trendsData.reduce((sum, d) => sum + d.realizedRevenue, 0) /
+          trendsData.length;
+
+        // Calculate growth rate
+        const firstMonth = trendsData[0];
+        const lastMonth = trendsData[trendsData.length - 1];
+        const orderGrowth =
+          firstMonth.totalOrderCount > 0
+            ? (
+                ((lastMonth.totalOrderCount - firstMonth.totalOrderCount) /
+                  firstMonth.totalOrderCount) *
+                100
+              ).toFixed(1)
+            : 0;
+        const revenueGrowth =
+          firstMonth.realizedRevenue > 0
+            ? (
+                ((lastMonth.realizedRevenue - firstMonth.realizedRevenue) /
+                  firstMonth.realizedRevenue) *
+                100
+              ).toFixed(1)
+            : 0;
+
+        predictionText = `
+        [PREDICTION DATA - USE THIS FOR FORECASTS]
+        Last 3 Months Average:
+        - Orders: ${avgOrders.toFixed(0)} per month
+        - Revenue: ${avgRevenue.toFixed(0)} EGP per month
+        Growth Trend: ${orderGrowth}% (Orders), ${revenueGrowth}% (Revenue)
+        Recent Months: ${last3Months.join(", ")}
+        `;
+      }
+
       // --- C. FULL PERSONNEL LISTS (No Limits) ---
       // 1. Merchants
       const merchants = await User.find({ userType: "merchant" }).select(
@@ -395,6 +438,8 @@ async function fetchDynamicSystemContext(userType, userId) {
         [BUSINESS TIMELINE (FULL HISTORY)]
         ${fullTimeline || "No history available yet."}
         
+ ${predictionText}
+        
         [FINANCIAL REPORT (ALL TIME)]
         - Total Realized Revenue: ${totalRealizedRevenue} EGP
         - COD Volume: ${revenueCOD} EGP
@@ -496,6 +541,75 @@ async function fetchDynamicSystemContext(userType, userId) {
         myDrivers.map((d) => `- ${d.fullName} (${d.phone})`).join("\n") ||
         "No drivers assigned yet";
 
+      // Prediction Data (Merchant's Own Historical Trend)
+      const myMonthlyData = await Order.aggregate([
+        {
+          $match: { createdBy: new mongoose.Types.ObjectId(userId) },
+        },
+        {
+          $group: {
+            _id: {
+              month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+              status: "$status",
+            },
+            revenue: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.month": 1 } },
+      ]);
+
+      const myTimelineMap = new Map();
+      myMonthlyData.forEach((m) => {
+        const month = m._id.month;
+        if (!myTimelineMap.has(month)) {
+          myTimelineMap.set(month, { orders: 0, revenue: 0 });
+        }
+        const entry = myTimelineMap.get(month);
+        entry.orders += m.count;
+        if (m._id.status === "Delivered") {
+          entry.revenue += m.revenue;
+        }
+      });
+
+      const myMonths = Array.from(myTimelineMap.keys()).sort();
+      const myLast3 = myMonths.slice(-3);
+      let myPredictionText = "";
+
+      if (myLast3.length >= 2) {
+        const myTrends = myLast3.map((m) => myTimelineMap.get(m));
+        const myAvgOrders =
+          myTrends.reduce((s, d) => s + d.orders, 0) / myTrends.length;
+        const myAvgRevenue =
+          myTrends.reduce((s, d) => s + d.revenue, 0) / myTrends.length;
+
+        const myFirst = myTrends[0];
+        const myLast = myTrends[myTrends.length - 1];
+        const myOrderGrowth =
+          myFirst.orders > 0
+            ? (
+                ((myLast.orders - myFirst.orders) / myFirst.orders) *
+                100
+              ).toFixed(1)
+            : 0;
+        const myRevenueGrowth =
+          myFirst.revenue > 0
+            ? (
+                ((myLast.revenue - myFirst.revenue) / myFirst.revenue) *
+                100
+              ).toFixed(1)
+            : 0;
+
+        myPredictionText = `
+        [MY PREDICTION DATA - FOR FORECASTS]
+        Your Last 3 Months Average:
+        - Orders: ${myAvgOrders.toFixed(0)} per month
+        - Revenue: ${myAvgRevenue.toFixed(0)} EGP per month
+        Your Growth Trend: ${myOrderGrowth}% (Orders), ${myRevenueGrowth}% (Revenue)
+        Recent Months: ${myLast3.join(", ")}
+        `;
+      }
+
       // Fetch Current Merchant Info
       const currentUser = await User.findById(userId).select(
         "fullName phone email storeName"
@@ -529,12 +643,14 @@ async function fetchDynamicSystemContext(userType, userId) {
         [MY RECENT ORDERS (Last 10)]
         ${myRecentSummary}
 
+        ${myPredictionText}
+
         [MY DRIVERS]
         ${myDriversList}
         `;
     }
 
-    // ---------------- EMPLOYEE CONTEXT (Orders Only) ----------------
+    // ---------------- EMPLOYEE CONTEXT (Orders Management) ----------------
     if (userType === "employee") {
       // 1. Fetch Current Employee Info
       const currentUser = await User.findById(userId).select(
@@ -569,12 +685,28 @@ async function fetchDynamicSystemContext(userType, userId) {
         )
         .join("\n");
 
-      // 4. User Manual for Employees
+      // 4. Weight Settings & Shipping Types (for order management)
+      const weightSettingsEmp = await WeightSetting.findOne();
+      const shippingTypesEmp = await ShippingType.find({ isActive: true });
+
+      const weightInfo = weightSettingsEmp
+        ? `- Default Weight Limit: ${weightSettingsEmp.defaultWeightLimit}kg\n- Extra Kg Cost: ${weightSettingsEmp.extraKgCost} EGP\n- Village Delivery Fee: ${weightSettingsEmp.villageDeliveryCost} EGP`
+        : "No weight settings configured";
+
+      const shippingInfo =
+        shippingTypesEmp.length > 0
+          ? shippingTypesEmp
+              .map((s) => `- ${s.name}: +${s.adjustmentAmount} EGP`)
+              .join("\n")
+          : "No shipping types configured";
+
+      // 5. User Manual for Employees
       const userManual = `
       [SYSTEM USER MANUAL - EMPLOYEE]
       - **View Order Details**: Ask "Show me order #123" or "What's the status of order 555"
       - **Assign Driver**: In dashboard, click order -> Select driver from dropdown
       - **Update Status**: Click order row -> Change status -> Save
+      - **Cancel Order**: Click order -> Change status to "Cancelled" -> Add reason -> Save
       `;
 
       return `
@@ -593,6 +725,12 @@ async function fetchDynamicSystemContext(userType, userId) {
         
         [RECENT ORDERS (Last 10)]
         ${recentSummary}
+
+        [WEIGHT SETTINGS]
+        ${weightInfo}
+
+        [SHIPPING TYPES]
+        ${shippingInfo}
         `;
     }
   } catch (err) {
@@ -770,6 +908,59 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     - "How much money did we make?" (YES)
     - "List all employees." (YES)
     - "What is the status of order #123?" (YES)
+    
+    ### ROLE-BASED DATA ACCESS (CRITICAL)
+    **IMPORTANT**: Analyze the user's question carefully. Distinguish between:
+    1. **Information Questions** ("Who are...?", "What is...?", "Show me...") → Check data access rights
+    2. **Action Requests** ("Create order", "Add user", "Delete...") → Respond naturally that you cannot perform actions
+    
+    **Check [CURRENT USER PROFILE] to identify role, then apply these rules:**
+    
+    **MERCHANT ROLE:**
+    ✅ **CAN answer about:**
+    - Their own orders (status, details, history)
+    - Their own profit, revenue, sales figures
+    - Drivers assigned to their orders (name, phone)
+    - Order cancellation process, status updates
+    - Weight settings and shipping types (for understanding costs)
+    
+    ❌ **CANNOT answer about:**
+    - Other merchants or their data
+    - Employee information
+    - All drivers in the system
+    - System-wide/global company financials
+    
+    **Smart Refusals for Merchants:**
+    - If asked about other merchants/employees: "عذرًا، يمكنك الاطلاع على بياناتك الخاصة فقط. لمعلومات عن التجار أو الموظفين الآخرين، تواصل مع الإدارة."
+    - If asked about all drivers: "يمكنني عرض السائقين الذين عملوا على طلباتك. هل تريد رؤية قائمتهم؟"
+    - If asked to create order: "لا أستطيع إنشاء الطلبات مباشرة، لكن يمكنك إضافة طلب جديد من لوحة التحكم. اضغط على 'إضافة طلب' واملأ البيانات المطلوبة."
+    
+    **EMPLOYEE ROLE:**
+    ✅ **CAN answer about:**
+    - All order details (number, status, client, driver, merchant, cost, destination)
+    - Order statistics (totals, pending, delivered, cancelled)
+    - Order cancellation (process, how to cancel)
+    - Order status changes and tracking
+    - Weight settings and shipping types
+    
+    ❌ **CANNOT answer about:**
+    - Financial data (revenue, profit, company income)
+    - User information (merchant lists, employee lists, driver personal data beyond what's in orders)
+    - Predictions or forecasts (next month projections)
+    
+    **Smart Refusals for Employees:**
+    - If asked about financials: "كموظف، صلاحيتك تشمل إدارة الطلبات فقط. البيانات المالية متاحة للإدارة. هل تريد مساعدة في شيء متعلق بالطلبات؟"
+    - If asked about user lists: "لا يمكنني عرض قوائم المستخدمين. هل تحتاج معلومات عن طلب معين أو سائق مخصص لطلب؟"
+    - If asked to create order: "لا أستطيع إنشاء الطلبات، لكن يمكنك ذلك من النظام. اذهب إلى صفحة 'إدارة الطلبات' واضغط 'إضافة طلب'."
+    - If asked about predictions: "التوقعات المالية متاحة للإدارة والتجار فقط. يمكنني مساعدتك في تتبع الطلبات الحالية."
+    
+    **ADMIN ROLE:**
+    ✅ **CAN answer**: Everything (no restrictions)
+    ❌ **Action requests**: Same as others - explain you cannot perform actions, only provide information
+    
+    **General Action Request Response:**
+    When ANY role asks you to DO something (create, delete, modify):
+    "لا أستطيع تنفيذ العمليات مباشرة، لكن يمكنني إرشادك كيف تفعل ذلك بنفسك في النظام. [ثم اشرح الخطوات]"
     
     ### ANALYSIS FRAMEWORK
     When analyzing data (CSV/PDF/Image):
