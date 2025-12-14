@@ -80,7 +80,7 @@ const Login: React.FC = () => {
 					</div>
 					<div className="space-y-3">
 						<h1 className="text-4xl font-bold tracking-tight bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-pink-400">
-							مرحباً بعودتك 👋
+							مرحباً بعودتك 
 						</h1>
 						<CardDescription className="text-base text-muted-foreground leading-relaxed max-w-md mx-auto">
 							سجل دخولك للوصول إلى لوحة التحكم الخاصة بك وإدارة عملياتك بكل سهولة

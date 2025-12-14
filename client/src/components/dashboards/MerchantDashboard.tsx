@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable react-hooks/rules-of-hooks */
+import React, {useEffect, useState} from "react";
 import {
   Card,
   CardContent,
@@ -19,12 +20,13 @@ import {
   DollarSign,
   TrendingUp,
   Activity,
+  Download,
   Loader2, // (إضافة)
 } from "lucide-react";
 import api from "../../lib/api"; // (إضافة)
 import type { Order, GetOrdersResponse, ApiError } from "../../types"; // (إضافة)
+import { exportMerchantReport } from "../../lib/exportUtils";
 
-// (إضافة): تعريف الحالات بالعربي زي ما عملنا
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",
   Processing: "قيد المعالجة",
@@ -34,18 +36,16 @@ const statusLabels: Record<string, string> = {
 };
 
 export function MerchantDashboard() {
-  // --- (إضافة States جديدة) ---
+  const navigate = useNavigate();
+  
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // --- (نهاية الإضافة) ---
 
-  // --- (إضافة دالة جلب البيانات) ---
   const fetchMyOrders = async () => {
     setLoading(true);
     setError(null);
     try {
-      // بنكلم الـ Endpoint الخاص بالتاجر
       const response = await api.get<GetOrdersResponse>("/api/orders/my-orders");
       setAllOrders(response.data.data.orders);
     } catch (err) {
@@ -59,9 +59,32 @@ export function MerchantDashboard() {
   useEffect(() => {
     fetchMyOrders();
   }, []);
+
+
+      const [shippingTypes, setShippingTypes] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [weightSettings, setWeightSettings] = useState([]);
+
+    useEffect(() => {
+      // جلب أنواع الشحن
+      api.get("/api/shipping-types").then(res => setShippingTypes(res.data.data));
+      // جلب المدن
+      api.get("/api/locations/cities")
+      .then(res => setCities(res.data.data || []))
+      .catch(err => {
+          console.error("خطأ في جلب المدن:", err);
+          setCities([]);
+      });
+      // جلب إعدادات الوزن
+      api.get("/api/weight-settings").then(res => {
+        const weightData = Array.isArray(res.data) ? res.data : [res.data];
+        setWeightSettings(weightData);
+      });
+    }, []);
+
+    
   // --- (نهاية جلب البيانات) ---
 
-  // --- (تعديل): دوال الحسابات بقت بتعتمد على الداتا الحقيقية ---
   const getTotalOrders = () => allOrders.length;
 
   const getSuccessRate = () => {
@@ -76,14 +99,12 @@ export function MerchantDashboard() {
     ).length;
   };
 
-  // (إضافة): حساب إجمالي المبيعات (للطلبات المكتملة)
   const getTotalSales = () => {
     return allOrders
       .filter((o) => o.status === "Delivered")
       .reduce((total, order) => total + order.orderCost, 0);
   };
 
-  // (إضافة): حساب الإحصائيات للكروت
   const statusCounts = {
     Pending: allOrders.filter((o) => o.status === "Pending").length,
     Processing: allOrders.filter((o) => o.status === "Processing").length,
@@ -126,7 +147,6 @@ export function MerchantDashboard() {
     }
   };
 
-  // --- (إضافة): كارت خاص بحالة التحميل أو الخطأ ---
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -150,7 +170,6 @@ export function MerchantDashboard() {
       </Card>
     );
   }
-  // --- (نهاية الإضافة) ---
 
   return (
     <div className="space-y-6">
@@ -161,13 +180,33 @@ export function MerchantDashboard() {
             متابعة شحناتك وإدارة طلباتك
           </p>
         </div>
-        <Button className="bg-orange-600 hover:bg-orange-700">
-          <Plus className="h-4 w-4 mr-2" />
-          إنشاء طلب جديد
-        </Button>
+        <div className="flex space-x-2 space-x-reverse">
+          <Button className="bg-orange-600 hover:bg-orange-700">
+            <Plus className="h-4 w-4 mr-2" />
+            إنشاء طلب جديد
+          </Button>
+          <Button variant="outline" className="mr-2"
+            onClick={() => {
+                exportMerchantReport({
+                  orders: allOrders,
+                  stats: {
+                    "إجمالي الطلبات": getTotalOrders(),
+                    "معدل النجاح": getSuccessRate(),
+                    "الطلبات النشطة": getActiveOrders(),
+                    "إجمالي المبيعات (المكتملة)": getTotalSales().toFixed(2),
+                  },
+                  shippingTypes: shippingTypes,
+                  cities: cities,
+                  weightSettings: weightSettings
+                });
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            تصدير البيانات
+          </Button>
+        </div>            
       </div>
 
-      {/* --- (تعديل): إحصائيات عامة حقيقية --- */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -222,7 +261,6 @@ export function MerchantDashboard() {
         </Card>
       </div>
 
-      {/* --- (تعديل): تقرير حالات الطلبات الحقيقي --- */}
       <Card>
         <CardHeader>
           <CardTitle>تقرير حالات الطلبات</CardTitle>
@@ -232,7 +270,6 @@ export function MerchantDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-5">
-            {/* عرض الـ 5 حالات الحقيقية من الـ API */}
             <StatusCard
               icon={Package}
               title="قيد الانتظار"
@@ -271,9 +308,7 @@ export function MerchantDashboard() {
           </div>
         </CardContent>
       </Card>
-      {/* --- (نهاية التعديل) --- */}
 
-      {/* ... (كارت "إنشاء طلب جديد" زي ما هو) ... */}
       <Card className="border-orange-200 bg-orange-50">
         <CardHeader>
           <CardTitle className="text-orange-800">إنشاء طلب شحن جديد</CardTitle>
@@ -282,14 +317,17 @@ export function MerchantDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button size="lg" className="w-full bg-orange-600 hover:bg-orange-700">
+          <Button 
+            size="lg" 
+            className="w-full bg-orange-600 hover:bg-orange-700"
+            onClick={() => navigate('/create-order')}
+          >
             <Plus className="h-5 w-5 mr-2" />
             إنشاء طلب جديد
           </Button>
         </CardContent>
       </Card>
 
-      {/* --- (تعديل): أحدث الطلبات الحقيقية --- */}
       <Card>
         <CardHeader>
           <CardTitle>أحدث طلباتي</CardTitle>
@@ -344,16 +382,12 @@ export function MerchantDashboard() {
             )}
           </div>
 
-          {/*<div className="mt-4 text-center">*/}
-          {/*  <Button variant="outline">عرض جميع الطلبات</Button>*/}
-          {/*</div>*/}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-// (إضافة): كومبوننت مساعد لكارت الإحصائيات
 const StatusCard = ({ icon: Icon, title, count, color, iconColor }: any) => (
   <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
     <div className="flex items-center justify-between mb-2">
