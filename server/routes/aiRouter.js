@@ -11,12 +11,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const dotenv = require("dotenv");
 dotenv.config();
 
-
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 const client = new ChromaClient();
 const COLLECTION_NAME = "rag_knowledge_base";
-
 
 const Order = require("../models/Order");
 const WeightSetting = require("../models/WeightSetting");
@@ -25,16 +23,11 @@ const City = require("../models/City");
 const ShippingType = require("../models/ShippingType");
 const Governotate = require("../models/Governotate");
 
-
 const genAI = new GoogleGenerativeAI(process.env.API_KEY || "YOUR_API_KEY");
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-
-
-
 async function fetchDynamicSystemContext(userType, userId) {
   try {
-    
     const weightSettings = await WeightSetting.findOne().sort({
       updatedAt: -1,
     });
@@ -42,7 +35,6 @@ async function fetchDynamicSystemContext(userType, userId) {
     const villagePrice = weightSettings?.villageDeliveryCost || 0;
     const limitWeight = weightSettings?.defaultWeightLimit || 0;
 
-    
     const cities = await City.find({ isActive: true }).populate("governorate");
     const cityList = cities
       .map((c) => `${c.cityName} (${c.governorate?.govName})`)
@@ -51,7 +43,6 @@ async function fetchDynamicSystemContext(userType, userId) {
     const governorates = await Governotate.find({ isActive: true });
     const govList = governorates.map((g) => g.govName).join(", ");
 
-   
     const shippingTypes = await ShippingType.find();
     const shippingSummary = shippingTypes
       .map(
@@ -64,7 +55,6 @@ async function fetchDynamicSystemContext(userType, userId) {
       )
       .join("\n");
 
-   
     if (userType === "admin") {
       const totalOrders = await Order.countDocuments();
       const pendingOrders = await Order.countDocuments({ status: "Pending" });
@@ -100,7 +90,7 @@ async function fetchDynamicSystemContext(userType, userId) {
 
       let deliveredProfit = 0;
       let pendingProfit = 0;
-      const mongoose = require("mongoose"); 
+      const mongoose = require("mongoose");
 
       profitStats.forEach((stat) => {
         if (stat._id === "Delivered") {
@@ -161,17 +151,11 @@ async function fetchDynamicSystemContext(userType, userId) {
     if (userType === "merchant") {
       if (!userId) return "[Merchant Data Error: No ID]";
 
-<<<<<<< HEAD
       const currentUser = await User.findById(userId).select(
         "fullName phone email storeName createdAt"
       );
 
       // 1. Core Counts
-=======
-      // Need mongoose for ObjectId casting if stored as ObjectId
-      const mongoose = require("mongoose");
-
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
       const myOrdersCount = await Order.countDocuments({ createdBy: userId });
       const myPending = await Order.countDocuments({
         createdBy: userId,
@@ -224,7 +208,6 @@ async function fetchDynamicSystemContext(userType, userId) {
         { $sort: { "_id.month": -1 } },
       ]);
 
-<<<<<<< HEAD
       const myTimelineMap = new Map();
       myMonthlyStats.forEach((m) => {
         const month = m._id.month;
@@ -253,28 +236,17 @@ async function fetchDynamicSystemContext(userType, userId) {
           } EGP Realized) | Status: ${d.distinctStatuses.join(", ")}`;
         })
         .join("\n");
-=======
-      // Fetch Current Merchant Info
-      const currentUser = await User.findById(userId).select(
-        "fullName phone email companyName"
-      );
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Merchant"}
         - Role: Merchant
-<<<<<<< HEAD
         - Store: ${currentUser?.storeName || "N/A"}
         - Member Since: ${
           currentUser?.createdAt
             ? new Date(currentUser.createdAt).toLocaleDateString()
             : "Unknown"
         }
-=======
-        - Company: ${currentUser?.companyName || "N/A"}
-        - Phone: ${currentUser?.phone || "N/A"}
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
 
         [MERCHANT DASHBOARD]
         - Total Orders: ${myOrdersCount}
@@ -294,7 +266,6 @@ async function fetchDynamicSystemContext(userType, userId) {
     }
 
     // ---------------- EMPLOYEE CONTEXT ----------------
-<<<<<<< HEAD
     if (userType === "employee") {
       const currentUser = await User.findById(userId).select(
         "fullName phone email createdAt"
@@ -391,34 +362,6 @@ async function fetchDynamicSystemContext(userType, userId) {
         ${shippingSummary}
         `;
     }
-=======
-    // Fetch Current Employee Info
-    const currentUser = await User.findById(userId).select(
-      "fullName phone email"
-    );
-
-    return `
-    [CURRENT USER PROFILE]
-    - Name: ${currentUser?.fullName || "Employee"}
-    - Role: Employee
-    - Phone: ${currentUser?.phone || "N/A"}
-
-    [EMPLOYEE VIEW]
-    - Access to General Shipping Rules.
-    - No Financial Access.
-    - No Driver List Access.
-    
-    [SERVED AREAS]
-    - Cities: ${cityList || "No active cities found."}
-    - Governorates: ${govList || "No active governorates."}
-
-    [SHIPPING TYPES & SERVICES]
-    ${shippingSummary || "No specific shipping types defined."}
-    
-    [PRICING RULES]
-    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
-    `;
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
     return "[System Data Unavailable]";
@@ -444,7 +387,6 @@ async function resetCollection() {
 resetCollection();
 
 async function getEmbedding(text) {
-  
   const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
     method: "POST",
     headers: {
@@ -559,7 +501,6 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     1. **LANGUAGE**: Your response must be in **Professional Business Arabic** (العربية الفصحى المهنية).
     2. **ROLE**: Act as a senior consultant. Don't just read numbers; explain *why* they matter.
     3. **NO GENERICS**: Avoid phrases like "Perform better". Instead say "Increase delivery efficiency by 15% using...".
-<<<<<<< HEAD
 
     ### SYSTEM EXPERT PROTOCOL
     You are the **Master Controller** and **Chief Analyst** of this Shipping System.
@@ -582,8 +523,6 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     - "How much money did we make?" (YES)
     - "List all employees." (YES)
     - "What is the status of order #123?" (YES)
-=======
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
     
     ### ANALYSIS FRAMEWORK
     When analyzing data (CSV/PDF/Image):
@@ -680,8 +619,7 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
 
     const reader = fetchResponse.body.getReader();
     const decoder = new TextDecoder("utf-8");
-    let fullText = ""; 
-
+    let fullText = "";
 
     while (true) {
       const { done, value } = await reader.read();
@@ -720,7 +658,6 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
   }
 }
 
-
 const DEFAULT_DOC_PATH = path.join(__dirname, "../../client/document.txt");
 
 async function initDefaultDocument() {
@@ -740,7 +677,6 @@ async function initDefaultDocument() {
   }
 }
 
-<<<<<<< HEAD
 async function indexDatabaseContent() {
   try {
     console.log("📚 Starting Database Deep Study (Indexing)...");
@@ -798,11 +734,6 @@ async function indexDatabaseContent() {
   await initDefaultDocument();
   await indexDatabaseContent();
 })();
-=======
-
-initDefaultDocument();
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
-
 
 router.post("/chat", upload.single("file"), async (req, res) => {
   try {
@@ -870,7 +801,6 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         } else if (isCsv) {
           rawText = await parseCSV(filePath);
         } else if (isImage) {
-       
           const {
             data: { text },
           } = await tesseract.recognize(filePath, "ara+eng");
@@ -907,17 +837,14 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         }
       } catch (fileErr) {
         console.error("Error parsing file:", fileErr);
-      
+
         return res
           .status(400)
           .json({ error: `Failed to process file: ${fileErr.message}` });
       } finally {
-        
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
     }
-
-  
 
     let finalAnswer = "";
 
@@ -951,20 +878,14 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           answer: `✅ تم رفع الملف **${file.originalname}** بنجاح، ولكن لم أتمكن من قراءة النص بوضوح. حاول رفعه كصورة أو ملف نصي.`,
         });
       }
-      return; 
+      return;
     }
 
     if (question) {
-<<<<<<< HEAD
       // RAG Search
       let ragContext = "";
       try {
         const queryVector = await getEmbedding(question);
-=======
-     
-      const queryVector = await getEmbedding(question);
-      const collection = await client.getCollection({ name: COLLECTION_NAME });
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
 
         let collection;
         try {
@@ -982,7 +903,6 @@ router.post("/chat", upload.single("file"), async (req, res) => {
           nResults: 5, // Top 5 relevant facts
         });
 
-<<<<<<< HEAD
         if (
           results.metadatas &&
           results.metadatas[0] &&
@@ -1004,20 +924,6 @@ router.post("/chat", upload.single("file"), async (req, res) => {
         }
       } catch (ragErr) {
         console.warn("⚠️ Vector Search warning:", ragErr.message);
-=======
-    
-
-      // --- INJECT DYNAMIC SYSTEM DATA ---
-      const systemContext = await fetchDynamicSystemContext(userType, userId);
-
-      retrievedContext = `
-      ${systemContext}
-
-      ${
-        fileContext
-          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n(Please analyze the content above)`
-          : ""
->>>>>>> 7348525eb7706e47465e0dcd39c7fc024eea0be8
       }
 
       // --- 3. FETCH DYNAMIC CONTEXT (Live Stats) ---
