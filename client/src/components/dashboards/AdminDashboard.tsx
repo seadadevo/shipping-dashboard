@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Package,
@@ -102,13 +102,17 @@ const AdminDashboard: React.FC = () => {
   // const [loading, setLoading] = useState<boolean>(true);
   // const [error, setError] = useState<string | null>(null);
 
-    const [countOrdersToday, setCountOrdersToday] = useState<number>(0);
-    const [pendingOrdersToday, setPendingOrdersToday] = useState<number>(0);
-    const [previousPendingOrders, setPreviousPendingOrders] = useState<number>(0);
-    const [moneysToday, setMoneysToday] = useState<number>(0);
-    const [chartData, setChartData] = useState<{ day: string; orders: number }[]>([]);
-    const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] = useState<number>(0);
-    const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] = useState<number>(0);
+  const [countOrdersToday, setCountOrdersToday] = useState<number>(0);
+  const [pendingOrdersToday, setPendingOrdersToday] = useState<number>(0);
+  const [previousPendingOrders, setPreviousPendingOrders] = useState<number>(0);
+  const [moneysToday, setMoneysToday] = useState<number>(0);
+  const [chartData, setChartData] = useState<{ day: string; orders: number }[]>(
+    []
+  );
+  const [ordersTodayRelativeToWeek, setOrdersTodayRelativeToWeek] =
+    useState<number>(0);
+  const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] =
+    useState<number>(0);
 
     const [shippingTypes, setShippingTypes] = useState([]);
     const [cities, setCities] = useState([]);
@@ -157,7 +161,7 @@ const AdminDashboard: React.FC = () => {
         السبت: 0,
       };
 
-      if (safeOrders.length > 0) {
+      if (safeOrders.length) {
         const todayNum = new Date().getDay();
         for (const order of safeOrders) {
           if (isDateToday(order.createdAt) === "today") {
@@ -223,11 +227,11 @@ const AdminDashboard: React.FC = () => {
       console.log("Orders fetched successfully");
       setOrdersLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   ///////////////////////////////////////////////////////////////////////
   return (
@@ -238,43 +242,50 @@ const AdminDashboard: React.FC = () => {
           <p className="text-gray-500">نظرة شاملة على أداء نظام الشحن</p>
         </div>
         <div className="flex space-x-2 space-x-reverse">
-          <Button onClick={() => {
-            generatePDFReport({
-              orders: allOrders,
-              users: users,
-              stats: {
-                "الطلبات اليوم": countOrdersToday,
-                "الشحنات المعلقة": pendingOrdersToday,
-                "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
-                "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
-                "الإيرادات اليوم": moneysToday,
-                "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
-                "المستخدمين النشطين": users.length,
-              }
-            });
-          }}>إنشاء تقرير</Button>
-          <Button variant="outline" className="mr-2"
+          <Button
             onClick={() => {
-                generateAdminReportCSVSingleFile({
-                  orders: allOrders,
-                  users: users,
-                  stats: {
-                    "الطلبات اليوم": countOrdersToday,
-                    "الشحنات المعلقة": pendingOrdersToday,
-                    "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
-                    "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع": ordersTodayRelativeToWeek,
-                    "الإيرادات اليوم": moneysToday,
-                    "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع": profitTodayRelativeToWeek,
-                    "المستخدمين النشطين": users.length,
-                  },
-                   shippingTypes: shippingTypes,
-                    cities: cities,
-                    weightSettings: weightSettings
-                });
+              generatePDFReport({
+                orders: allOrders,
+                users: users,
+                stats: {
+                  "الطلبات اليوم": countOrdersToday,
+                  "الشحنات المعلقة": pendingOrdersToday,
+                  "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                  "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع":
+                    ordersTodayRelativeToWeek,
+                  "الإيرادات اليوم": moneysToday,
+                  "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع":
+                    profitTodayRelativeToWeek,
+                  "المستخدمين النشطين": users.length,
+                },
+              });
             }}
           >
-              <Download className="h-4 w-4 mr-2" />
-              تصدير البيانات
+            إنشاء تقرير
+          </Button>
+          <Button
+            variant="outline"
+            className="mr-2"
+            onClick={() => {
+              generateAdminReport({
+                orders: allOrders,
+                users: users,
+                stats: {
+                  "الطلبات اليوم": countOrdersToday,
+                  "الشحنات المعلقة": pendingOrdersToday,
+                  "الشحنات المعلقة منذ اكثر من اسبوعين": previousPendingOrders,
+                  "طلبات اليوم بالنسبة لمتوسط الطلبات خلال الاسبوع":
+                    ordersTodayRelativeToWeek,
+                  "الإيرادات اليوم": moneysToday,
+                  "ايرادات اليوم بالنسبة لمتوسط الايرادات خلال الاسبوع":
+                    profitTodayRelativeToWeek,
+                  "المستخدمين النشطين": users.length,
+                },
+              });
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            تصدير البيانات
           </Button>
         </div>
       </div>

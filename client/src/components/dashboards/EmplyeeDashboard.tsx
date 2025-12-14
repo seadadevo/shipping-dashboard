@@ -65,17 +65,17 @@ export function EmployeeDashboard() {
         const usersList = usersRes.data?.data?.users || usersRes.data || [];
         setUsers(Array.isArray(usersList) ? usersList : []);
 
-      const ordersList = ordersRes.data?.data?.orders || [];
-            setOrders(Array.isArray(ordersList) ? ordersList : []);
-          } catch (error) {
-            console.error("Error fetching dashboard data:", error);
-          } finally {
-            setLoading(false);
-          }
-        };
+        const ordersList = ordersRes.data?.data?.orders || [];
+        setOrders(Array.isArray(ordersList) ? ordersList : []);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-        fetchData();
-      }, []);;
   // merchant count derived from users
   const merchantsCount = useMemo(() => {
     return users.reduce(
@@ -268,9 +268,13 @@ export function EmployeeDashboard() {
           <h1>لوحة تحكم الموظف</h1>
           <p className="text-muted-foreground">متابعة ومعالجة طلبات الشحن</p>
         </div>
-       
+        {/*<Button className="bg-blue-600 hover:bg-blue-700">*/}
+        {/*  <Plus className="h-4 w-4 mr-2" />*/}
+        {/*  معالجة طلب جديد*/}
+        {/*</Button>*/}
       </div>
 
+      {/* إحصائيات عامة */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -361,6 +365,7 @@ export function EmployeeDashboard() {
         </CardContent>
       </Card>
 
+      {/* الطلبات الحديثة */}
       <Card>
         <CardHeader>
           <CardTitle>الطلبات الحديثة</CardTitle>
@@ -370,7 +375,7 @@ export function EmployeeDashboard() {
           <div className="space-y-4">
             {allRecentOrders.map((order) => (
               <div
-                key={order.id}
+                key={order._id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-secondary transition-colors"
               >
                 <div className="flex items-center space-x-4 space-x-reverse">
@@ -379,7 +384,7 @@ export function EmployeeDashboard() {
                   </div>
                   <div>
                     <p className="font-medium">{order.customerName}</p>
-                    <p className="text-sm text-blue-600">{order.shippingType}</p>
+                    <p className="text-sm text-blue-600">{order.orderType}</p>
                     <div className="flex items-center text-sm text-muted-foreground mt-1">
                       <MapPin className="h-3 w-3 mr-1" />
                       {order.governorate +
@@ -434,10 +439,13 @@ export function EmployeeDashboard() {
             ))}
           </div>
 
-        
+          {/*<div className="mt-4 text-center">*/}
+          {/*  <Button variant="outline">عرض جميع الطلبات</Button>*/}
+          {/*</div>*/}
         </CardContent>
       </Card>
 
+      {/* إجراءات سريعة */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>

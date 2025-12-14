@@ -154,7 +154,7 @@ export const DriverDashboard: React.FC = () => {
 
         // رسالة خاصة عند التسليم
         if (newStatus === "Delivered") {
-          toast.success(" تم التسليم بنجاح!", {
+          toast.success("🎉 تم التسليم بنجاح!", {
             description: 'تم نقل الطلب إلى صفحة "توصيلاتي"',
           });
         } else if (newStatus === "Cancelled") {
@@ -333,7 +333,6 @@ export const DriverDashboard: React.FC = () => {
                     <TableHead className="text-right">رقم الهاتف</TableHead>
                     <TableHead className="text-right">العنوان</TableHead>
                     <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">نوع الشحن</TableHead>
                     <TableHead className="text-right">إجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -401,7 +400,7 @@ export const DriverDashboard: React.FC = () => {
           dir="rtl"
         >
           <DialogHeader>
-            <DialogTitle className="text-right text-blue-600">
+            <DialogTitle className="text-right">
               تفاصيل الطلب #
               {selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}
             </DialogTitle>

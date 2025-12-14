@@ -89,8 +89,16 @@ export default function DriverManagement() {
       const response = await api.get("/api/drivers/all");
       setDrivers(response.data.data);
       setFilteredDrivers(response.data.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch drivers");
+    } catch (err: unknown) {
+      if (
+        (err as any).response &&
+        (err as any).response.data &&
+        (err as any).response.data.message
+      ) {
+        setError((err as any).response.data.message);
+      } else {
+        setError("Failed to fetch drivers");
+      }
     } finally {
       setLoading(false);
     }
