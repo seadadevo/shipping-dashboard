@@ -43,7 +43,7 @@ const AiButton = () => {
       <div className="absolute inset-0 rounded-full border border-border/50 transition-colors duration-300" />
 
       {/* 4. Button Content - Removed Hover Effects */}
-      <div className="relative flex items-center gap-2.5 rounded-full bg-card px-5 py-2.5 m-[1.5px] tracking-wide transition-all duration-300 backface-hidden z-10">
+      <div className="relative flex items-center gap-2.5 rounded-full bg-card px-3 py-2 sm:px-5 sm:py-2.5 m-[1.5px] tracking-wide transition-all duration-300 backface-hidden z-10">
         {/* Icon Group */}
         <div className="relative flex items-center justify-center">
           <Sparkles className="h-4 w-4 text-primary bg-clip-text" />
@@ -51,7 +51,7 @@ const AiButton = () => {
           <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-[1.5px] border-card animate-pulse shadow-sm" />
         </div>
 
-        <span className="text-sm font-semibold text-foreground/90">
+        <span className="hidden sm:inline text-sm font-semibold text-foreground/90">
           المساعد الذكي
         </span>
       </div>

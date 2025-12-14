@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "../ui/select";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import api from "../../lib/api";
 import { toast } from "sonner";
 import type { User } from "../../types";
@@ -69,6 +69,10 @@ export function UserManagement() {
     fullName?: string;
     email?: string;
   }>({});
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  
 
   const getUsers = async (
     page = 1,
@@ -258,6 +262,23 @@ export function UserManagement() {
       await fetchAllUsersForStats(); // Update stats
     } catch (error) {
       toast.error("حدث خطأ أثناء تحديث المستخدم");
+    }
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.delete(`/api/users/${userToDelete._id}`);
+      toast.success("تم حذف المستخدم بنجاح");
+      setUsers((prev) => prev.filter((u) => u._id !== userToDelete._id));
+      await fetchAllUsersForStats();
+      setUserToDelete(null);
+    } catch (err) {
+      setDeleteError("فشل في حذف المستخدم");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -483,9 +504,9 @@ export function UserManagement() {
 
                           <DropdownMenuSeparator className="my-1" />
 
-                          {/* 🗑️ Delete (with confirmation) */}
+                          {/*  Delete (with confirmation) */}
                           <DropdownMenuItem
-                            onClick={() => handleDeleteUser(user._id)}
+                            onClick={() => setUserToDelete(user)}
                             className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 cursor-pointer rounded-md transition font-medium"
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
@@ -584,6 +605,48 @@ export function UserManagement() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* --- نافذة تأكيد حذف المستخدم --- */}
+      <Dialog
+        open={!!userToDelete}
+        onOpenChange={(isOpen) => !isOpen && setUserToDelete(null)}
+      >
+        <DialogContent className="bg-background text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-blue-600 text-right">تأكيد الحذف</DialogTitle>
+            <DialogDescription className="text-primary text-right">
+              هل أنت متأكد أنك تريد حذف المستخدم{" "}
+              {userToDelete?.fullName}؟
+              <br />
+              لا يمكن التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+          <div className="flex justify-end space-x-2 space-x-reverse pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setUserToDelete(null)}
+              disabled={isDeleting}
+            >
+              إلغاء
+            </Button>
+            <Button
+              className="text-white ml-1 border-2 mr-2"
+              variant="destructive"
+              onClick={handleConfirmDeleteUser}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              تأكيد الحذف
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

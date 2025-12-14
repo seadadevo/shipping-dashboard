@@ -33,7 +33,7 @@ const Header: React.FC<HeaderWithSidebarProps> = ({
       admin: "مدير",
       employee: "موظف",
       merchant: "تاجر",
-      driver: "سائق",
+      courier: "سائق",
     };
     return roleNames[role];
   };

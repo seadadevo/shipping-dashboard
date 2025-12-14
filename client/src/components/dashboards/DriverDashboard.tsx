@@ -352,6 +352,7 @@ export const DriverDashboard: React.FC = () => {
                         </span>
                       </TableCell>
                       <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{order.shippingType}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button
@@ -399,7 +400,7 @@ export const DriverDashboard: React.FC = () => {
           dir="rtl"
         >
           <DialogHeader>
-            <DialogTitle className="text-right">
+            <DialogTitle className="text-right text-blue-600">
               تفاصيل الطلب #
               {selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}
             </DialogTitle>
@@ -573,9 +574,14 @@ export const DriverDashboard: React.FC = () => {
           dir="rtl"
         >
           <DialogHeader>
-            <DialogTitle>تحديث حالة التوصيل</DialogTitle>
-            <DialogDescription>اختر الحالة الجديدة للطلب</DialogDescription>
+            <DialogTitle className="text-right text-blue-600">
+              تحديث حالة التوصيل
+            </DialogTitle>
+            <DialogDescription className="text-right text-primary">
+              اختر الحالة الجديدة للطلب
+            </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground mb-2">
@@ -585,7 +591,8 @@ export const DriverDashboard: React.FC = () => {
                 العميل: {selectedOrder?.customerName}
               </p>
             </div>
-            <Select value={newStatus} onValueChange={setNewStatus}>
+
+            <Select value={newStatus} onValueChange={setNewStatus} dir="rtl">
               <SelectTrigger>
                 <SelectValue placeholder="اختر الحالة" />
               </SelectTrigger>
@@ -606,6 +613,7 @@ export const DriverDashboard: React.FC = () => {
                 )}
               </SelectContent>
             </Select>
+
             <p className="text-xs text-muted-foreground">
               {selectedOrder?.status === "Processing" &&
                 'يمكنك نقل الطلب إلى "في الطريق"، "تم التسليم" أو "ملغي"'}
@@ -615,6 +623,7 @@ export const DriverDashboard: React.FC = () => {
                 "الطلب تم تسليمه بالفعل"}
             </p>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               إلغاء
