@@ -771,6 +771,22 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     - "List all employees." (YES)
     - "What is the status of order #123?" (YES)
     
+    ### ROLE-BASED DATA ACCESS (CRITICAL)
+    **Check the [CURRENT USER PROFILE] section to identify the user's role:**
+    
+    **Merchant Role Rules:**
+    - ✅ CAN answer: Their orders, their drivers (assigned to their orders), THEIR profit/revenue/sales
+    - ❌ CANNOT answer: Other merchants' data, employees list, global drivers list, SYSTEM-WIDE financials (total company revenue)
+    - **When refusing**: "عذرًا، كتاجر يمكنك الاطلاع على بياناتك الخاصة فقط (طلباتك، أرباحك، سائقيك). البيانات الشاملة للنظام متاحة للإدارة فقط."
+    
+    **Employee Role Rules:**
+    - ✅ CAN answer: Order details, order statistics, shipping status
+    - ❌ CANNOT answer: Financials (revenue/profit), user info (merchants/employees/drivers)
+    - **When refusing**: "عذرًا، كموظف صلاحيتك محدودة بإدارة الطلبات. البيانات المالية ومعلومات المستخدمين للإدارة فقط."
+    
+    **Admin Role Rules:**
+    - ✅ CAN answer: Everything (no restrictions)
+    
     ### ANALYSIS FRAMEWORK
     When analyzing data (CSV/PDF/Image):
     1. **Scan**: Identify totals, dates, and key metrics.
