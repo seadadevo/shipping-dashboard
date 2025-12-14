@@ -1,0 +1,1470 @@
+[
+  {
+    "userType": "merchant",
+    "fullName": "صلاح الدين يوسف",
+    "email": "salah.youssef@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01012345678",
+    "governorate": "القاهرة",
+    "city": "الرحاب",
+    "assignedCities": [
+      {
+        "governorate": "القاهرة",
+        "city": "مدينة نصر",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39459d"
+        }
+      },
+      {
+        "governorate": "القاهرة",
+        "city": "التجمع الخامس",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39459e"
+        }
+      }
+    ],
+    "address": "شارع الجمهورية، الرحاب"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عبدالله فيصل",
+    "email": "abdullah.faisal@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01123456789",
+    "governorate": "الجيزة",
+    "city": "زايد الجديدة",
+    "assignedCities": [
+      {
+        "governorate": "الجيزة",
+        "city": "أكتوبر الجديدة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39459f"
+        }
+      },
+      {
+        "governorate": "الجيزة",
+        "city": "الهرم",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a0"
+        }
+      },
+      {
+        "governorate": "الجيزة",
+        "city": "الحوامدية",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a1"
+        }
+      }
+    ],
+    "address": "شارع النصر، زايد الجديدة"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "حمزة عثمان",
+    "email": "hamza.othman@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01234567890",
+    "governorate": "الإسكندرية",
+    "city": "المنتزه",
+    "assignedCities": [
+      {
+        "governorate": "الإسكندرية",
+        "city": "المنتزه",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a2"
+        }
+      },
+      {
+        "governorate": "الإسكندرية",
+        "city": "سموحة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a3"
+        }
+      }
+    ],
+    "address": "شارع الحرية، المنتزه"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "زياد طلال",
+    "email": "ziad.talal@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01098765432",
+    "governorate": "القليوبية",
+    "city": "بنها",
+    "assignedCities": [
+      {
+        "governorate": "القليوبية",
+        "city": "بنها",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a4"
+        }
+      },
+      {
+        "governorate": "القليوبية",
+        "city": "قليوب",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a5"
+        }
+      },
+      {
+        "governorate": "القليوبية",
+        "city": "القناطر الخيرية",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a6"
+        }
+      }
+    ],
+    "address": "شارع الثورة، بنها"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "فهد عبدالرحمن",
+    "email": "fahd.abdelrahman@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01187654321",
+    "governorate": "الدقهلية",
+    "city": "طلخا",
+    "assignedCities": [
+      {
+        "governorate": "الدقهلية",
+        "city": "طلخا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a7"
+        }
+      },
+      {
+        "governorate": "الدقهلية",
+        "city": "المنصورة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a8"
+        }
+      },
+      {
+        "governorate": "الدقهلية",
+        "city": "ميت غمر",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945a9"
+        }
+      }
+    ],
+    "address": "شارع الجلاء، طلخا"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "نواف سلطان",
+    "email": "nawaf.sultan@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01276543210",
+    "governorate": "الشرقية",
+    "city": "العاشر من رمضان",
+    "assignedCities": [
+      {
+        "governorate": "الشرقية",
+        "city": "فاقوس",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945aa"
+        }
+      },
+      {
+        "governorate": "الشرقية",
+        "city": "أبو حماد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ab"
+        }
+      }
+    ],
+    "address": "شارع المحطة، العاشر من رمضان"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "راشد خالد",
+    "email": "rashed.khaled@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01065432109",
+    "governorate": "الغربية",
+    "city": "زفتى",
+    "assignedCities": [
+      {
+        "governorate": "الغربية",
+        "city": "زفتى",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ac"
+        }
+      },
+      {
+        "governorate": "الغربية",
+        "city": "المحلة الكبرى",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ad"
+        }
+      }
+    ],
+    "address": "شارع الجيش، زفتى"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "سعود ماجد",
+    "email": "saud.maged@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01154321098",
+    "governorate": "المنوفية",
+    "city": "منوف",
+    "assignedCities": [
+      {
+        "governorate": "المنوفية",
+        "city": "منوف",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ae"
+        }
+      },
+      {
+        "governorate": "المنوفية",
+        "city": "شبين الكوم",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945af"
+        }
+      }
+    ],
+    "address": "شارع البحر، منوف"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عمار حسام",
+    "email": "ammar.hossam@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01243210987",
+    "governorate": "البحيرة",
+    "city": "رشيد",
+    "assignedCities": [
+      {
+        "governorate": "البحيرة",
+        "city": "رشيد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b0"
+        }
+      },
+      {
+        "governorate": "البحيرة",
+        "city": "إدكو",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b1"
+        }
+      },
+      {
+        "governorate": "البحيرة",
+        "city": "دمنهور",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b2"
+        }
+      }
+    ],
+    "address": "شارع النيل، رشيد"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "ثامر نايف",
+    "email": "thamer.nayef@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01032109876",
+    "governorate": "كفر الشيخ",
+    "city": "بيلا",
+    "assignedCities": [
+      {
+        "governorate": "كفر الشيخ",
+        "city": "بيلا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b3"
+        }
+      },
+      {
+        "governorate": "كفر الشيخ",
+        "city": "دسوق",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b4"
+        }
+      }
+    ],
+    "address": "شارع سعد زغلول، بيلا"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "غسان وليد",
+    "email": "ghassan.walid@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01121098765",
+    "governorate": "دمياط",
+    "city": "رأس البر",
+    "assignedCities": [
+      {
+        "governorate": "دمياط",
+        "city": "كفر سعد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b5"
+        }
+      },
+      {
+        "governorate": "دمياط",
+        "city": "رأس البر",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b6"
+        }
+      },
+      {
+        "governorate": "دمياط",
+        "city": "دمياط",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b7"
+        }
+      }
+    ],
+    "address": "شارع الهرم، رأس البر"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "جاسم عادل",
+    "email": "jassem.adel@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01210987654",
+    "governorate": "بورسعيد",
+    "city": "بورفؤاد",
+    "assignedCities": [
+      {
+        "governorate": "بورسعيد",
+        "city": "بورسعيد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b8"
+        }
+      },
+      {
+        "governorate": "بورسعيد",
+        "city": "بورفؤاد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945b9"
+        }
+      }
+    ],
+    "address": "شارع فيصل، بورفؤاد"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "طلال رشيد",
+    "email": "talal.rasheed@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01009876543",
+    "governorate": "الإسماعيلية",
+    "city": "فايد",
+    "assignedCities": [
+      {
+        "governorate": "الإسماعيلية",
+        "city": "أبو صوير",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ba"
+        }
+      },
+      {
+        "governorate": "الإسماعيلية",
+        "city": "القنطرة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945bb"
+        }
+      },
+      {
+        "governorate": "الإسماعيلية",
+        "city": "الإسماعيلية",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945bc"
+        }
+      }
+    ],
+    "address": "شارع الجامعة، فايد"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عدنان كريم",
+    "email": "adnan.karim@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01198765432",
+    "governorate": "السويس",
+    "city": "عتاقة",
+    "assignedCities": [
+      {
+        "governorate": "السويس",
+        "city": "عتاقة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945bd"
+        }
+      },
+      {
+        "governorate": "السويس",
+        "city": "السويس",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945be"
+        }
+      }
+    ],
+    "address": "شارع التسعين، عتاقة"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "فراس محمود",
+    "email": "feras.mahmoud@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01287654321",
+    "governorate": "أسيوط",
+    "city": "أسيوط",
+    "assignedCities": [
+      {
+        "governorate": "أسيوط",
+        "city": "منفلوط",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945bf"
+        }
+      },
+      {
+        "governorate": "أسيوط",
+        "city": "أبنوب",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c0"
+        }
+      }
+    ],
+    "address": "كورنيش النيل، أسيوط"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "نبيل سامي",
+    "email": "nabil.samy@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01076543210",
+    "governorate": "سوهاج",
+    "city": "طما",
+    "assignedCities": [
+      {
+        "governorate": "سوهاج",
+        "city": "سوهاج",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c1"
+        }
+      },
+      {
+        "governorate": "سوهاج",
+        "city": "جرجا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c2"
+        }
+      }
+    ],
+    "address": "شارع الجمهورية، طما"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "وسام جمال",
+    "email": "wessam.gamal@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01165432109",
+    "governorate": "قنا",
+    "city": "قنا",
+    "assignedCities": [
+      {
+        "governorate": "قنا",
+        "city": "قوص",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c3"
+        }
+      },
+      {
+        "governorate": "قنا",
+        "city": "قنا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c4"
+        }
+      }
+    ],
+    "address": "شارع النصر، قنا"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عماد طارق",
+    "email": "emad.tarek@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01254321098",
+    "governorate": "الأقصر",
+    "city": "أرمنت",
+    "assignedCities": [
+      {
+        "governorate": "الأقصر",
+        "city": "الأقصر",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c5"
+        }
+      },
+      {
+        "governorate": "الأقصر",
+        "city": "الطود",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c6"
+        }
+      },
+      {
+        "governorate": "الأقصر",
+        "city": "أرمنت",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c7"
+        }
+      }
+    ],
+    "address": "شارع الحرية، أرمنت"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "رياض أحمد",
+    "email": "riyad.ahmed@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01043210987",
+    "governorate": "أسوان",
+    "city": "دراو",
+    "assignedCities": [
+      {
+        "governorate": "أسوان",
+        "city": "أسوان",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c8"
+        }
+      },
+      {
+        "governorate": "أسوان",
+        "city": "كوم أمبو",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945c9"
+        }
+      }
+    ],
+    "address": "شارع الثورة، دراو"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "سليم حسن",
+    "email": "salim.hassan@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01132109876",
+    "governorate": "الفيوم",
+    "city": "إطسا",
+    "assignedCities": [
+      {
+        "governorate": "الفيوم",
+        "city": "طامية",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ca"
+        }
+      },
+      {
+        "governorate": "الفيوم",
+        "city": "الفيوم",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945cb"
+        }
+      },
+      {
+        "governorate": "الفيوم",
+        "city": "إطسا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945cc"
+        }
+      }
+    ],
+    "address": "شارع الجلاء، إطسا"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "منذر علي",
+    "email": "munther.ali@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01221098765",
+    "governorate": "بني سويف",
+    "city": "الواسطى",
+    "assignedCities": [
+      {
+        "governorate": "بني سويف",
+        "city": "الواسطى",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945cd"
+        }
+      },
+      {
+        "governorate": "بني سويف",
+        "city": "الفشن",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ce"
+        }
+      }
+    ],
+    "address": "شارع المحطة، الواسطى"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "قصي محمد",
+    "email": "qusay.mohamed@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01010987654",
+    "governorate": "المنيا",
+    "city": "بني مزار",
+    "assignedCities": [
+      {
+        "governorate": "المنيا",
+        "city": "المنيا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945cf"
+        }
+      },
+      {
+        "governorate": "المنيا",
+        "city": "بني مزار",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d0"
+        }
+      },
+      {
+        "governorate": "المنيا",
+        "city": "ملوي",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d1"
+        }
+      }
+    ],
+    "address": "شارع الجيش، بني مزار"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "لؤي إبراهيم",
+    "email": "louay.ibrahim@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01109876543",
+    "governorate": "البحر الأحمر",
+    "city": "سفاجا",
+    "assignedCities": [
+      {
+        "governorate": "البحر الأحمر",
+        "city": "الغردقة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d2"
+        }
+      },
+      {
+        "governorate": "البحر الأحمر",
+        "city": "سفاجا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d3"
+        }
+      },
+      {
+        "governorate": "البحر الأحمر",
+        "city": "القصير",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d4"
+        }
+      }
+    ],
+    "address": "شارع البحر، سفاجا"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "مازن يوسف",
+    "email": "mazen.youssef@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01298765432",
+    "governorate": "جنوب سيناء",
+    "city": "شرم الشيخ",
+    "assignedCities": [
+      {
+        "governorate": "جنوب سيناء",
+        "city": "شرم الشيخ",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d5"
+        }
+      },
+      {
+        "governorate": "جنوب سيناء",
+        "city": "دهب",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d6"
+        }
+      }
+    ],
+    "address": "شارع النيل، شرم الشيخ"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "هيثم عمر",
+    "email": "haitham.omar@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01087654321",
+    "governorate": "شمال سيناء",
+    "city": "رفح",
+    "assignedCities": [
+      {
+        "governorate": "شمال سيناء",
+        "city": "العريش",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d7"
+        }
+      },
+      {
+        "governorate": "شمال سيناء",
+        "city": "رفح",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d8"
+        }
+      }
+    ],
+    "address": "شارع سعد زغلول، رفح"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "بشار سعيد",
+    "email": "bashar.said@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01176543210",
+    "governorate": "مطروح",
+    "city": "الساحل الشمالي",
+    "assignedCities": [
+      {
+        "governorate": "مطروح",
+        "city": "الساحل الشمالي",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945d9"
+        }
+      },
+      {
+        "governorate": "مطروح",
+        "city": "مرسى مطروح",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945da"
+        }
+      }
+    ],
+    "address": "شارع الهرم، الساحل الشمالي"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عامر فتحي",
+    "email": "amer.fathy@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01265432109",
+    "governorate": "الوادي الجديد",
+    "city": "الداخلة",
+    "assignedCities": [
+      {
+        "governorate": "الوادي الجديد",
+        "city": "الداخلة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945db"
+        }
+      },
+      {
+        "governorate": "الوادي الجديد",
+        "city": "الخارجة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945dc"
+        }
+      }
+    ],
+    "address": "شارع فيصل، الداخلة"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "نضال صلاح",
+    "email": "nidal.salah@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01054321098",
+    "governorate": "القاهرة",
+    "city": "وسط البلد",
+    "assignedCities": [
+      {
+        "governorate": "القاهرة",
+        "city": "مدينة نصر",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945dd"
+        }
+      },
+      {
+        "governorate": "القاهرة",
+        "city": "مصر الجديدة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945de"
+        }
+      }
+    ],
+    "address": "شارع الجامعة، وسط البلد"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "إياد رامي",
+    "email": "eyad.ramy@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01143210987",
+    "governorate": "الجيزة",
+    "city": "السادس من أكتوبر",
+    "assignedCities": [
+      {
+        "governorate": "الجيزة",
+        "city": "زايد الجديدة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945df"
+        }
+      },
+      {
+        "governorate": "الجيزة",
+        "city": "الهرم",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e0"
+        }
+      },
+      {
+        "governorate": "الجيزة",
+        "city": "أكتوبر الجديدة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e1"
+        }
+      }
+    ],
+    "address": "شارع التسعين، السادس من أكتوبر"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "شادي باسم",
+    "email": "shady.bassem@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01232109876",
+    "governorate": "الإسكندرية",
+    "city": "المنتزه",
+    "assignedCities": [
+      {
+        "governorate": "الإسكندرية",
+        "city": "سموحة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e2"
+        }
+      },
+      {
+        "governorate": "الإسكندرية",
+        "city": "المنتزه",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e3"
+        }
+      }
+    ],
+    "address": "كورنيش النيل، المنتزه"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "رائد معتز",
+    "email": "raed.moataz@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01021098765",
+    "governorate": "القليوبية",
+    "city": "العبور",
+    "assignedCities": [
+      {
+        "governorate": "القليوبية",
+        "city": "القناطر الخيرية",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e4"
+        }
+      },
+      {
+        "governorate": "القليوبية",
+        "city": "بنها",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e5"
+        }
+      }
+    ],
+    "address": "شارع الجمهورية، العبور"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "وائل تامر",
+    "email": "wael.tamer@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01110987654",
+    "governorate": "الدقهلية",
+    "city": "بلقاس",
+    "assignedCities": [
+      {
+        "governorate": "الدقهلية",
+        "city": "بلقاس",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e6"
+        }
+      },
+      {
+        "governorate": "الدقهلية",
+        "city": "المنصورة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e7"
+        }
+      }
+    ],
+    "address": "شارع النصر، بلقاس"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "حاتم عصام",
+    "email": "hatem.essam@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01209876543",
+    "governorate": "الشرقية",
+    "city": "أبو حماد",
+    "assignedCities": [
+      {
+        "governorate": "الشرقية",
+        "city": "فاقوس",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e8"
+        }
+      },
+      {
+        "governorate": "الشرقية",
+        "city": "الزقازيق",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945e9"
+        }
+      },
+      {
+        "governorate": "الشرقية",
+        "city": "أبو حماد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ea"
+        }
+      }
+    ],
+    "address": "شارع الحرية، أبو حماد"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "سامر فادي",
+    "email": "samer.fady@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01098765432",
+    "governorate": "الغربية",
+    "city": "المحلة الكبرى",
+    "assignedCities": [
+      {
+        "governorate": "الغربية",
+        "city": "طنطا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945eb"
+        }
+      },
+      {
+        "governorate": "الغربية",
+        "city": "زفتى",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ec"
+        }
+      },
+      {
+        "governorate": "الغربية",
+        "city": "كفر الزيات",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ed"
+        }
+      }
+    ],
+    "address": "شارع الثورة، المحلة الكبرى"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عاصم نادر",
+    "email": "asem.nader@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01187654321",
+    "governorate": "المنوفية",
+    "city": "منوف",
+    "assignedCities": [
+      {
+        "governorate": "المنوفية",
+        "city": "منوف",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ee"
+        }
+      },
+      {
+        "governorate": "المنوفية",
+        "city": "أشمون",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ef"
+        }
+      },
+      {
+        "governorate": "المنوفية",
+        "city": "قويسنا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f0"
+        }
+      }
+    ],
+    "address": "شارع الجلاء، منوف"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "ماهر مروان",
+    "email": "maher.marwan@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01276543210",
+    "governorate": "البحيرة",
+    "city": "إدكو",
+    "assignedCities": [
+      {
+        "governorate": "البحيرة",
+        "city": "إدكو",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f1"
+        }
+      },
+      {
+        "governorate": "البحيرة",
+        "city": "كفر الدوار",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f2"
+        }
+      },
+      {
+        "governorate": "البحيرة",
+        "city": "دمنهور",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f3"
+        }
+      }
+    ],
+    "address": "شارع المحطة، إدكو"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "صفوان جمال",
+    "email": "safwan.gamal@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01065432109",
+    "governorate": "كفر الشيخ",
+    "city": "دسوق",
+    "assignedCities": [
+      {
+        "governorate": "كفر الشيخ",
+        "city": "بيلا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f4"
+        }
+      },
+      {
+        "governorate": "كفر الشيخ",
+        "city": "دسوق",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f5"
+        }
+      },
+      {
+        "governorate": "كفر الشيخ",
+        "city": "كفر الشيخ",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f6"
+        }
+      }
+    ],
+    "address": "شارع الجيش، دسوق"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عزام سيد",
+    "email": "azzam.sayed@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01154321098",
+    "governorate": "دمياط",
+    "city": "فارسكور",
+    "assignedCities": [
+      {
+        "governorate": "دمياط",
+        "city": "كفر سعد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f7"
+        }
+      },
+      {
+        "governorate": "دمياط",
+        "city": "رأس البر",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f8"
+        }
+      },
+      {
+        "governorate": "دمياط",
+        "city": "دمياط",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945f9"
+        }
+      }
+    ],
+    "address": "شارع البحر، فارسكور"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "حازم منير",
+    "email": "hazem.mounir@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01243210987",
+    "governorate": "بورسعيد",
+    "city": "بورفؤاد",
+    "assignedCities": [
+      {
+        "governorate": "بورسعيد",
+        "city": "بورسعيد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945fa"
+        }
+      },
+      {
+        "governorate": "بورسعيد",
+        "city": "بورفؤاد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945fb"
+        }
+      }
+    ],
+    "address": "شارع النيل، بورفؤاد"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "كنان حمدي",
+    "email": "kinan.hamdy@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01032109876",
+    "governorate": "الإسماعيلية",
+    "city": "أبو صوير",
+    "assignedCities": [
+      {
+        "governorate": "الإسماعيلية",
+        "city": "الإسماعيلية",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945fc"
+        }
+      },
+      {
+        "governorate": "الإسماعيلية",
+        "city": "فايد",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945fd"
+        }
+      },
+      {
+        "governorate": "الإسماعيلية",
+        "city": "أبو صوير",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945fe"
+        }
+      }
+    ],
+    "address": "شارع سعد زغلول، أبو صوير"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "أسامة ماهر",
+    "email": "osama.maher@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01121098765",
+    "governorate": "السويس",
+    "city": "عتاقة",
+    "assignedCities": [
+      {
+        "governorate": "السويس",
+        "city": "عتاقة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db3945ff"
+        }
+      },
+      {
+        "governorate": "السويس",
+        "city": "السويس",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394600"
+        }
+      }
+    ],
+    "address": "شارع الهرم، عتاقة"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "بلال ياسين",
+    "email": "bilal.yassin@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01210987654",
+    "governorate": "أسيوط",
+    "city": "ديروط",
+    "assignedCities": [
+      {
+        "governorate": "أسيوط",
+        "city": "أبنوب",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394601"
+        }
+      },
+      {
+        "governorate": "أسيوط",
+        "city": "ديروط",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394602"
+        }
+      }
+    ],
+    "address": "شارع فيصل، ديروط"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "جهاد زياد",
+    "email": "jehad.ziad@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01009876543",
+    "governorate": "سوهاج",
+    "city": "جرجا",
+    "assignedCities": [
+      {
+        "governorate": "سوهاج",
+        "city": "طما",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394603"
+        }
+      },
+      {
+        "governorate": "سوهاج",
+        "city": "جرجا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394604"
+        }
+      }
+    ],
+    "address": "شارع الجامعة، جرجا"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "رشاد عادل",
+    "email": "rashad.adel@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01198765432",
+    "governorate": "قنا",
+    "city": "قوص",
+    "assignedCities": [
+      {
+        "governorate": "قنا",
+        "city": "نجع حمادي",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394605"
+        }
+      },
+      {
+        "governorate": "قنا",
+        "city": "دشنا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394606"
+        }
+      },
+      {
+        "governorate": "قنا",
+        "city": "قوص",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394607"
+        }
+      }
+    ],
+    "address": "شارع التسعين، قوص"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "سهيل إيهاب",
+    "email": "sohail.ehab@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01287654321",
+    "governorate": "الأقصر",
+    "city": "إسنا",
+    "assignedCities": [
+      {
+        "governorate": "الأقصر",
+        "city": "الأقصر",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394608"
+        }
+      },
+      {
+        "governorate": "الأقصر",
+        "city": "إسنا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394609"
+        }
+      },
+      {
+        "governorate": "الأقصر",
+        "city": "الطود",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39460a"
+        }
+      }
+    ],
+    "address": "كورنيش النيل، إسنا"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "طاهر مدحت",
+    "email": "taher.medhat@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01076543210",
+    "governorate": "أسوان",
+    "city": "كوم أمبو",
+    "assignedCities": [
+      {
+        "governorate": "أسوان",
+        "city": "كوم أمبو",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39460b"
+        }
+      },
+      {
+        "governorate": "أسوان",
+        "city": "أسوان",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39460c"
+        }
+      },
+      {
+        "governorate": "أسوان",
+        "city": "إدفو",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39460d"
+        }
+      }
+    ],
+    "address": "شارع الجمهورية، كوم أمبو"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "عبيدة فتحي",
+    "email": "obaida.fathy@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01165432109",
+    "governorate": "الفيوم",
+    "city": "طامية",
+    "assignedCities": [
+      {
+        "governorate": "الفيوم",
+        "city": "إطسا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39460e"
+        }
+      },
+      {
+        "governorate": "الفيوم",
+        "city": "طامية",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db39460f"
+        }
+      },
+      {
+        "governorate": "الفيوم",
+        "city": "الفيوم",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394610"
+        }
+      }
+    ],
+    "address": "شارع النصر، طامية"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "فيصل سمير",
+    "email": "faisal.samir@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01254321098",
+    "governorate": "بني سويف",
+    "city": "الواسطى",
+    "assignedCities": [
+      {
+        "governorate": "بني سويف",
+        "city": "الواسطى",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394611"
+        }
+      },
+      {
+        "governorate": "بني سويف",
+        "city": "بني سويف",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394612"
+        }
+      },
+      {
+        "governorate": "بني سويف",
+        "city": "ببا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394613"
+        }
+      }
+    ],
+    "address": "شارع الحرية، الواسطى"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "قيس نبيل",
+    "email": "qais.nabil@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01043210987",
+    "governorate": "المنيا",
+    "city": "مغاغة",
+    "assignedCities": [
+      {
+        "governorate": "المنيا",
+        "city": "بني مزار",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394614"
+        }
+      },
+      {
+        "governorate": "المنيا",
+        "city": "ملوي",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394615"
+        }
+      }
+    ],
+    "address": "شارع الثورة، مغاغة"
+  },
+  {
+    "userType": "merchant",
+    "fullName": "ليث رفعت",
+    "email": "layth.refaat@gmail.com",
+    "password": "$2b$10$nW6ch8EAgIYNqs5wiqOEc.crpHITx9vvyb0gC4A4rFXhmh4ozrov.",
+    "phone": "01132109876",
+    "governorate": "البحر الأحمر",
+    "city": "سفاجا",
+    "assignedCities": [
+      {
+        "governorate": "البحر الأحمر",
+        "city": "سفاجا",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394616"
+        }
+      },
+      {
+        "governorate": "البحر الأحمر",
+        "city": "القصير",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394617"
+        }
+      },
+      {
+        "governorate": "البحر الأحمر",
+        "city": "الغردقة",
+        "_id": {
+          "$oid": "693db1bd422aa7b9db394618"
+        }
+      }
+    ],
+    "address": "شارع الجلاء، سفاجا"
+  }
+]

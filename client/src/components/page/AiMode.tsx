@@ -623,6 +623,10 @@ const AiMode = () => {
     setTimeout(() => {
       textAreaRef.current?.focus();
     }, 100);
+
+    setMessages([]);
+    setQuestion("");
+    setShowHistory(false); // Close history on new chat
   };
 
   const clearAllSessions = () => {

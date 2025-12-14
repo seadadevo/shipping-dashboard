@@ -134,8 +134,8 @@ export function CreateOrder() {
       setIsLoadingLists(true);
       try {
         const [govRes, shipRes, weightRes] = await Promise.all([
-          api.get('/api/locations/governorates'),
-          api.get('/api/shipping-types'),
+          api.get('/api/locations/governorates?limit=100'),
+          api.get('/api/shipping-types?limit=100'),
           api.get('/api/weight-settings')
         ]);
         setGovernoratesList(govRes.data.data.filter((g: Governorate) => g.isActive));
@@ -182,11 +182,37 @@ export function CreateOrder() {
     handleInputChange('cityName', '');
     setAvailableCities([]);
     const selectedGov = governoratesList.find(g => g.govName === governorateName);
-    if (!selectedGov) return;
+    console.log('🔍 Selected Governorate:', { governorateName, selectedGov });
+    if (!selectedGov) {
+      console.error('❌ No governorate found');
+      toast.error('المحافظة غير موجودة');
+      return;
+    }
     try {
-      const res = await api.get(`/api/locations/governorates/${selectedGov._id}/cities`);
-      setAvailableCities(res.data.data);
-    } catch (err) { setError('فشل في تحميل المدن'); }
+      console.log(`📡 Fetching cities for governorate ID: ${selectedGov._id}`);
+      const res = await api.get(`/api/locations/governorates/${selectedGov._id}/cities?limit=100`);
+      console.log('✅ API Response:', res.data);
+      console.log('✅ Cities loaded:', res.data.data);
+      
+      if (!res.data.data || res.data.data.length === 0) {
+        console.warn('⚠️ No cities found for this governorate');
+        toast.warning(`لا توجد مدن مضافة لمحافظة ${governorateName} حتى الآن`);
+        setAvailableCities([]);
+        return;
+      }
+      
+      const activeCities = res.data.data.filter((c: City) => c.isActive !== false);
+      setAvailableCities(activeCities);
+      console.log('📍 Available cities set:', activeCities.length);
+      
+      if (activeCities.length === 0) {
+        toast.warning('جميع المدن في هذه المحافظة غير نشطة');
+      }
+    } catch (err) { 
+      console.error('❌ Failed to load cities:', err);
+      toast.error('فشل في تحميل المدن');
+      setError('فشل في تحميل المدن'); 
+    }
   };
 
   const handleCityChange = async (cityName: string) => {
@@ -542,19 +568,41 @@ export function CreateOrder() {
                   </div>
                   <div className='space-y-2'>
                       <Label className="text-base">المدينة <span className="text-red-500">*</span></Label>
-                      <Select value={formData.cityName} onValueChange={handleCityChange} disabled={availableCities.length===0} dir="rtl">
-                          <SelectTrigger className="h-11"><SelectValue placeholder="اختر المدينة" /></SelectTrigger>
+                      <Select 
+                          value={formData.cityName} 
+                          onValueChange={handleCityChange} 
+                          disabled={!formData.governorateName || availableCities.length === 0} 
+                          dir="rtl"
+                      >
+                          <SelectTrigger className="h-11">
+                              <SelectValue placeholder={
+                                  !formData.governorateName 
+                                      ? "اختر المحافظة أولاً" 
+                                      : availableCities.length === 0 
+                                          ? "لا توجد مدن متاحة" 
+                                          : "اختر المدينة"
+                              } />
+                          </SelectTrigger>
                           <SelectContent className='bg-background'>
-                              {availableCities.map(c => (
-                                  <SelectItem key={c._id} value={c.cityName}>
-                                      <div className="flex justify-between w-full gap-4">
-                                          <span>{c.cityName}</span>
-                                          <Badge variant="secondary" className="text-xs">{c.shippingCost} ج.م</Badge>
-                                      </div>
-                                  </SelectItem>
-                              ))}
+                              {availableCities.length > 0 ? (
+                                  availableCities.map(c => (
+                                      <SelectItem key={c._id} value={c.cityName}>
+                                          <div className="flex justify-between w-full gap-4">
+                                              <span>{c.cityName}</span>
+                                              <Badge variant="secondary" className="text-xs">{c.shippingCost} ج.م</Badge>
+                                          </div>
+                                      </SelectItem>
+                                  ))
+                              ) : (
+                                  <div className="p-2 text-center text-muted-foreground text-sm">
+                                      {!formData.governorateName ? "اختر المحافظة أولاً" : "جاري تحميل المدن..."}
+                                  </div>
+                              )}
                           </SelectContent>
                       </Select>
+                      {availableCities.length > 0 && (
+                          <p className="text-xs text-green-600">✓ {availableCities.length} مدينة متاحة</p>
+                      )}
                   </div>
               </div>
               <div className='grid gap-6 md:grid-cols-3'>
