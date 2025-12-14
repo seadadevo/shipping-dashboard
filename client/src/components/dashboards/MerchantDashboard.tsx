@@ -26,6 +26,7 @@ import {
 import api from "../../lib/api"; // (إضافة)
 import type { Order, GetOrdersResponse, ApiError } from "../../types"; // (إضافة)
 import { exportMerchantReport } from "../../lib/exportUtils";
+import { useNavigate } from 'react-router-dom';
 
 const statusLabels: Record<string, string> = {
   Pending: "قيد الانتظار",

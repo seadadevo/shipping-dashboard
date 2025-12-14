@@ -65,32 +65,17 @@ export function EmployeeDashboard() {
         const usersList = usersRes.data?.data?.users || usersRes.data || [];
         setUsers(Array.isArray(usersList) ? usersList : []);
 
-        const ordersList = ordersRes.data?.data?.orders || [];
-    useEffect(() => {
-        getUsers().catch(console.error);
-    }, []);
+      const ordersList = ordersRes.data?.data?.orders || [];
+            setOrders(Array.isArray(ordersList) ? ordersList : []);
+          } catch (error) {
+            console.error("Error fetching dashboard data:", error);
+          } finally {
+            setLoading(false);
+          }
+        };
 
-   
-    const merchantsCount = useMemo(() => {
-        return users.reduce((acc, u) => acc + (u.userType?.toLowerCase() === "merchant" ? 1 : 0), 0);
-    }, [users]);
-
-    
-    const [orders, setOrders] = useState<Order[]>([]);
-    const getAllOrders = async (): Promise<void> => {
-        const res = await api.get("/api/orders?limit=1000");
-       
-        const ordersList = res.data?.data?.orders || [];
-        setOrders(Array.isArray(ordersList) ? ordersList : []);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
+        fetchData();
+      }, []);;
   // merchant count derived from users
   const merchantsCount = useMemo(() => {
     return users.reduce(
