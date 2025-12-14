@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
+import { Card, CardContent, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -16,21 +10,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "../ui/dialog";
-import { Checkbox } from "../ui/checkbox";
 import { Switch } from "../ui/switch";
 import { Alert, AlertDescription } from "../ui/alert";
-import {
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Plus,
-  Loader2,
-  Search,
-  Truck,
-  MapPin,
-  Phone,
-  Mail,
-} from "lucide-react";
+import { Loader2, Search, Truck, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
 import api from "../../lib/api";
 import type { User, Governorate, City } from "../../types";
@@ -50,7 +32,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -89,8 +70,16 @@ export default function DriverManagement() {
       const response = await api.get("/api/drivers/all");
       setDrivers(response.data.data);
       setFilteredDrivers(response.data.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch drivers");
+    } catch (err: unknown) {
+      if (
+        (err as any).response &&
+        (err as any).response.data &&
+        (err as any).response.data.message
+      ) {
+        setError((err as any).response.data.message);
+      } else {
+        setError("Failed to fetch drivers");
+      }
     } finally {
       setLoading(false);
     }
@@ -235,7 +224,9 @@ export default function DriverManagement() {
         </div>
         <Select
           value={statusFilter}
-          onValueChange={(value: any) => setStatusFilter(value)}
+          onValueChange={(value: "all" | "available" | "unavailable") =>
+            setStatusFilter(value)
+          }
         >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="تصفية حسب الحالة" />
@@ -424,7 +415,7 @@ export default function DriverManagement() {
           <DialogHeader className="p-6 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-blue-600">
+                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                   تعيين مناطق التغطية
                   <Badge variant="outline" className="text-base font-normal">
                     {selectedDriver?.fullName}
