@@ -412,7 +412,11 @@ async function fetchDynamicSystemContext(userType, userId) {
     if (userType === "merchant") {
       if (!userId) return "[Merchant Data Error: No ID]";
 
-      // Need mongoose for ObjectId casting if stored as ObjectId
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email storeName createdAt"
+      );
+
+      // 1. Core Counts
       const myOrdersCount = await Order.countDocuments({ createdBy: userId });
       const myPending = await Order.countDocuments({
         createdBy: userId,
@@ -423,6 +427,7 @@ async function fetchDynamicSystemContext(userType, userId) {
         status: "Delivered",
       });
 
+      // 2. Today's Financials
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       const myStats = await Order.aggregate([
@@ -440,125 +445,179 @@ async function fetchDynamicSystemContext(userType, userId) {
           },
         },
       ]);
-
-      let myRealized = 0;
-      let myPotential = 0;
+      let myRealized = 0,
+        myPotential = 0;
       myStats.forEach((stat) => {
         if (stat._id === "Delivered") myRealized = stat.totalCost;
         else if (["Pending", "Processing", "On the Way"].includes(stat._id))
           myPotential += stat.totalCost;
       });
 
-      const myRecent = await Order.find({ createdBy: userId })
-        .sort({ createdAt: -1 })
-        .limit(5);
-      const myRecentSummary = myRecent
-        .map(
-          (o) => `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}`
-        )
-        .join("\n");
+      // 3. Merchant Timeline (My Orders Only)
+      const myMonthlyStats = await Order.aggregate([
+        { $match: { createdBy: new mongoose.Types.ObjectId(userId) } },
+        {
+          $group: {
+            _id: {
+              month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+              status: "$status",
+            },
+            revenue: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.month": -1 } },
+      ]);
 
-      // Fetch Current Merchant Info
-      const currentUser = await User.findById(userId).select(
-        "fullName phone email storeName"
-      );
+      const myTimelineMap = new Map();
+      myMonthlyStats.forEach((m) => {
+        const month = m._id.month;
+        if (!myTimelineMap.has(month))
+          myTimelineMap.set(month, {
+            total: 0,
+            revenue: 0,
+            delivered: 0,
+            distinctStatuses: [],
+          });
+
+        const entry = myTimelineMap.get(month);
+        entry.total += m.count;
+        entry.distinctStatuses.push(`${m._id.status}: ${m.count}`);
+        if (m._id.status === "Delivered") {
+          entry.delivered += m.count;
+          entry.revenue += m.revenue;
+        }
+      });
+
+      const myTimelineStr = Array.from(myTimelineMap.keys())
+        .map((month) => {
+          const d = myTimelineMap.get(month);
+          return `> [${month}]: ${d.total} Orders (${
+            d.revenue
+          } EGP Realized) | Status: ${d.distinctStatuses.join(", ")}`;
+        })
+        .join("\n");
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Merchant"}
         - Role: Merchant
-        - Company: ${currentUser?.storeName || "N/A"}
-        - Phone: ${currentUser?.phone || "N/A"}
+        - Store: ${currentUser?.storeName || "N/A"}
+        - Member Since: ${
+          currentUser?.createdAt
+            ? new Date(currentUser.createdAt).toLocaleDateString()
+            : "Unknown"
+        }
 
-        [MERCHANT DASHBOARD - PERSONALIZED]
-        - Your Total Orders: ${myOrdersCount}
-        - Your Pending: ${myPending} | Delivered: ${myDelivered}
+        [MERCHANT DASHBOARD]
+        - Total Orders: ${myOrdersCount}
+        - Pending: ${myPending} | Delivered: ${myDelivered}
         
-        [YOUR FINANCIALS (Today)]
+        [FINANCIALS (Today)]
         - Realized: ${myRealized} EGP
         - Potential: ${myPotential} EGP
+
+        [MY BUSINESS TIMELINE (Sales History)]
+        ${myTimelineStr || "No history yet."}
         
-        [AREAS SERVED]
-        - Cities: ${cityList || "No active cities found."}
-        - Governorates: ${govList || "No active governorates."}
-
-        [SHIPPING TYPES & SERVICES]
-        ${shippingSummary || "No specific shipping types defined."}
-
-        [PRICING RULES]
-        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
-
-        [YOUR RECENT ACTIVITY]
-        ${myRecentSummary}
+        [SHIPPING CONFIG]
+        - Weight Limit: ${limitWeight}kg | Extra: ${kgPrice}EGP | Village: ${villagePrice}EGP
+        ${shippingSummary}
         `;
     }
 
     // ---------------- EMPLOYEE CONTEXT ----------------
     if (userType === "employee") {
-      // 1. Fetch Current Employee Info
       const currentUser = await User.findById(userId).select(
-        "fullName phone email"
+        "fullName phone email createdAt"
       );
 
-      // 2. Order Statistics (Full Access)
+      // 1. Global Counts
       const totalOrders = await Order.countDocuments();
       const pendingOrders = await Order.countDocuments({ status: "Pending" });
       const deliveredOrders = await Order.countDocuments({
         status: "Delivered",
       });
 
-      // 3. Financials (Order Values)
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const profitStats = await Order.aggregate([
-        { $match: { createdAt: { $gte: startOfDay } } },
+      // 2. Operational Timeline (System Wide)
+      const opsMonthlyStats = await Order.aggregate([
         {
           $group: {
-            _id: "$status",
-            totalCost: { $sum: "$orderCost" },
+            _id: {
+              month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+              status: "$status",
+            },
             count: { $sum: 1 },
           },
         },
+        { $sort: { "_id.month": -1 } },
       ]);
 
-      let deliveredVal = 0;
-      let pendingVal = 0;
-      profitStats.forEach((stat) => {
-        if (stat._id === "Delivered") deliveredVal = stat.totalCost;
-        else if (["Pending", "Processing", "On the Way"].includes(stat._id))
-          pendingVal += stat.totalCost;
+      const opsTimelineMap = new Map();
+      opsMonthlyStats.forEach((m) => {
+        const month = m._id.month;
+        if (!opsTimelineMap.has(month)) opsTimelineMap.set(month, []);
+        opsTimelineMap.get(month).push(`${m._id.status}: ${m.count}`);
       });
 
-      // 4. Recent Orders
-      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
-      const recentSummary = recentOrders
-        .map(
-          (o) =>
-            `- Order ${o.orderNumber}: ${o.status}, Val: ${o.orderCost}, to ${o.city}`
-        )
+      const opsTimelineStr = Array.from(opsTimelineMap.keys())
+        .map((month) => {
+          return `> [${month}]: ${opsTimelineMap.get(month).join(", ")}`;
+        })
+        .join("\n");
+
+      // 3. Driver Roster (Key for Employees)
+      const drivers = await User.find({ userType: "courier" }).select(
+        "fullName phone isAvailable assignedCities"
+      );
+      const driverPerformance = await Order.aggregate([
+        { $match: { status: "Delivered", assignedDriver: { $exists: true } } },
+        { $group: { _id: "$assignedDriver", count: { $sum: 1 } } },
+      ]);
+      const driverMap = {};
+      driverPerformance.forEach((d) => {
+        driverMap[d._id.toString()] = d.count;
+      });
+
+      const driverList = drivers
+        .map((d) => {
+          const count = driverMap[d._id.toString()] || 0;
+          return `- ${d.fullName} (${d.phone}) [${
+            d.isAvailable ? "Available" : "Busy"
+          }]: ${count} Delivered`;
+        })
+        .join("\n");
+
+      // 4. Merchant Directory (New Addition)
+      const merchants = await User.find({ userType: "merchant" }).select(
+        "fullName phone storeName email"
+      );
+      const merchantList = merchants
+        .map((m) => `- ${m.storeName || m.fullName} (${m.phone})`)
         .join("\n");
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Employee"}
         - Role: Employee
-        - Phone: ${currentUser?.phone || "N/A"}
+        - Member Since: ${
+          currentUser?.createdAt
+            ? new Date(currentUser.createdAt).toLocaleDateString()
+            : "Unknown"
+        }
 
-        [ORDER MANAGEMENT DASHBOARD]
+        [OPERATIONAL DASHBOARD]
         - Total Orders: ${totalOrders}
-        - Pending/Processing: ${pendingOrders}
-        - Delivered: ${deliveredOrders}
+        - Pending: ${pendingOrders} | Delivered: ${deliveredOrders}
         
-        [ORDER FINANCIALS (Today)]
-        - Realized Value (Delivered): ${deliveredVal} EGP
-        - Pipeline Value (Pending): ${pendingVal} EGP
+        [OPERATIONAL TIMELINE (Monthly Volume)]
+        ${opsTimelineStr || "No history."}
         
-        [RECENT ORDERS]
-        ${recentSummary}
-        
-        [SERVED AREAS & RULES]
-        - Cities: ${cityList || "No active cities."}
-        - Pricing: Limit ${limitWeight}Kg, Extra ${kgPrice}EGP, Village ${villagePrice}EGP
+        [DRIVER ROSTER & PERFORMANCE]
+        ${driverList || "No drivers."}
+
+        [MERCHANT DIRECTORY]
+        ${merchantList || "No merchants found."}
         
         [SHIPPING SERVICES]
         ${shippingSummary}
@@ -707,15 +766,27 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     2. **ROLE**: Act as a senior consultant. Don't just read numbers; explain *why* they matter.
     3. **NO GENERICS**: Avoid phrases like "Perform better". Instead say "Increase delivery efficiency by 15% using...".
 
-    ### STRICT SCOPE & REFUSAL PROTOCOL
-    1. **DOMAIN**: You are ONLY allowed to answer questions about:
-       - Shipping, Logistics, Orders, Deliveries.
-       - Dashboard Data (Finance, Users, Charts).
-       - Using this System.
-    2. **REFUSAL**: If the user asks about ANYTHING else (e.g., General Knowledge, Cooking, Coding external apps, Life advice, Religion, Politics), you MUST Refuse.
-    3. **REFUSAL MESSAGE**: Return EXACTLY this Arabic message:
-       "عذرًا، أنا مساعد لوجستي فقط في هذا النظام ولا يمكنني الإجابة على أسئلة عامة خارج نطاق العمل."
-    4. **NO EXCEPTIONS**: Do not be helpful for out-of-scope topics.
+    ### SYSTEM EXPERT PROTOCOL
+    You are the **Master Controller** and **Chief Analyst** of this Shipping System.
+    
+    **YOUR KNOWLEDGE BASE:**
+    - You know **ALL** Orders (Pending, Delivered, Cancelled).
+    - You know **ALL** Users (Merchants, Employees, Drivers).
+    - You know **ALL** Financials (Revenue, Profit, Pricing).
+    - You know **ALL** Rules (Shipping Types, Cities, Weight Limits).
+
+    **INSTRUCTIONS:**
+    1. **ANSWER FREELY**: If the user asks about people, money, boxes, cities, or time -> **ANSWER IT**.
+    2. **BE DIRECT**: Don't say "I will check". Say "Here is the data: ...".
+    3. **REFUSAL POLICY (Lenient)**: 
+       - ONLY refuse if the user asks about something **completely unrelated** to business (e.g., "How to bake a cake", "Who won the World Cup").
+       - If you refuse, say: "أنا هنا فقط لمساعدتك في إدارة أعمالك ونظام الشحن."
+    
+    **EXAMPLES OF ALLOWED QUESTIONS:**
+    - "Who are the merchants?" (YES)
+    - "How much money did we make?" (YES)
+    - "List all employees." (YES)
+    - "What is the status of order #123?" (YES)
     
     ### ANALYSIS FRAMEWORK
     When analyzing data (CSV/PDF/Image):
@@ -879,8 +950,63 @@ async function initDefaultDocument() {
   }
 }
 
+async function indexDatabaseContent() {
+  try {
+    console.log("📚 Starting Database Deep Study (Indexing)...");
+
+    // 1. Index Orders
+    const orders = await Order.find()
+      .limit(2000)
+      .select(
+        "orderNumber status orderCost city paymentType changeReason notes createdAt"
+      );
+    if (orders.length > 0) {
+      const orderText = orders
+        .map(
+          (o) =>
+            `[Order Record] ID: #${o.orderNumber}, Status: ${o.status}, Cost: ${
+              o.orderCost
+            } EGP, Dest: ${o.city}, Pay: ${o.paymentType}, Date: ${new Date(
+              o.createdAt
+            ).toLocaleDateString()}` +
+            (o.changeReason ? `, Reason: ${o.changeReason}` : "") +
+            (o.notes ? `, Note: ${o.notes}` : "")
+        )
+        .join("\n");
+
+      console.log(`📚 Indexing ${orders.length} Orders...`);
+      await processAndStoreDocument(orderText);
+    }
+
+    // 2. Index Users (Drivers/Merchants)
+    const users = await User.find().select(
+      "fullName userType phone storeName email isAvailable"
+    );
+    if (users.length > 0) {
+      const userText = users
+        .map(
+          (u) =>
+            `[User Record] Role: ${u.userType}, Name: ${u.fullName}, Phone: ${u.phone}, Email: ${u.email}` +
+            (u.storeName ? `, Store: ${u.storeName}` : "") +
+            (u.isAvailable !== undefined ? `, Active: ${u.isAvailable}` : "")
+        )
+        .join("\n");
+
+      console.log(`📚 Indexing ${users.length} Users...`);
+      await processAndStoreDocument(userText);
+    }
+
+    console.log("✅ Database Study Complete.");
+  } catch (err) {
+    console.error("❌ Database Indexing Failed:", err);
+  }
+}
+
 // Run init on start
-initDefaultDocument();
+(async () => {
+  await initDefaultDocument();
+  await indexDatabaseContent();
+})();
 
 // ================= API ENDPOINTS =================
 
@@ -1041,49 +1167,76 @@ router.post("/chat", upload.single("file"), async (req, res) => {
     // -> RAG Search + Answer
     if (question) {
       // RAG Search
-      const queryVector = await getEmbedding(question);
-      const collection = await client.getCollection({ name: COLLECTION_NAME });
+      let ragContext = "";
+      try {
+        const queryVector = await getEmbedding(question);
 
-      const result = await collection.query({
-        queryEmbeddings: [queryVector],
-        nResults: 3,
-      });
+        let collection;
+        try {
+          collection = await client.getCollection({ name: COLLECTION_NAME });
+        } catch (e) {
+          // Collection might not exist if just cleared or empty
+          collection = await client.getOrCreateCollection({
+            name: COLLECTION_NAME,
+            embeddingFunction: null,
+          });
+        }
 
-      let retrievedContext =
-        result.metadatas && result.metadatas[0]
-          ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
-          : "";
+        const results = await collection.query({
+          queryEmbeddings: [queryVector],
+          nResults: 5, // Top 5 relevant facts
+        });
 
-      // If we just uploaded a file, prioritize its context if RAG didn't find it yet
-      // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
-
-      // --- INJECT DYNAMIC SYSTEM DATA ---
-      const systemContext = await fetchDynamicSystemContext(userType, userId);
-
-      retrievedContext = `
-      ${systemContext}
-
-      ${
-        fileContext
-          ? `\n=============== [EMBEDDED FILE CONTENT START] ===============\n${fileContext}\n=============== [EMBEDDED FILE CONTENT END] ===============\n(Please analyze the content above)`
-          : ""
+        if (
+          results.metadatas &&
+          results.metadatas[0] &&
+          results.metadatas[0].length > 0
+        ) {
+          // Extract text and join
+          const validFacts = results.metadatas[0]
+            .map((m) => m.text)
+            .filter((t) => t && t.length > 5);
+          if (validFacts.length > 0) {
+            ragContext = `
+              [RELEVANT DATABASE RECORDS (DEEP STUDY FACTS)]
+              ${validFacts.join("\n\n")}
+              `;
+            console.log(
+              `✅ Found ${validFacts.length} relevant facts via RAG.`
+            );
+          }
+        }
+      } catch (ragErr) {
+        console.warn("⚠️ Vector Search warning:", ragErr.message);
       }
 
-      [EXISTING KNOWLEDGE BASE]:
-      ${retrievedContext}
-      `;
+      // --- 3. FETCH DYNAMIC CONTEXT (Live Stats) ---
+      const dynamicContext = await fetchDynamicSystemContext(userType, userId);
 
-      finalAnswer = await generateAnswer(
-        retrievedContext,
-        question,
-        res,
-        base64Image
-      );
-      return; // Response ended by generateAnswer stream
+      // --- 4. ASSEMBLE PROMPT CONTEXT ---
+      const context = `
+      ${dynamicContext}
+      
+      ${ragContext}
+      
+      ${fileContext ? `[ATTACHED FILE CONTENT]:\n${fileContext}` : ""}
+      `;
+      // --- 5. GENERATE ANSWER ---
+      // Streaming Response
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      await generateAnswer(context, question, res, base64Image);
+      return;
     }
+
+    // Default Fallback
+    res.json({ answer: "No question provided." });
   } catch (error) {
-    console.error("❌ Error in /chat:", error);
-    res.status(500).json({ error: "Failed to process request." });
+    console.error("Router Error:", error);
+    if (!res.headersSent)
+      res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
