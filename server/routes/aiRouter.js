@@ -253,7 +253,7 @@ async function fetchDynamicSystemContext(userType, userId) {
 
       // 3. Drivers (With Delivered Count)
       const drivers = await User.find({ userType: "courier" }).select(
-        "fullName phone isAvailable assignedCities"
+        "fullName phone isAvailable assignedCities governorate"
       );
       // Aggregate detailed delivery counts for each driver
       const driverPerformance = await Order.aggregate([
@@ -268,9 +268,12 @@ async function fetchDynamicSystemContext(userType, userId) {
       const driverList = drivers
         .map((d) => {
           const count = driverMap[d._id.toString()] || 0;
+          const routes =
+            d.assignedCities?.map((c) => c.city).join(", ") || "All";
+          const location = d.governorate || "Unknown Loc";
           return `- ${d.fullName} (${d.phone}) [${
             d.isAvailable ? "Available" : "Busy"
-          }]: ${count} Delivered`;
+          }] {From: ${location}} {Routes: ${routes}} : ${count} Delivered`;
         })
         .join("\n");
 
@@ -347,6 +350,14 @@ async function fetchDynamicSystemContext(userType, userId) {
           ? (((statusMap["Delivered"] || 0) / totalOrders) * 100).toFixed(1)
           : "0";
 
+      // --- I. SYSTEM USER MANUAL (How-To Guide) ---
+      const userManual = `
+    [SYSTEM USER MANUAL]
+    - **How to Add Order**: Go to 'Management' or 'Orders' page -> Click 'Add Order' -> Enter Client Name, Phone, Cost, City -> Click Save.
+    - **How to Assign Driver**: In Order Table, click 'Edit' or 'Assign' icon -> Select Driver from list -> Status changes to 'On the Way'.
+    - **How to Register Merchant**: Go to 'Users' -> 'Add User' -> Select Role 'Merchant' -> Fill Store Name & Contact.
+    `;
+
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Admin"}
@@ -364,6 +375,8 @@ async function fetchDynamicSystemContext(userType, userId) {
             : "Unknown"
         }
         
+        ${userManual}
+
         [EXECUTIVE DASHBOARD]
         - Total Orders: ${totalOrders}
         - Total Users: ${totalUsers}
@@ -708,7 +721,7 @@ async function processAndStoreDocument(rawText) {
 }
 
 async function generateAnswer(context, query, res = null, base64Image = null) {
-  const prompt = `
+  let prompt = `
     You are a **Strategic Data Analyst & Logistics Consultant** for a Shipping Company.
     
     ### CORE DIRECTIVES
@@ -726,13 +739,15 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     - You know **ALL** Rules (Shipping Types, Cities, Weight Limits).
 
     **INSTRUCTIONS:**
-    1. **ANSWER FREELY**: If the user asks about people, money, boxes, cities, or time -> **ANSWER IT**.
-    2. **BE DIRECT**: Don't say "I will check". Say "Here is the data: ...".
-    3. **REFUSAL POLICY (Lenient)**: 
+    1. **ANSWER FREELY**: If the user asks about people, money, boxes, cities, time, or **THE SYSTEM ITSELF** -> **ANSWER IT**.
+    2. **MARKETING & VISION**: You are allowed to explain how this system helps society, improves efficiency, or creates jobs. **SELL THE VISION**.
+    3. **BE DIRECT**: Don't say "I will check". Say "Here is the data: ...".
+    4. **REFUSAL POLICY (Lenient)**: 
        - ONLY refuse if the user asks about something **completely unrelated** to business (e.g., "How to bake a cake", "Who won the World Cup").
        - If you refuse, say: "أنا هنا فقط لمساعدتك في إدارة أعمالك ونظام الشحن."
-    
+
     **EXAMPLES OF ALLOWED QUESTIONS:**
+    - "How does this system help the community?" (YES - Explain logistics efficiency)
     - "Who are the merchants?" (YES)
     - "How much money did we make?" (YES)
     - "List all employees." (YES)
@@ -765,7 +780,26 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
       ]
     }
     \`\`\`
-    
+    `;
+
+  // --- CONDITIONALLY ADD FILE RELEVANCE CHECK ---
+  // Only if an image is attached or context text suggests a file content block
+  if (
+    base64Image ||
+    context.includes("ATTACHED FILE") ||
+    context.includes("EMBEDDED FILE")
+  ) {
+    prompt += `
+    ### FILE RELEVANCE CHECK (CRITICAL)
+    The user has uploaded a file or image.
+    1. **VALIDATE**: Check if the content is related to Shipping, Orders, Invoices, or Business.
+    2. **REFUSE UNRELATED**: If it contains Religion, Politics, Stories, or Memes -> **REFUSE**.
+       - Say: "عذرًا، هذا الملف لا يبدو مرتبطًا بنظام الشحن الخاص بنا."
+    3. **ANALYZE RELATE**: If it is business data, analyze it deeply.
+    `;
+  }
+
+  prompt += `
     ### CONTEXT & QUERY
     [SYSTEM CONTEXT]:
     ${context}
@@ -914,11 +948,13 @@ async function indexDatabaseContent() {
       return;
     }
 
-    // 1. Index Orders (Limit 300 for performance/safety on startup)
+    // 1. Index Orders (Limit 1500 for deep historical context)
     const orders = await Order.find()
-      .limit(300)
+      .limit(1500)
+      .populate("assignedDriver", "fullName")
+      .populate("createdBy", "storeName fullName")
       .select(
-        "orderNumber status orderCost city paymentType changeReason notes createdAt"
+        "orderNumber status orderCost city paymentType changeReason notes createdAt assignedDriver createdBy"
       );
     if (orders.length > 0) {
       const orderText = orders
@@ -929,6 +965,10 @@ async function indexDatabaseContent() {
             } EGP, Dest: ${o.city}, Pay: ${o.paymentType}, Date: ${new Date(
               o.createdAt
             ).toLocaleDateString()}` +
+            (o.assignedDriver ? `, Driver: ${o.assignedDriver.fullName}` : "") +
+            (o.createdBy
+              ? `, Merchant: ${o.createdBy.storeName || o.createdBy.fullName}`
+              : "") +
             (o.changeReason ? `, Reason: ${o.changeReason}` : "") +
             (o.notes ? `, Note: ${o.notes}` : "")
         )
@@ -940,7 +980,7 @@ async function indexDatabaseContent() {
 
     // 2. Index Users (Drivers/Merchants)
     const users = await User.find().select(
-      "fullName userType phone storeName email isAvailable"
+      "fullName userType phone storeName email isAvailable governorate assignedCities"
     );
     if (users.length > 0) {
       const userText = users
@@ -948,6 +988,10 @@ async function indexDatabaseContent() {
           (u) =>
             `[User Record] Role: ${u.userType}, Name: ${u.fullName}, Phone: ${u.phone}, Email: ${u.email}` +
             (u.storeName ? `, Store: ${u.storeName}` : "") +
+            (u.governorate ? `, Location: ${u.governorate}` : "") +
+            (u.assignedCities && u.assignedCities.length > 0
+              ? `, Routes: ${u.assignedCities.map((c) => c.city).join(", ")}`
+              : "") +
             (u.isAvailable !== undefined ? `, Active: ${u.isAvailable}` : "")
         )
         .join("\n");
@@ -1140,15 +1184,64 @@ router.post("/chat", upload.single("file"), async (req, res) => {
       const queryVector = await getEmbedding(question);
       const collection = await client.getCollection({ name: COLLECTION_NAME });
 
+      let directOrderContext = "";
+      // --- DIRECT ORDER LOOKUP (Specificity Boost) ---
+      // Check for patterns like "#12345", "Order 12345", "Order #12345", or just digits if context implies
+      const orderIdMatch = question.match(
+        /(?:order|#|num|id)\s*[:#]?\s*(\d+)/i
+      );
+      if (orderIdMatch && orderIdMatch[1]) {
+        const searchedId = orderIdMatch[1];
+        console.log(
+          `🎯 Detected specific Order ID: ${searchedId}. Fetching direct record...`
+        );
+        const orderData = await Order.findOne({ orderNumber: searchedId })
+          .populate("assignedDriver", "fullName phone")
+          .populate("createdBy", "storeName fullName phone");
+
+        if (orderData) {
+          directOrderContext = `
+            [DIRECT DATABASE RECORD - HIGH PRIORITY]
+            Detailed Record for Order #${orderData.orderNumber}:
+            - Status: ${orderData.status}
+            - Cost: ${orderData.orderCost} EGP
+            - City: ${orderData.city}
+            - Address: ${orderData.address}
+            - Payment: ${orderData.paymentType}
+            - Driver: ${
+              orderData.assignedDriver
+                ? `${orderData.assignedDriver.fullName} (${orderData.assignedDriver.phone})`
+                : "Unassigned"
+            }
+            - Merchant: ${
+              orderData.createdBy
+                ? `${
+                    orderData.createdBy.storeName ||
+                    orderData.createdBy.fullName
+                  }`
+                : "Unknown"
+            }
+            - Client: ${orderData.clientName} (${orderData.clientPhone})
+            - Created: ${new Date(orderData.createdAt).toLocaleString()}
+            - Notes: ${orderData.notes || "None"}
+            - Change Reason: ${orderData.changeReason || "N/A"}
+            `;
+          console.log("✅ Direct Order Record Found & Injected.");
+        }
+      }
+
       const result = await collection.query({
         queryEmbeddings: [queryVector],
-        nResults: 3,
+        nResults: 8, // Increased from 5/3 to 8 for broader knowledge
       });
 
       let retrievedContext =
         result.metadatas && result.metadatas[0]
           ? result.metadatas[0].map((m) => (m ? m.text : "")).join("\n---\n")
           : "";
+
+      // Combine Direct + RAG
+      retrievedContext = directOrderContext + "\n" + retrievedContext;
 
       // If we just uploaded a file, prioritize its context if RAG didn't find it yet
       // But to be safe and "immediate", we can prepend the fileContext to the retrieved context
