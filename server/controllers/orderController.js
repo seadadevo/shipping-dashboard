@@ -200,7 +200,9 @@ exports.addOrder = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
   try {
     const { status, q } = req.query;
-    const query = {};
+    const query = {
+      status: { $ne: "Returned" }  // استبعاد الطلبات المرتجعة
+    };
 
     if (status && status !== "all") {
       query.status = status;
@@ -250,6 +252,7 @@ exports.searchOrders = async (req, res) => {
 
     const { page, limit } = req.query;
     const filter = {
+      status: { $ne: "Returned" },  // استبعاد الطلبات المرتجعة
       $or: [
         { customerName: searchRegex },
         { customerPhone1: searchRegex },

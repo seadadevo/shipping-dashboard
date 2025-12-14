@@ -134,14 +134,18 @@ router.patch(
         return res.status(404).json({ message: "الطلب غير موجود" });
       }
 
+      // Save previous status before changing
+      const previousStatus = order.status;
+      const newStatus = status || "Processing";
+
       // Update order with driver and status
       order.assignedDriver = driverId;
-      order.status = status || "Processing";
+      order.status = newStatus;
 
       // Add to state history
       order.stateHistory.push({
-        previousState: order.status,
-        newState: status || "Processing",
+        previousState: previousStatus,
+        newState: newStatus,
         changedBy: userId,
         changeReason: `تعيين السائق وتحويل الطلب إلى قيد المعالجة`,
         changedAt: new Date(),
