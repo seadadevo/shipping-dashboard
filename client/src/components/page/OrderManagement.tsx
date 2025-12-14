@@ -626,10 +626,10 @@ export function OrderManagement() {
                       <TableCell>
                         <div>
                           <p className="font-medium">
-                            {order.createdBy?.fullName || "Unknown User"}
+                            {order.createdBy.fullName}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {order.createdBy?.userType || "N/A"}
+                            {order.createdBy.userType}
                           </p>
                         </div>
                       </TableCell>
