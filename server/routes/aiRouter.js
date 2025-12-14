@@ -421,7 +421,7 @@ async function fetchDynamicSystemContext(userType, userId) {
         `;
     }
 
-    // ---------------- MERCHANT CONTEXT ----------------
+    // ---------------- MERCHANT CONTEXT (Own Data Only) ----------------
     if (userType === "merchant") {
       if (!userId) return "[Merchant Data Error: No ID]";
 
@@ -462,19 +462,52 @@ async function fetchDynamicSystemContext(userType, userId) {
           myPotential += stat.totalCost;
       });
 
+      // My Recent Orders with Driver Info
       const myRecent = await Order.find({ createdBy: userId })
         .sort({ createdAt: -1 })
-        .limit(5);
+        .limit(10)
+        .populate("assignedDriver", "fullName phone");
+
       const myRecentSummary = myRecent
         .map(
-          (o) => `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}`
+          (o) =>
+            `- Order #${o.orderNumber}: ${o.status}, Cost: ${
+              o.orderCost
+            } EGP, City: ${o.city}, Driver: ${
+              o.assignedDriver?.fullName || "Unassigned"
+            }`
         )
         .join("\n");
+
+      // Get Unique Drivers Who Worked on My Orders
+      const myDriverIds = [
+        ...new Set(
+          myRecent
+            .filter((o) => o.assignedDriver)
+            .map((o) => o.assignedDriver._id.toString())
+        ),
+      ];
+      const myDrivers = await User.find({
+        _id: { $in: myDriverIds },
+        userType: "courier",
+      }).select("fullName phone");
+
+      const myDriversList =
+        myDrivers.map((d) => `- ${d.fullName} (${d.phone})`).join("\n") ||
+        "No drivers assigned yet";
 
       // Fetch Current Merchant Info
       const currentUser = await User.findById(userId).select(
         "fullName phone email storeName"
       );
+
+      // User Manual for Merchants
+      const userManual = `
+      [SYSTEM USER MANUAL - MERCHANT]
+      - **Track Orders**: Ask "Show my orders" or "What's the status of order #123"  
+      - **View Drivers**: Ask "Who are my drivers?" to see drivers working on your orders
+      - **Add Order**: In dashboard, click 'Add Order' -> Fill details -> Submit
+      `;
 
       return `
         [CURRENT USER PROFILE]
@@ -483,98 +516,83 @@ async function fetchDynamicSystemContext(userType, userId) {
         - Company: ${currentUser?.storeName || "N/A"}
         - Phone: ${currentUser?.phone || "N/A"}
 
-        [MERCHANT DASHBOARD - PERSONALIZED]
+        ${userManual}
+
+        [MY ORDERS DASHBOARD]
         - Your Total Orders: ${myOrdersCount}
         - Your Pending: ${myPending} | Delivered: ${myDelivered}
         
-        [YOUR FINANCIALS (Today)]
+        [MY FINANCIALS (Today)]
         - Realized: ${myRealized} EGP
         - Potential: ${myPotential} EGP
         
-        [AREAS SERVED]
-        - Cities: ${cityList || "No active cities found."}
-        - Governorates: ${govList || "No active governorates."}
-
-        [SHIPPING TYPES & SERVICES]
-        ${shippingSummary || "No specific shipping types defined."}
-
-        [PRICING RULES]
-        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
-
-        [YOUR RECENT ACTIVITY]
+        [MY RECENT ORDERS (Last 10)]
         ${myRecentSummary}
+
+        [MY DRIVERS]
+        ${myDriversList}
         `;
     }
 
-    // ---------------- EMPLOYEE CONTEXT ----------------
+    // ---------------- EMPLOYEE CONTEXT (Orders Only) ----------------
     if (userType === "employee") {
       // 1. Fetch Current Employee Info
       const currentUser = await User.findById(userId).select(
         "fullName phone email"
       );
 
-      // 2. Order Statistics (Full Access)
+      // 2. Order Statistics (Orders-Only View)
       const totalOrders = await Order.countDocuments();
       const pendingOrders = await Order.countDocuments({ status: "Pending" });
       const deliveredOrders = await Order.countDocuments({
         status: "Delivered",
       });
-
-      // 3. Financials (Order Values)
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const profitStats = await Order.aggregate([
-        { $match: { createdAt: { $gte: startOfDay } } },
-        {
-          $group: {
-            _id: "$status",
-            totalCost: { $sum: "$orderCost" },
-            count: { $sum: 1 },
-          },
-        },
-      ]);
-
-      let deliveredVal = 0;
-      let pendingVal = 0;
-      profitStats.forEach((stat) => {
-        if (stat._id === "Delivered") deliveredVal = stat.totalCost;
-        else if (["Pending", "Processing", "On the Way"].includes(stat._id))
-          pendingVal += stat.totalCost;
+      const cancelledOrders = await Order.countDocuments({
+        status: "Cancelled",
       });
 
-      // 4. Recent Orders
-      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
+      // 3. Recent Orders with Full Details
+      const recentOrders = await Order.find()
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate("assignedDriver", "fullName")
+        .populate("createdBy", "storeName fullName");
+
       const recentSummary = recentOrders
         .map(
           (o) =>
-            `- Order ${o.orderNumber}: ${o.status}, Val: ${o.orderCost}, to ${o.city}`
+            `- Order #${o.orderNumber}: ${o.status}, Cost: ${
+              o.orderCost
+            } EGP, City: ${o.city}, Client: ${o.clientName}, Driver: ${
+              o.assignedDriver?.fullName || "Unassigned"
+            }, Merchant: ${o.createdBy?.storeName || "Unknown"}`
         )
         .join("\n");
+
+      // 4. User Manual for Employees
+      const userManual = `
+      [SYSTEM USER MANUAL - EMPLOYEE]
+      - **View Order Details**: Ask "Show me order #123" or "What's the status of order 555"
+      - **Assign Driver**: In dashboard, click order -> Select driver from dropdown
+      - **Update Status**: Click order row -> Change status -> Save
+      `;
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Employee"}
-        - Role: Employee
+        - Role: Employee (Orders Management)
         - Phone: ${currentUser?.phone || "N/A"}
 
-        [ORDER MANAGEMENT DASHBOARD]
+        ${userManual}
+
+        [ORDER STATISTICS]
         - Total Orders: ${totalOrders}
-        - Pending/Processing: ${pendingOrders}
+        - Pending: ${pendingOrders}
         - Delivered: ${deliveredOrders}
+        - Cancelled: ${cancelledOrders}
         
-        [ORDER FINANCIALS (Today)]
-        - Realized Value (Delivered): ${deliveredVal} EGP
-        - Pipeline Value (Pending): ${pendingVal} EGP
-        
-        [RECENT ORDERS]
+        [RECENT ORDERS (Last 10)]
         ${recentSummary}
-        
-        [SERVED AREAS & RULES]
-        - Cities: ${cityList || "No active cities."}
-        - Pricing: Limit ${limitWeight}Kg, Extra ${kgPrice}EGP, Village ${villagePrice}EGP
-        
-        [SHIPPING SERVICES]
-        ${shippingSummary}
         `;
     }
   } catch (err) {
@@ -792,10 +810,10 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     prompt += `
     ### FILE RELEVANCE CHECK (CRITICAL)
     The user has uploaded a file or image.
-    1. **VALIDATE**: Check if the content is related to Shipping, Orders, Invoices, or Business.
-    2. **REFUSE UNRELATED**: If it contains Religion, Politics, Stories, or Memes -> **REFUSE**.
-       - Say: "عذرًا، هذا الملف لا يبدو مرتبطًا بنظام الشحن الخاص بنا."
-    3. **ANALYZE RELATE**: If it is business data, analyze it deeply.
+    1. **DATA IS VALID**: If the file contains **CSV data, Tables, Numbers, Logs, or Lists** -> **ALWAYS ACCEPT & ANALYZE**.
+    2. **REFUSE ONLY**: If the file is **Narrative Text** about unrelated topics (Religion, Politics, Fairy Tales, Jokes) -> **REFUSE**.
+       - Refusal Message: "عذرًا، هذا الملف لا يبدو مرتبطًا بنظام الشحن الخاص بنا."
+    3. **DEFAULT**: If unsure, assume it IS related to logistics and analyze it.
     `;
   }
 
