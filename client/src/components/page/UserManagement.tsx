@@ -48,7 +48,7 @@ import api from "../../lib/api";
 import { toast } from "sonner";
 import type { User } from "../../types";
 import { Pagination } from "../ui/pagination";
-import validator from "validator";
+// import validator from "validator";
 
 export function UserManagement() {
   const navigate = useNavigate();
