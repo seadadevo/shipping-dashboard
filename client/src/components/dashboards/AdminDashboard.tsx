@@ -227,7 +227,7 @@ const AdminDashboard: React.FC = () => {
       console.log("Orders fetched successfully");
       setOrdersLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -267,7 +267,7 @@ const AdminDashboard: React.FC = () => {
             variant="outline"
             className="mr-2"
             onClick={() => {
-              generateAdminReport({
+              generateAdminReportCSVSingleFile({
                 orders: allOrders,
                 users: users,
                 stats: {
@@ -394,7 +394,7 @@ const AdminDashboard: React.FC = () => {
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" />
-                <YAxis />
+                <YAxis tick={{ dx: -10 }}/>
                 <Tooltip />
                 <Line
                   type="monotone"

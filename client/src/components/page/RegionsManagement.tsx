@@ -125,6 +125,7 @@ export function RegionsManagement() {
   // Village delivery cost state
   const [villageDeliveryCost, setVillageDeliveryCost] = useState<number>(0);
   const [isSavingVillageCost, setIsSavingVillageCost] = useState(false);
+  const [isLoadingVillageCost, setIsLoadingVillageCost] = useState(true);
 
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -141,11 +142,14 @@ export function RegionsManagement() {
   }, []);
 
   const fetchVillageDeliveryCost = async () => {
+    setIsLoadingVillageCost(true);
     try {
       const response = await api.get('/api/weight-settings');
       setVillageDeliveryCost(response.data.villageDeliveryCost || 0);
     } catch (err) {
       console.error('Failed to fetch village delivery cost:', err);
+    } finally {
+      setIsLoadingVillageCost(false);
     }
   };
 
@@ -466,7 +470,7 @@ export function RegionsManagement() {
       </div>
 
       {/* ... (إحصائيات سريعة - remains the same) ... */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         {/* ... Card 1 ... */}
         <Card>
           <CardHeader className="pb-3">
@@ -522,12 +526,26 @@ export function RegionsManagement() {
             )}
           </CardContent>
         </Card>
+
+        {/* ... Card 2 ... */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">تكلفة توصيل القرى</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingVillageCost ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <div className="text-2xl font-bold">{villageDeliveryCost} جنيه</div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Village Delivery Cost Settings Card */}
-      <Card className="border-green-200 bg-green-50/30">
+      <Card className="border-green-200 ">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center text-green-800">
+          <CardTitle className="text-lg flex items-center text-green-600">
             <MapPin className="h-5 w-5 ml-2" />
             إعدادات توصيل القرى
           </CardTitle>

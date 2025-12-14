@@ -182,7 +182,9 @@ export function MerchantDashboard() {
           </p>
         </div>
         <div className="flex space-x-2 space-x-reverse">
-          <Button className="bg-orange-600 hover:bg-orange-700">
+          <Button className="bg-orange-600 hover:bg-orange-700"
+          onClick={() => navigate('/create-order')}
+          >
             <Plus className="h-4 w-4 mr-2" />
             إنشاء طلب جديد
           </Button>
@@ -194,7 +196,7 @@ export function MerchantDashboard() {
                     "إجمالي الطلبات": getTotalOrders(),
                     "معدل النجاح": getSuccessRate(),
                     "الطلبات النشطة": getActiveOrders(),
-                    "إجمالي المبيعات (المكتملة)": getTotalSales().toFixed(2),
+                    "إجمالي تكاليف التوصيلات (المكتملة)": getTotalSales().toFixed(2),
                   },
                   shippingTypes: shippingTypes,
                   cities: cities,
@@ -247,7 +249,7 @@ export function MerchantDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              إجمالي المبيعات (المكتملة)
+              إجمالي تكاليف التوصيلات (المكتملة)
             </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>

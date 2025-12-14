@@ -235,7 +235,7 @@ export function AddUser({ onSave }: AddUserProps) {
           <Button
             className="ml-3 cursor-pointer"
             variant="outline"
-            onClick={() => onBack?.()}
+            onClick={() => navigate('/user-management')}
           >
             <ArrowRight className="h-4 w-4 mr-2" />
             العودة

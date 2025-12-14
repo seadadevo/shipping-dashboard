@@ -784,7 +784,7 @@ export function CreateOrder() {
                       <Info className="h-5 w-5 text-amber-700" />
                   </div>
                   <div className="flex-1">
-                      <p className="font-bold text-amber-900 mb-2 text-base">📋 إعدادات التسعير:</p>
+                      <p className="font-bold text-amber-900 mb-2 text-base"> إعدادات التسعير:</p>
                       <div className="grid gap-2 text-sm text-amber-900">
                           <div className="flex items-center gap-2 bg-white/60 p-2 rounded">
                               <span className="bg-amber-200 rounded-full w-1.5 h-1.5"></span>
@@ -806,7 +806,7 @@ export function CreateOrder() {
                           </div>
                       </div>
                       <p className="text-xs text-amber-700 mt-2 italic">
-                          💡 التكلفة النهائية = سعر المدينة + الوزن الزائد + نوع الشحن + رسوم القرية (إن وجدت)
+                           التكلفة النهائية = سعر المدينة + الوزن الزائد + نوع الشحن + رسوم القرية (إن وجدت)
                       </p>
                   </div>
               </div>
@@ -986,10 +986,10 @@ export function CreateOrder() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow className="hover:bg-green-50/50">
+                  <TableRow className="hover:bg-green-50/50 text-gray-50">
                     <TableCell className="font-medium">تكلفة الشحن الأساسية</TableCell>
                     <TableCell className="text-gray-600">
-                      سعر الشحن من <strong>{formData.governorateName}</strong> إلى <strong>{formData.cityName}</strong>
+                    سعر الشحن إلى <strong>{formData.cityName}</strong> في محاقظة <strong>{formData.governorateName}</strong>
                     </TableCell>
                     <TableCell className="font-bold text-green-700">{costBreakdown.baseCost} جنيه</TableCell>
                   </TableRow>
@@ -1032,7 +1032,7 @@ export function CreateOrder() {
                     <TableRow className="hover:bg-green-50/50">
                       <TableCell className="font-medium">رسوم توصيل القرية</TableCell>
                       <TableCell className="text-gray-600">
-                        رسوم إضافية للتوصيل إلى القرية: <strong>{formData.village || 'غير محدد'}</strong>
+                        رسوم إضافية للتوصيل إلى القرية: <strong>{weightSettings.villageDeliveryCost || 'غير محدد'}</strong>
                       </TableCell>
                       <TableCell className="font-bold text-orange-700">+{costBreakdown.villageCost} جنيه</TableCell>
                     </TableRow>

@@ -400,7 +400,7 @@ export const DriverDashboard: React.FC = () => {
           dir="rtl"
         >
           <DialogHeader>
-            <DialogTitle className="text-right">
+            <DialogTitle className="text-right text-blue-600">
               تفاصيل الطلب #
               {selectedOrder?.orderNumber || selectedOrder?._id.slice(-6)}
             </DialogTitle>

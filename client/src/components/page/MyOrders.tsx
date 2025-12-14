@@ -435,7 +435,7 @@ export function MyOrders() {
             <DialogTitle className="text-blue-600  text-right">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
-            <DialogDescription  className="text-primary  text-right">
+            <DialogDescription  className="text-primary text-right">
               عرض جميع تفاصيل الطلب والحالة الحالية
             </DialogDescription>
           </DialogHeader>
