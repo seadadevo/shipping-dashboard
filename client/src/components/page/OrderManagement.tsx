@@ -169,7 +169,7 @@ export function OrderManagement() {
     }
   };
 
-  // --- (🚀 تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
+  // --- ( تعديل: fetchOrders الآن تستخدم الفلاتر لإرسالها للـ API) ---
   const fetchOrders = async (page = currentPage, limit = itemsPerPage) => {
     setLoading(true);
     setError(null);
@@ -253,8 +253,8 @@ export function OrderManagement() {
     }
   };
 
-  // --- (🚀 إزالة: filteredOrders) ---
-  // (⭐ إزالة): لم نعد بحاجة للفلترة في الفرونت إند
+  // --- ( إزالة: filteredOrders) ---
+  // ( إزالة): لم نعد بحاجة للفلترة في الفرونت إند
   // الباك إند هو المسؤول الآن عن إرجاع البيانات المفلترة
   // const filteredOrders = allOrders.filter((order) => { ... });
 
@@ -566,6 +566,7 @@ export function OrderManagement() {
                   <TableHead className="text-right">الوجهة</TableHead>
                   <TableHead className="text-right">الموظف/التاجر</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right">نوع الشحن</TableHead>
                   <TableHead className="text-right">التكلفة</TableHead>
                   <TableHead className="text-right">تاريخ الإنشاء</TableHead>
                   <TableHead className="text-right">الإجراءات</TableHead>
@@ -640,6 +641,7 @@ export function OrderManagement() {
                           </span>
                         </Badge>
                       </TableCell>
+                      <TableCell>{order.shippingType}</TableCell>
                       <TableCell className="font-medium">
                         {order.orderCost?.toFixed(2) ?? "-"} جنيه
                       </TableCell>
@@ -803,10 +805,10 @@ export function OrderManagement() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className=" bg-background max-w-4xl" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-blue-600">
+            <DialogTitle className="text-blue-600 text-right">
               تفاصيل الطلب #{selectedOrder?._id.slice(-8)}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className=" text-right">
               عرض جميع تفاصيل الطلب والحالة الحالية
             </DialogDescription>
           </DialogHeader>
@@ -1131,10 +1133,10 @@ export function OrderManagement() {
         open={!!orderToDelete}
         onOpenChange={(isOpen) => !isOpen && setOrderToDelete(null)}
       >
-        <DialogContent className="bg-blue-50">
+        <DialogContent className="bg-background text-right" dir="rtl">
           <DialogHeader>
-            <DialogTitle>تأكيد الحذف</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-blue-600 text-right">تأكيد الحذف</DialogTitle>
+            <DialogDescription  className="text-primary text-right">
               هل أنت متأكد أنك تريد حذف الطلب رقم #
               {orderToDelete?._id.slice(-8)}؟
               <br />
@@ -1151,7 +1153,7 @@ export function OrderManagement() {
               إلغاء
             </Button>
             <Button
-              className="text-[red] ml-1 border-2"
+              className="text-[white] ml-1 border-2  mr-2"
               variant="destructive"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
