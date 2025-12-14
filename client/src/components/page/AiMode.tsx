@@ -293,7 +293,7 @@ const InputBox = ({
           }}
           placeholder={
             isLoading
-              ? "Wait..."
+              ? "Thinking..."
               : isListening
               ? "جاري الاستماع..."
               : "Ask anything... | اسأل أي شيء"

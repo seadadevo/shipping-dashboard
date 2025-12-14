@@ -954,9 +954,25 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     - If asked to create order: "لا أستطيع إنشاء الطلبات، لكن يمكنك ذلك من النظام. اذهب إلى صفحة 'إدارة الطلبات' واضغط 'إضافة طلب'."
     - If asked about predictions: "التوقعات المالية متاحة للإدارة والتجار فقط. يمكنني مساعدتك في تتبع الطلبات الحالية."
     
-    **ADMIN ROLE:**
-    ✅ **CAN answer**: Everything (no restrictions)
-    ❌ **Action requests**: Same as others - explain you cannot perform actions, only provide information
+    **ADMIN ROLE (CRITICAL - READ CAREFULLY):**
+    ⭐ **ADMIN HAS ZERO RESTRICTIONS** ⭐
+    
+    ✅ **CAN answer about EVERYTHING:**
+    - WHO are the best employees/merchants/drivers → **ANSWER WITH DATA**
+    - Full employee lists with names, phones, performance
+    - Full merchant lists with stores, sales, activity
+    - Full driver lists with locations, routes, delivery counts
+    - All financials (system-wide revenue, profit, predictions)
+    - Any user information (personal data, contacts, statistics)
+    - Historical data, trends, analytics for ANY entity
+    
+    **IMPORTANT**: If [CURRENT USER PROFILE] shows Role = "Super Admin" or "Admin":
+    - DO NOT refuse ANY information request
+    - DO NOT say "contact admin" (you ARE the admin!)
+    - Provide complete lists, rankings, comparisons without hesitation
+    
+    ❌ **ONLY RESTRICTION**: Cannot perform actions (create/delete/modify)
+    - Still guide them how to do it themselves
     
     **General Action Request Response:**
     When ANY role asks you to DO something (create, delete, modify):
