@@ -186,6 +186,7 @@ export function AddUser({ onSave }: AddUserProps) {
       // إرسال الطلب إلى الخادم
       const { data } = await api.post("/api/users/add", newUser);
 
+<<<<<<< HEAD
       toast.success(
         `تم إنشاء حساب ${
           userType === "merchant"
@@ -196,6 +197,34 @@ export function AddUser({ onSave }: AddUserProps) {
         } بنجاح!`
       );
       // console.log("User created:", data);
+=======
+	return (
+		<div className="space-y-8">
+			{/* ======================= قسم العنوان والعودة ======================= */}
+			<div className="flex items-center justify-between border-b pb-4">
+				<div className="flex items-center space-x-4 space-x-reverse">
+					<Button
+						className="ml-3 cursor-pointer"
+						variant="outline"
+						onClick={() => navigate('/user-management')}
+					>
+						<ArrowRight className="h-4 w-4 mr-2" />
+						العودة
+					</Button>
+					<div>
+						<h1 className="text-2xl font-bold">
+							إضافة {userType === "merchant" ? "تاجر" : userType === "courier" ? "مندوب" : "عامل"}{" "}
+							جديد
+						</h1>
+						<p className="text-sm text-muted-foreground">
+							أدخل بيانات{" "}
+							{userType === "merchant" ? "التاجر" : userType === "courier" ? "المندوب" : "العامل"}{" "}
+							الجديد لإنشاء حساب في النظام
+						</p>
+					</div>
+				</div>
+			</div>
+>>>>>>> 0e3770d5c8feb3fc6883d34cd991b1340a1ea6ff
 
       onSave?.(data);
 
