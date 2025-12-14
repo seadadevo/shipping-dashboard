@@ -1,7 +1,6 @@
 const ShippingType = require("../models/ShippingType");
 const { paginate } = require("../utils/pagination");
 
-// 1. إضافة نوع شحن (Admin)
 exports.addShippingType = async (req, res) => {
   try {
     const {
@@ -15,6 +14,14 @@ exports.addShippingType = async (req, res) => {
       return res
         .status(400)
         .json({ message: "Name and adjustment amount are required" });
+    }
+
+    // التحقق من وجود نوع شحن بنفس الاسم ومفعل فقط
+    const existingActiveType = await ShippingType.findOne({ name, isActive: true });
+    if (existingActiveType) {
+      return res
+        .status(400)
+        .json({ message: "نوع الشحن بهذا الاسم موجود ومفعل بالفعل" });
     }
 
     const newType = await ShippingType.create({
@@ -35,13 +42,13 @@ exports.addShippingType = async (req, res) => {
   }
 };
 
-// 2. جلب كل أنواع الشحن (Any User)
 exports.getAllShippingTypes = async (req, res) => {
   try {
     const { page, limit } = req.query;
+    
     const { data: types, meta } = await paginate(
       ShippingType,
-      { isActive: true },
+      {}, 
       { page, limit, sort: { adjustmentAmount: 1 } }
     );
     res
@@ -52,7 +59,6 @@ exports.getAllShippingTypes = async (req, res) => {
   }
 };
 
-// 3. تحديث نوع الشحن (Admin)
 exports.updateShippingType = async (req, res) => {
   try {
     const { id } = req.params;
