@@ -66,95 +66,345 @@ async function fetchDynamicSystemContext(userType, userId) {
 
     // ---------------- ADMIN CONTEXT ----------------
     if (userType === "admin") {
+      const currentUser = await User.findById(userId);
+      // --- A. KEY METRICS ---
       const totalOrders = await Order.countDocuments();
-      const pendingOrders = await Order.countDocuments({ status: "Pending" });
-      const deliveredOrders = await Order.countDocuments({
-        status: "Delivered",
-      });
       const totalUsers = await User.countDocuments();
 
-      // Admin: Drivers List
-      const drivers = await User.find({ userType: "courier" }).select(
-        "fullName phone isAvailable assignedCities"
-      );
-      const driverSummary = drivers
-        .map(
-          (d) =>
-            `- ${d.fullName} (${d.phone}) [${
-              d.isAvailable ? "Available" : "Busy"
-            }]`
-        )
-        .join("\n");
+      const statusCounts = await Order.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]);
+      const statusMap = statusCounts.reduce((acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {});
 
-      // Admin: Financials
+      // --- B. FINANCIALS DEEP DIVE (Corrected for Local Day) ---
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-      const profitStats = await Order.aggregate([
-        { $match: { createdAt: { $gte: startOfDay } } },
+
+      const financialStats = await Order.aggregate([
         {
           $group: {
-            _id: "$status",
-            totalCost: { $sum: "$orderCost" },
+            _id: { status: "$status", payment: "$paymentType" },
+            total: { $sum: "$orderCost" },
             count: { $sum: 1 },
           },
         },
       ]);
 
-      let deliveredProfit = 0;
-      let pendingProfit = 0;
+      // Daily Financials
+      const todayFinancials = await Order.aggregate([
+        { $match: { createdAt: { $gte: startOfDay } } },
+        {
+          $group: {
+            _id: { status: "$status" },
+            total: { $sum: "$orderCost" },
+          },
+        },
+      ]);
 
-      profitStats.forEach((stat) => {
-        if (stat._id === "Delivered") {
-          deliveredProfit = stat.totalCost;
-        } else if (["Pending", "Processing", "On the Way"].includes(stat._id)) {
-          pendingProfit += stat.totalCost;
+      let todayRealized = 0;
+      let todayPotential = 0;
+      todayFinancials.forEach((t) => {
+        if (t._id.status === "Delivered") todayRealized += t.total;
+        else if (["Pending", "Processing", "On the Way"].includes(t._id.status))
+          todayPotential += t.total;
+      });
+
+      // All Time Financials
+      let revenueCOD = 0;
+      let revenuePrepaid = 0;
+      let totalRealizedRevenue = 0;
+
+      financialStats.forEach((stat) => {
+        const { status, payment } = stat._id;
+        if (status === "Delivered") {
+          totalRealizedRevenue += stat.total;
+        }
+
+        if (payment === "واجبة التحصيل" || payment === "طرد مقابل طرد") {
+          revenueCOD += stat.total;
+        } else {
+          revenuePrepaid += stat.total;
         }
       });
 
-      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
-      const recentSummary = recentOrders
+      // --- G. BUSINESS TIMELINE (FULL HISTORY) ---
+
+      // 1. Get Monthly Order Stats (All Time - Broken down by Status)
+      const monthlyOrders = await Order.aggregate([
+        {
+          $group: {
+            _id: {
+              month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+              status: "$status",
+            },
+            revenue: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.month": 1 } },
+      ]);
+
+      // 2. Get Monthly User Growth (All Time)
+      const monthlyUsers = await User.aggregate([
+        {
+          $group: {
+            _id: {
+              month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+              type: "$userType",
+            },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // 3. Merge & Format Timeline
+      const timelineMap = new Map();
+
+      // Seed with Order Months
+      monthlyOrders.forEach((m) => {
+        const month = m._id.month;
+        const status = m._id.status;
+
+        if (!timelineMap.has(month)) {
+          timelineMap.set(month, {
+            totalOrderCount: 0,
+            deliveredCount: 0,
+            pendingCount: 0,
+            cancelledCount: 0,
+            realizedRevenue: 0,
+            potentialRevenue: 0,
+            newUsers: [],
+          });
+        }
+
+        const entry = timelineMap.get(month);
+        entry.totalOrderCount += m.count;
+
+        if (status === "Delivered") {
+          entry.deliveredCount += m.count;
+          entry.realizedRevenue += m.revenue;
+        } else if (status === "Cancelled") {
+          entry.cancelledCount += m.count;
+        } else {
+          // Pending, Processing, On the Way, etc.
+          entry.pendingCount += m.count;
+          entry.potentialRevenue += m.revenue;
+        }
+      });
+
+      // Merge User Data
+      monthlyUsers.forEach((u) => {
+        const month = u._id.month;
+        const type = u._id.type;
+        const count = u.count;
+
+        if (!timelineMap.has(month)) {
+          timelineMap.set(month, {
+            totalOrderCount: 0,
+            deliveredCount: 0,
+            pendingCount: 0,
+            cancelledCount: 0,
+            realizedRevenue: 0,
+            potentialRevenue: 0,
+            newUsers: [],
+          });
+        }
+        const entry = timelineMap.get(month);
+        entry.newUsers.push(
+          `${count} ${type === "courier" ? "Drivers" : type + "s"}`
+        );
+      });
+
+      // Sort keys (Months) Descending for display (Newest First)
+      const sortedMonths = Array.from(timelineMap.keys()).sort().reverse();
+
+      const fullTimeline = sortedMonths
+        .map((month) => {
+          const data = timelineMap.get(month);
+          const userGrowthStr =
+            data.newUsers.length > 0
+              ? ` | Added: +${data.newUsers.join(", +")}`
+              : "";
+
+          return `> [${month}]: ${data.totalOrderCount} Total Orders (${data.realizedRevenue} EGP Realized)
+           - Breakout: ${data.deliveredCount} Delivered, ${data.pendingCount} Pending, ${data.cancelledCount} Cancelled${userGrowthStr}`;
+        })
+        .join("\n");
+
+      // --- C. FULL PERSONNEL LISTS (No Limits) ---
+      // 1. Merchants
+      const merchants = await User.find({ userType: "merchant" }).select(
+        "fullName phone storeName email"
+      );
+      const merchantList = merchants
+        .map((m) => `- ${m.storeName || m.fullName} (${m.phone})`)
+        .join("\n");
+
+      // 2. Employees
+      const employees = await User.find({ userType: "employee" }).select(
+        "fullName phone email"
+      );
+      const employeeList = employees
+        .map((e) => `- ${e.fullName} (${e.phone})`)
+        .join("\n");
+
+      // 3. Drivers (With Delivered Count)
+      const drivers = await User.find({ userType: "courier" }).select(
+        "fullName phone isAvailable assignedCities"
+      );
+      // Aggregate detailed delivery counts for each driver
+      const driverPerformance = await Order.aggregate([
+        { $match: { status: "Delivered", assignedDriver: { $exists: true } } },
+        { $group: { _id: "$assignedDriver", count: { $sum: 1 } } },
+      ]);
+      const driverMap = {};
+      driverPerformance.forEach((d) => {
+        driverMap[d._id.toString()] = d.count;
+      });
+
+      const driverList = drivers
+        .map((d) => {
+          const count = driverMap[d._id.toString()] || 0;
+          return `- ${d.fullName} (${d.phone}) [${
+            d.isAvailable ? "Available" : "Busy"
+          }]: ${count} Delivered`;
+        })
+        .join("\n");
+
+      // --- D. FULL AREA COVERAGE ---
+      const governorates = await Governotate.find({ isActive: true });
+      const cities = await City.find({ isActive: true });
+
+      const areaCoverage = governorates
+        .map((gov) => {
+          const govCities = cities.filter(
+            (c) =>
+              c.governorate && c.governorate.toString() === gov._id.toString()
+          );
+          const cityNames = govCities.map((c) => c.cityName).join(", ");
+          return `- ${gov.govName}: [${cityNames}]`;
+        })
+        .join("\n");
+
+      // --- E. SHIPPING & WEIGHT CONFIG ---
+      const weightSettingsAdmin = await WeightSetting.findOne();
+      const shippingTypesAdmin = await ShippingType.find({ isActive: true });
+
+      const shippingConfigStr = weightSettingsAdmin
+        ? `
+      - Default Weight Limit: ${weightSettingsAdmin.defaultWeightLimit}kg
+      - Extra Kg Cost: ${weightSettingsAdmin.extraKgCost} EGP
+      - Village Delivery Fee: ${weightSettingsAdmin.villageDeliveryCost} EGP
+      > Active Services:
+      ${shippingTypesAdmin
+        .map((s) => `- ${s.name}: +${s.adjustmentAmount} EGP`)
+        .join("\n")}
+      `
+        : "Weight settings not configured.";
+
+      // --- F. OPERATIONAL INSIGHTS ---
+      // Cancellations
+      const cancelledOrders = await Order.find({ status: "Cancelled" })
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .select("orderNumber changeReason notes");
+
+      const cancelSummary = cancelledOrders
         .map(
           (o) =>
-            `- Order ${o.orderNumber}: ${o.status}, Cost: ${o.orderCost}, to ${o.city}`
+            `- ${o.orderNumber}: ${
+              o.changeReason || o.notes || "No reason logged"
+            }`
         )
         .join("\n");
 
-      // Fetch Current Admin Info
-      const currentUser = await User.findById(userId).select(
-        "fullName phone email"
-      );
+      // --- H. RECENT GLOBAL ACTIVITY & DETAILED STATUS ---
+
+      // Detailed Status Breakdown
+      const detailedStatusList = Object.entries(statusMap)
+        .map(([status, count]) => `- ${status}: ${count}`)
+        .join("\n");
+
+      // Recent Global Orders (Stream)
+      const recentGlobalOrders = await Order.find()
+        .sort({ updatedAt: -1 })
+        .limit(15)
+        .select("orderNumber status orderCost city paymentType");
+
+      const recentGlobalSummary = recentGlobalOrders
+        .map(
+          (o) =>
+            `- #${o.orderNumber} (${o.status}) to ${o.city}: ${o.orderCost} EGP [${o.paymentType}]`
+        )
+        .join("\n");
+
+      // KPI Calculations
+      const deliverySuccessRate =
+        totalOrders > 0
+          ? (((statusMap["Delivered"] || 0) / totalOrders) * 100).toFixed(1)
+          : "0";
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Admin"}
-        - Role: Admin
+        - Role: Super Admin
+        - Email: ${currentUser?.email || "N/A"}
         - Phone: ${currentUser?.phone || "N/A"}
-
-        [ADMIN DASHBOARD - FULL ACCESS]
+        - Member Since: ${
+          currentUser?.createdAt || currentUser?._id?.getTimestamp()
+            ? new Date(
+                currentUser.createdAt || currentUser._id.getTimestamp()
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+              })
+            : "Unknown"
+        }
+        
+        [EXECUTIVE DASHBOARD]
         - Total Orders: ${totalOrders}
-        - Pending: ${pendingOrders} | Delivered: ${deliveredOrders}
         - Total Users: ${totalUsers}
+        - Current Success Rate: ${deliverySuccessRate}%
+        
+        [DETAILED ORDER STATUS BREAKDOWN]
+        ${detailedStatusList || "No orders found."}
+        
+        [RECENT GLOBAL ORDER STREAM (LAST 15)]
+        ${recentGlobalSummary || "No recent activity."}
+        
+        [FINANCIAL REPORT (TODAY)]
+        - **Realized Profit (Delivered): ${todayRealized} EGP** (Since 00:00 Local)
+        - Pipeline Value (Pending): ${todayPotential} EGP
+        
+        [BUSINESS TIMELINE (FULL HISTORY)]
+        ${fullTimeline || "No history available yet."}
+        
+        [FINANCIAL REPORT (ALL TIME)]
+        - Total Realized Revenue: ${totalRealizedRevenue} EGP
+        - COD Volume: ${revenueCOD} EGP
+        - Prepaid Volume: ${revenuePrepaid} EGP
 
-        [FINANCIALS (Today)]
-        - Realized (Delivered): ${deliveredProfit} EGP
-        - Potential (Pending): ${pendingProfit} EGP
-        - Total Today: ${deliveredProfit + pendingProfit} EGP
+        [SHIPPING CONFIGURATION]
+        ${shippingConfigStr}
 
-        [DRIVERS]
-        ${driverSummary || "No drivers."}
+        [FULL PERSONNEL DIRECTORY]
+        > Employees:
+        ${employeeList || "No employees found."}
+        
+        > Merchants:
+        ${merchantList || "No merchants found."}
+        
+        > Drivers (Stats):
+        ${driverList || "No drivers found."}
 
-        [AREAS]
-        - Cities: ${cityList || "No active cities found."}
-        - Governorates: ${govList || "No active governorates."}
+        [SERVICE AREA COVERAGE]
+        ${areaCoverage || "No active areas."}
 
-        [SHIPPING TYPES & SERVICES]
-        ${shippingSummary || "No specific shipping types defined."}
-
-        [PRICING]
-        - Weight Limit: ${limitWeight}Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
-
-        [RECENT SYSTEM ACTIVITY]
-        ${recentSummary}
+        [PROBLEM AREAS - RECENT CANCELLATIONS]
+        ${cancelSummary || "None"}
         `;
     }
 
@@ -210,14 +460,14 @@ async function fetchDynamicSystemContext(userType, userId) {
 
       // Fetch Current Merchant Info
       const currentUser = await User.findById(userId).select(
-        "fullName phone email companyName"
+        "fullName phone email storeName"
       );
 
       return `
         [CURRENT USER PROFILE]
         - Name: ${currentUser?.fullName || "Merchant"}
         - Role: Merchant
-        - Company: ${currentUser?.companyName || "N/A"}
+        - Company: ${currentUser?.storeName || "N/A"}
         - Phone: ${currentUser?.phone || "N/A"}
 
         [MERCHANT DASHBOARD - PERSONALIZED]
@@ -244,32 +494,76 @@ async function fetchDynamicSystemContext(userType, userId) {
     }
 
     // ---------------- EMPLOYEE CONTEXT ----------------
-    // Fetch Current Employee Info
-    const currentUser = await User.findById(userId).select(
-      "fullName phone email"
-    );
+    if (userType === "employee") {
+      // 1. Fetch Current Employee Info
+      const currentUser = await User.findById(userId).select(
+        "fullName phone email"
+      );
 
-    return `
-    [CURRENT USER PROFILE]
-    - Name: ${currentUser?.fullName || "Employee"}
-    - Role: Employee
-    - Phone: ${currentUser?.phone || "N/A"}
+      // 2. Order Statistics (Full Access)
+      const totalOrders = await Order.countDocuments();
+      const pendingOrders = await Order.countDocuments({ status: "Pending" });
+      const deliveredOrders = await Order.countDocuments({
+        status: "Delivered",
+      });
 
-    [EMPLOYEE VIEW]
-    - Access to General Shipping Rules.
-    - No Financial Access.
-    - No Driver List Access.
-    
-    [SERVED AREAS]
-    - Cities: ${cityList || "No active cities found."}
-    - Governorates: ${govList || "No active governorates."}
+      // 3. Financials (Order Values)
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const profitStats = await Order.aggregate([
+        { $match: { createdAt: { $gte: startOfDay } } },
+        {
+          $group: {
+            _id: "$status",
+            totalCost: { $sum: "$orderCost" },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
 
-    [SHIPPING TYPES & SERVICES]
-    ${shippingSummary || "No specific shipping types defined."}
-    
-    [PRICING RULES]
-    - Standard Weight Limit: ${limitWeight} Kg, Extra: ${kgPrice}EGP, Village: ${villagePrice}EGP
-    `;
+      let deliveredVal = 0;
+      let pendingVal = 0;
+      profitStats.forEach((stat) => {
+        if (stat._id === "Delivered") deliveredVal = stat.totalCost;
+        else if (["Pending", "Processing", "On the Way"].includes(stat._id))
+          pendingVal += stat.totalCost;
+      });
+
+      // 4. Recent Orders
+      const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5);
+      const recentSummary = recentOrders
+        .map(
+          (o) =>
+            `- Order ${o.orderNumber}: ${o.status}, Val: ${o.orderCost}, to ${o.city}`
+        )
+        .join("\n");
+
+      return `
+        [CURRENT USER PROFILE]
+        - Name: ${currentUser?.fullName || "Employee"}
+        - Role: Employee
+        - Phone: ${currentUser?.phone || "N/A"}
+
+        [ORDER MANAGEMENT DASHBOARD]
+        - Total Orders: ${totalOrders}
+        - Pending/Processing: ${pendingOrders}
+        - Delivered: ${deliveredOrders}
+        
+        [ORDER FINANCIALS (Today)]
+        - Realized Value (Delivered): ${deliveredVal} EGP
+        - Pipeline Value (Pending): ${pendingVal} EGP
+        
+        [RECENT ORDERS]
+        ${recentSummary}
+        
+        [SERVED AREAS & RULES]
+        - Cities: ${cityList || "No active cities."}
+        - Pricing: Limit ${limitWeight}Kg, Extra ${kgPrice}EGP, Village ${villagePrice}EGP
+        
+        [SHIPPING SERVICES]
+        ${shippingSummary}
+        `;
+    }
   } catch (err) {
     console.error("Error fetching dynamic context:", err);
     return "[System Data Unavailable]";
@@ -412,6 +706,16 @@ async function generateAnswer(context, query, res = null, base64Image = null) {
     1. **LANGUAGE**: Your response must be in **Professional Business Arabic** (العربية الفصحى المهنية).
     2. **ROLE**: Act as a senior consultant. Don't just read numbers; explain *why* they matter.
     3. **NO GENERICS**: Avoid phrases like "Perform better". Instead say "Increase delivery efficiency by 15% using...".
+
+    ### STRICT SCOPE & REFUSAL PROTOCOL
+    1. **DOMAIN**: You are ONLY allowed to answer questions about:
+       - Shipping, Logistics, Orders, Deliveries.
+       - Dashboard Data (Finance, Users, Charts).
+       - Using this System.
+    2. **REFUSAL**: If the user asks about ANYTHING else (e.g., General Knowledge, Cooking, Coding external apps, Life advice, Religion, Politics), you MUST Refuse.
+    3. **REFUSAL MESSAGE**: Return EXACTLY this Arabic message:
+       "عذرًا، أنا مساعد لوجستي فقط في هذا النظام ولا يمكنني الإجابة على أسئلة عامة خارج نطاق العمل."
+    4. **NO EXCEPTIONS**: Do not be helpful for out-of-scope topics.
     
     ### ANALYSIS FRAMEWORK
     When analyzing data (CSV/PDF/Image):

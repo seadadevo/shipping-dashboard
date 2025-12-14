@@ -204,6 +204,7 @@ const InputBox = ({
   clearFile,
   showIntroGlow = false,
   textAreaRef,
+  onStop,
 }: {
   question: string;
   setQuestion: (val: string) => void;
@@ -219,6 +220,7 @@ const InputBox = ({
   clearFile?: () => void;
   showIntroGlow?: boolean;
   textAreaRef: React.RefObject<HTMLTextAreaElement>;
+  onStop?: () => void;
 }) => {
   useEffect(() => {
     if (centered) {
@@ -339,16 +341,21 @@ const InputBox = ({
             </button>
 
             <button
-              onClick={() => handleSend()}
-              disabled={(!question.trim() && !selectedFile) || isLoading}
+              onClick={isLoading ? onStop : () => handleSend()}
+              disabled={!question.trim() && !selectedFile && !isLoading}
               className={`rounded-full p-2 transition-all ${
-                (question.trim() || selectedFile) && !isLoading
+                isLoading
+                  ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
+                  : question.trim() || selectedFile
                   ? "bg-primary text-primary-foreground hover:opacity-90"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               }`}
+              title={isLoading ? "إيقاف التوليد" : "إرسال"}
             >
               {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <div className="h-5 w-5 flex items-center justify-center">
+                  <div className="h-3 w-3 bg-white rounded-[2px]" />
+                </div>
               ) : (
                 <Send className="h-5 w-5" />
               )}
@@ -381,6 +388,9 @@ const AiMode = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Abort Controller for Stop Generation
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Intro Animation State
   const [showIntroGlow, setShowIntroGlow] = useState(true);
@@ -624,6 +634,13 @@ const AiMode = () => {
       textAreaRef.current?.focus();
     }, 100);
 
+    // Stop any ongoing generation when starting new chat
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setLoading(false);
+
     setMessages([]);
     setQuestion("");
     setShowHistory(false); // Close history on new chat
@@ -687,6 +704,23 @@ const AiMode = () => {
     setSelectedFile(null);
   };
 
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setLoading(false);
+      // Add cancelled message
+      setMessages((prev) => {
+        const newMsgs = [...prev];
+        const lastIdx = newMsgs.length - 1;
+        if (lastIdx >= 0 && newMsgs[lastIdx].sender === "ai") {
+          newMsgs[lastIdx].text += " [Stopped by user]";
+        }
+        return newMsgs;
+      });
+    }
+  };
+
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || question;
     const hasFile = !!selectedFile;
@@ -705,6 +739,10 @@ const AiMode = () => {
     clearFile(); // Remove chip immediately
     setLoading(true);
 
+    // Create new abort controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const formData = new FormData();
       if (textToSend.trim()) formData.append("question", textToSend);
@@ -719,6 +757,7 @@ const AiMode = () => {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         body: formData, // Automatic multipart/form-data
+        signal: controller.signal,
       });
 
       // STREAMING RESPONSE HANDLER
@@ -756,6 +795,11 @@ const AiMode = () => {
         }
       }
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        console.log("Generation stopped by user");
+        return;
+      }
+
       console.error("Chat Error:", err);
       // If we already started streaming, appending error might be weird, but okay
       setMessages((prev) => {
@@ -775,7 +819,10 @@ const AiMode = () => {
         return newMsgs;
       });
     } finally {
-      setLoading(false);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -1059,6 +1106,7 @@ const AiMode = () => {
                 selectedFile={selectedFile}
                 clearFile={clearFile}
                 showIntroGlow={false} // Never show glow on bottom input, only on the centered one
+                onStop={handleStop}
               />
               <div className="mt-2 text-center text-xs text-muted-foreground">
                 قد ترتكب تقنيات الذكاء الاصطناعي أخطاءً، لذا يُرجى التحقق من

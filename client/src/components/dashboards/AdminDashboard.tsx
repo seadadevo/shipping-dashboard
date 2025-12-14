@@ -32,7 +32,7 @@ import type { ApiError, GetOrdersResponse, Order, User } from "../../types";
 import { getMenuItemsByRole } from "../../constants/menuItems.ts";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api.ts";
-import { generatePDFReport, generateAdminReport } from "../../lib/exportUtils";
+import { generatePDFReport, generateAdminReportCSVSingleFile } from "../../lib/exportUtils";
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -114,11 +114,30 @@ const AdminDashboard: React.FC = () => {
   const [profitTodayRelativeToWeek, setProfitTodayRelativeToWeek] =
     useState<number>(0);
 
-  const fetchOrders = useCallback(async (): Promise<void> => {
+    const [shippingTypes, setShippingTypes] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [weightSettings, setWeightSettings] = useState([]);
+
+    useEffect(() => {
+      // جلب أنواع الشحن
+      api.get("/api/shipping-types").then(res => setShippingTypes(res.data.data));
+      // جلب المدن
+      api.get("/api/locations/cities")
+      .then(res => setCities(res.data.data || []))
+      .catch(err => {
+          console.error("خطأ في جلب المدن:", err);
+          setCities([]);
+      });
+      // جلب إعدادات الوزن
+      api.get("/api/weight-settings").then(res => {
+        const weightData = Array.isArray(res.data) ? res.data : [res.data];
+        setWeightSettings(weightData);
+      });
+    }, []);
+
+  const fetchOrders = async (): Promise<void> => {
     try {
-      const response = await api.get<GetOrdersResponse>(
-        "/api/orders?limit=1000"
-      );
+      const response = await api.get<GetOrdersResponse>("/api/orders?limit=1000");
       const ordersList = response.data?.data?.orders || [];
       const safeOrders = Array.isArray(ordersList) ? ordersList : [];
 
@@ -208,7 +227,7 @@ const AdminDashboard: React.FC = () => {
       console.log("Orders fetched successfully");
       setOrdersLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -248,7 +267,7 @@ const AdminDashboard: React.FC = () => {
             variant="outline"
             className="mr-2"
             onClick={() => {
-              generateAdminReport({
+              generateAdminReportCSVSingleFile({
                 orders: allOrders,
                 users: users,
                 stats: {
@@ -375,7 +394,7 @@ const AdminDashboard: React.FC = () => {
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" />
-                <YAxis />
+                <YAxis tick={{ dx: -10 }}/>
                 <Tooltip />
                 <Line
                   type="monotone"
