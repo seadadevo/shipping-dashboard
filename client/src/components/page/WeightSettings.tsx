@@ -138,8 +138,7 @@ export function WeightSettings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* --- تم تعديل الشبكة لتكون 3 --- */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-700">{settings.defaultWeightLimit} كجم</div>
               <p className="text-sm text-blue-600">الوزن الأساسي</p>
@@ -148,12 +147,6 @@ export function WeightSettings() {
               <div className="text-2xl font-bold text-blue-700">{formatCurrency(settings.extraKgCost)}</div>
               <p className="text-sm text-blue-600">تكلفة كل كجم إضافي</p>
             </div>
-            {/* --- الإضافة الجديدة --- */}
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-700">{formatCurrency(settings.villageDeliveryCost)}</div>
-              <p className="text-sm text-blue-600">تكلفة توصيل القرية</p>
-            </div>
-            {/* --- نهاية الإضافة --- */}
           </div>
           {lastSaved && (
             <p className="text-xs text-blue-600 mt-4 text-center">
@@ -241,40 +234,6 @@ export function WeightSettings() {
 
           <Separator />
 
-          {/* --- الإضافة الجديدة: تكلفة القرية --- */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <MapPin className="h-5 w-5 text-green-600" />
-              <h3 className="font-medium">إعدادات توصيل القرى</h3>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="villageDeliveryCost" className="flex items-center">
-                <DollarSign className="h-4 w-4 mr-2" />
-                تكلفة التوصيل للقرية (جنيه)
-              </Label>
-              <Input
-                id="villageDeliveryCost"
-                type="number"
-                step="1"
-                min="0"
-                value={tempSettings.villageDeliveryCost}
-                onChange={(e) => setTempSettings({
-                  ...tempSettings,
-                  villageDeliveryCost: parseFloat(e.target.value) || 0
-                })}
-                placeholder="0.00"
-                className="text-right max-w-md"
-              />
-              <p className="text-xs text-muted-foreground">
-                سعر ثابت يُضاف على إجمالي الشحنة إذا تم تحديد "توصيل لقرية"
-              </p>
-            </div>
-          </div>
-          {/* --- نهاية الإضافة --- */}
-
-          <Separator />
-
           {/* Reset and Save Buttons */}
           <div className="flex justify-between pt-4">
             {/* ... (نفس كود الأزرار) ... */}
@@ -315,6 +274,7 @@ export function WeightSettings() {
           <ul className="list-disc list-inside space-y-2 text-sm">
             <li>هذه الإعدادات عامة وتطبق على جميع المدن.</li>
             <li>السعر الأساسي للشحن يتم تحديده الآن من صفحة "إدارة المدن".</li>
+            <li><strong>رسوم توصيل القرية</strong> يتم تحديدها من صفحة "إدارة المحافظات والمدن".</li>
             <li>لإدارة أنواع الشحن (عادي، سريع، ...) اذهب إلى صفحة "إدارة أنواع الشحن".</li>
           </ul>
         </CardContent>

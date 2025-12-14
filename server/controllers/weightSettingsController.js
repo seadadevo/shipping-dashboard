@@ -22,13 +22,17 @@ exports.getWeightSettings = async (req, res) => {
 // 2. تحديث الإعدادات
 exports.updateWeightSettings = async (req, res) => {
     try {
-        // --- إضافة villageDeliveryCost ---
         const { defaultWeightLimit, extraKgCost, villageDeliveryCost } = req.body; 
+        
+        // بناء الـ update object ديناميكياً
+        const updateData = { updatedAt: Date.now() };
+        if (defaultWeightLimit !== undefined) updateData.defaultWeightLimit = defaultWeightLimit;
+        if (extraKgCost !== undefined) updateData.extraKgCost = extraKgCost;
+        if (villageDeliveryCost !== undefined) updateData.villageDeliveryCost = villageDeliveryCost;
         
         const updatedSettings = await WeightSetting.findOneAndUpdate(
             {}, 
-            // --- إضافته هنا ---
-            { defaultWeightLimit, extraKgCost, villageDeliveryCost, updatedAt: Date.now() },
+            updateData,
             { 
                 new: true,    
                 upsert: true, 
