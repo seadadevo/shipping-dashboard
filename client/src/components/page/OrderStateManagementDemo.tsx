@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Order, UserRole, OrderState } from '../../types';
+import type { Order, UserRole, OrderState } from '../../types';
 import { OrderStateManager, StateHistoryDialog } from './OrderStateManager';
 import { orderStateService } from '../../lib/orderStateService';
 import { STATE_LABELS, getStateBadgeColor } from '../../lib/orderStateManager';
@@ -156,7 +156,7 @@ export const OrderStateManagementDemo: React.FC<OrderStateManagementDemoProps> =
 
           {/* Permissions Summary */}
           <div className="space-y-2">
-            <h4 الف="font-medium">الصلاحيات المتاحة:</h4>
+            <h4 className="font-medium">الصلاحيات المتاحة:</h4>
             <div className="flex flex-wrap gap-2">
               {permissions.canProcess && (
                 <Badge variant="outline" className="text-blue-600">

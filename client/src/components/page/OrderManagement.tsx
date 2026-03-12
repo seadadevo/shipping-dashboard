@@ -656,7 +656,6 @@ export function OrderManagement() {
                           <DropdownMenuContent
                             className="bg-background"
                             align="end"
-                            dir="rtl"
                           >
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                             <DropdownMenuItem
@@ -721,7 +720,6 @@ export function OrderManagement() {
                                 <DropdownMenuPortal>
                                   <DropdownMenuSubContent
                                     className="bg-background"
-                                    dir="rtl"
                                   >
                                     {getStatusDropdownOptions(
                                       user?.userType as UserRole,

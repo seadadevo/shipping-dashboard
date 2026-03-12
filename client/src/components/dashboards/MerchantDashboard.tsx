@@ -62,9 +62,9 @@ export function MerchantDashboard() {
   }, []);
 
 
-      const [shippingTypes, setShippingTypes] = useState([]);
-    const [cities, setCities] = useState([]);
-    const [weightSettings, setWeightSettings] = useState([]);
+      const [shippingTypes, setShippingTypes] = useState<any[]>([]);
+    const [cities, setCities] = useState<any[]>([]);
+    const [weightSettings, setWeightSettings] = useState<any[]>([]);
 
     useEffect(() => {
       // جلب أنواع الشحن

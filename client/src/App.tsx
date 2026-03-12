@@ -25,9 +25,12 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider dir="rtl">
-      <AppContent />
-      <Toaster position="top-center" richColors />
+  
+    <AuthProvider>
+      <div dir="rtl" className="min-h-screen">
+        <AppContent />
+        <Toaster position="top-center" richColors />
+      </div>
     </AuthProvider>
   );
 };

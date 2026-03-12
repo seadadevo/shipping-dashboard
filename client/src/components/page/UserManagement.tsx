@@ -496,7 +496,6 @@ export function UserManagement() {
                           align="end"
                           sideOffset={6}
                           className="w-52 rounded-xl border border-gray-200 bg-background shadow-lg ring-1 ring-gray-100"
-                          dir="rtl"
                         >
                           <DropdownMenuLabel className="text-foreground text-sm font-medium px-3 py-1">
                             الإجراءات

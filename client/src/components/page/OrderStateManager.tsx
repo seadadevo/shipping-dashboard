@@ -20,7 +20,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Order, OrderState, UserRole } from '../../types';
+import type { Order, OrderState, UserRole } from '../../types';
 import { 
   canChangeOrderState, 
   getAllowedNextStates, 

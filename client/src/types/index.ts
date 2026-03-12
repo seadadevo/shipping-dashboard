@@ -18,12 +18,12 @@ export interface User {
 	assignedCities?: { governorate: string; city: string }[];
 	isAvailable?: boolean;
 	storeName?: string;
-	// أضف أي بيانات أخرى تحتاجها من الموديل
+	address?: string;
+	governorate?: string;
+	city?: string;
 }
 
-/**
- * نوع بيانات الـ Authentication Context
- */
+
 export interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -260,10 +260,23 @@ export interface AddLocationResponse {
 export interface ShippingType {
   _id: string;
   name: string;
+  description?: string;
   adjustmentAmount: number;
   minDeliveryDays: number;
   maxDeliveryDays: number;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * نوع بيانات إعدادات الوزن
+ */
+export interface WeightSetting {
+  _id?: string;
+  defaultWeightLimit: number;
+  extraKgCost: number;
+  villageDeliveryCost: number;
   createdAt?: string;
   updatedAt?: string;
 }

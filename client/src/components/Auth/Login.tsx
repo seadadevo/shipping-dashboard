@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import {  Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, AlertCircle, Eye, EyeOff, Zap } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../lib/api";
 import { useTheme } from '../ui/theme-provider';
 import { toast } from 'sonner';
+import type { User, UserRole, ApiError, LoginResponse } from "../../types";
 
 import {
 	Card,
@@ -13,7 +14,69 @@ import {
 } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import type { ApiError, LoginResponse } from "../../types";
+
+// ── Demo user data (no backend needed) ──────────────────────────────────────
+const DEMO_USERS: { role: UserRole; label: string; color: string; user: User; token: string }[] = [
+  {
+    role: 'admin',
+    label: 'Admin',
+    color: 'from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700',
+    token: 'demo-token-admin-2024',
+    user: {
+      _id: 'demo-admin-001',
+      userType: 'admin',
+      fullName: 'Ahmed Admin',
+      email: 'admin@demo.com',
+      phone: '01000000001',
+      username: 'admin_demo',
+    },
+  },
+  {
+    role: 'employee',
+    label: 'Employee',
+    color: 'from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700',
+    token: 'demo-token-employee-2024',
+    user: {
+      _id: 'demo-employee-001',
+      userType: 'employee',
+      fullName: 'Sara Employee',
+      email: 'employee@demo.com',
+      phone: '01000000002',
+      username: 'employee_demo',
+    },
+  },
+  {
+    role: 'merchant',
+    label: 'Merchant',
+    color: 'from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700',
+    token: 'demo-token-merchant-2024',
+    user: {
+      _id: 'demo-merchant-001',
+      userType: 'merchant',
+      fullName: 'Mohamed Merchant',
+      email: 'merchant@demo.com',
+      phone: '01000000003',
+      username: 'merchant_demo',
+      storeName: 'Demo Store',
+    },
+  },
+  {
+    role: 'courier',
+    label: 'Courier',
+    color: 'from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600',
+    token: 'demo-token-courier-2024',
+    user: {
+      _id: 'demo-courier-001',
+      userType: 'courier',
+      fullName: 'Omar Courier',
+      email: 'courier@demo.com',
+      phone: '01000000004',
+      username: 'courier_demo',
+      isAvailable: true,
+    },
+  },
+];
+// ────────────────────────────────────────────────────────────────────────────
 
 const Login: React.FC = () => {
 	const [email, setEmail] = useState("");
@@ -55,6 +118,11 @@ const Login: React.FC = () => {
 			}
 			console.error(err);
 		}
+	};
+
+	const handleDemoLogin = (demo: typeof DEMO_USERS[number]) => {
+		login(demo.user, demo.token);
+		toast.success(`مرحباً ${demo.user.fullName}! تم تسجيل الدخول كـ ${demo.label} (Demo)`);
 	};
 
 	const { theme } = useTheme();
@@ -169,18 +237,39 @@ const Login: React.FC = () => {
 						</Button>
 					</form>
 
-					<div className="mt-8 pt-6 border-t border-border/50">
-						<div className="flex items-center justify-center gap-2 text-sm">
+					{/* ── Demo Login Section ────────────────────────────────── */}
+					<div className="mt-8 pt-6 border-t border-border/50 space-y-4">
+						<div className="flex items-center justify-center gap-2">
+							<Zap className="w-4 h-4 text-yellow-500" />
+							<p className="text-sm font-semibold text-muted-foreground">تجربة سريعة — اختر دوراً للدخول الفوري</p>
+							<Zap className="w-4 h-4 text-yellow-500" />
+						</div>
+
+						<div className="grid grid-cols-2 gap-3">
+							{DEMO_USERS.map((demo) => (
+								<button
+									key={demo.role}
+									type="button"
+									onClick={() => handleDemoLogin(demo)}
+									className={`bg-linear-to-r ${demo.color} text-white text-sm font-semibold py-2.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-95`}
+								>
+									Login as {demo.label} (Demo)
+								</button>
+							))}
+						</div>
+
+						<div className="flex items-center justify-center">
 							<div className="flex items-center gap-2 bg-linear-to-r from-green-500/10 to-emerald-500/10 px-5 py-2.5 rounded-full border border-green-500/20">
 								<div className="relative flex h-3 w-3">
 									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
 									<span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
 								</div>
 								<Lock className="w-4 h-4 text-green-600 dark:text-green-400" />
-								<span className="font-medium text-green-700 dark:text-green-300">نظام آمن ومشفر بالكامل</span>
+								<span className="font-medium text-sm text-green-700 dark:text-green-300">نظام آمن ومشفر بالكامل</span>
 							</div>
 						</div>
 					</div>
+					{/* ───────────────────────────────────────────────────────── */}
 				</CardContent>
 			</Card>
 		</div>

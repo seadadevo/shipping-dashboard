@@ -210,7 +210,7 @@ const InputBox = ({
   setQuestion: (val: string) => void;
   handleSend: (text?: string) => void;
   handleUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   centered?: boolean;
   startListening: () => void;
   stopListening: () => void;
@@ -219,7 +219,7 @@ const InputBox = ({
   selectedFile?: File | null;
   clearFile?: () => void;
   showIntroGlow?: boolean;
-  textAreaRef: React.RefObject<HTMLTextAreaElement>;
+  textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
   onStop?: () => void;
 }) => {
   useEffect(() => {

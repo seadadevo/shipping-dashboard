@@ -232,7 +232,7 @@ export function MyOrders() {
             <Download className="h-4 w-4 mr-2" />
             تصدير
           </Button>
-          <Button variant="outline" onClick={fetchOrders} disabled={loading}>
+          <Button variant="outline" onClick={() => fetchOrders()} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -379,7 +379,6 @@ export function MyOrders() {
                           <DropdownMenuContent
                             className="bg-background"
                             align="end"
-                            dir="rtl"
                           >
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                             <DropdownMenuItem
